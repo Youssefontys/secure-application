@@ -10,7 +10,8 @@ import os
 import psycopg
 from flask import Flask, abort, redirect, render_template, request, session, url_for
 
-app = Flask(__name__)
+# De website (HTML-templates en statische bestanden) staat in web/, los van de code.
+app = Flask(__name__, template_folder="web/templates", static_folder="web/static")
 # Flask heeft een sleutel nodig om de sessiecookie te ondertekenen.
 app.secret_key = os.environ["FLASK_SECRET_KEY"]
 

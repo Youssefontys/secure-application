@@ -10,7 +10,7 @@ Every feature that is added has an entry in `BoK/`: the use case, the misuse cas
 
 ## Structure
 
-- `app/` - the notes application (Flask, PostgreSQL)
+- `app/` - the notes application: Python code in `app/`, the website (HTML, CSS, JS) in `app/web/`
 - `BoK/Architecture/` - components, data flows, trust boundaries and the authentication and authorization points
 - `BoK/Threat Analysis/` - use cases, misuse cases, mitigations and attack trees
 - `compose.yaml` - app and database for local use

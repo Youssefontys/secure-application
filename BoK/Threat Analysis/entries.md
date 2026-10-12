@@ -173,7 +173,7 @@ andere misuse cases hieronder zijn dus open.
 ### MIT-01 Automatisch escapen in Jinja
 - Houdt tegen: MC-07 stap 2
 - Wat: Flask escapet in `.html`-templates alle `{{ ... }}`-waarden standaard. Dit is een standaardinstelling van het framework en geen eigen werk; wij vermijden alleen `|safe` (opmerking in `notes.html`).
-- Waar: `app/templates/*.html`
+- Waar: `app/web/templates/*.html`
 - Status: gebouwd
 - Sinds: baseline
 
