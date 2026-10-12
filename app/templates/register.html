@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Registreren{% endblock %}
+{% block body_class %}auth{% endblock %}
+{% block scene %}{% include "_scene.html" %}{% endblock %}
+
+{% block content %}
+  <h1>Account aanmaken</h1>
+
+  {% if error %}<p class="error">{{ error }}</p>{% endif %}
+
+  <div class="card">
+    <form method="post">
+      <label>Gebruikersnaam
+        <input name="username" autocomplete="username" required>
+      </label>
+      <label>Wachtwoord
+        <input name="password" type="password" autocomplete="new-password" required>
+      </label>
+      <button type="submit">Account aanmaken</button>
+    </form>
+  </div>
+
+  <p class="hint"><a href="{{ url_for('login') }}">Al een account? Inloggen</a></p>
+{% endblock %}

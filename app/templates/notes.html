@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Mijn notities{% endblock %}
+
+{% block content %}
+  <header class="bar">
+    <h1>Mijn notities</h1>
+    {% include "_account_menu.html" %}
+  </header>
+
+  {% if error %}<p class="error">{{ error }}</p>{% endif %}
+
+  <details class="card composer"{% if not notes or error %} open{% endif %}>
+    <summary>Nieuwe notitie</summary>
+    <form method="post">
+      <label>Titel
+        <input name="title" required value="{{ form_title or '' }}">
+      </label>
+      <label>Notitie
+        <textarea name="body" required>{{ form_body or '' }}</textarea>
+      </label>
+      <button type="submit">Opslaan</button>
+    </form>
+  </details>
+
+  <p class="count">{{ notes|length }} notities</p>
+
+  {# Jinja escapet de waarden hieronder standaard, dus een notitie met een
+     script-tag erin verschijnt als tekst. Gebruik hier nooit |safe. #}
+  <div class="notes-grid">
+    {% for note in notes %}
+      <article class="card note">
+        <h2>{{ note[1] }}</h2>
+        <p class="note-body">{{ note[2] }}</p>
+        <div class="note-meta">
+          <small>{{ note[3].strftime('%d-%m-%Y %H:%M') }}</small>
+          <div class="note-actions">
+            <a class="button secondary" href="{{ url_for('edit_note', note_id=note[0]) }}">Aanpassen</a>
+            <form method="post" action="{{ url_for('delete_note', note_id=note[0]) }}">
+              <button type="submit" class="danger">Verwijderen</button>
+            </form>
+          </div>
+        </div>
+      </article>
+    {% else %}
+      <p class="empty">Nog geen notities.</p>
+    {% endfor %}
+  </div>
+{% endblock %}
