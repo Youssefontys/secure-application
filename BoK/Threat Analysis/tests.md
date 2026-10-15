@@ -37,7 +37,7 @@ ID's: `T-`, nooit hergebruiken. Kolom "Nu" is met de hand gemeten op
 |----|------|------|----|-----------------|
 | T-10 | MC-01 | Na registreren `users.password` uitlezen | Het wachtwoord staat er leesbaar | Een hash, niet terug te rekenen |
 | T-11 | MC-02 | Gebruiker B opent, wijzigt en verwijdert een notitie van A via `/notes/<id>/edit` en `/delete` | Lukt | 404, notitie van A ongewijzigd |
-| T-12 | MC-03 | 50 foute inlogpogingen achter elkaar op één account | Allemaal 401, geen vertraging of blokkade | Na een paar pogingen vertraagd of geblokkeerd |
+| T-12 | MC-03 | Foute wachtwoorden achter elkaar op één account | De 5e geeft 429 en een blokkade van 15 minuten; ook het juiste wachtwoord wordt dan geweigerd (sinds MIT-10) | Idem; dit is het bewijs voor MIT-10 |
 | T-13 | MC-03 | Registreren of wijzigen naar wachtwoord `a` | Geaccepteerd | Geweigerd met uitleg |
 | T-14 | MC-04 | Cookie kopiëren, uitloggen, gekopieerde cookie gebruiken | 302 naar `/login` met de melding "Je sessie is niet meer geldig" (sinds MIT-09) | Idem; dit is het bewijs voor MIT-09 |
 | T-15 | MC-04, MC-12 | Twee sessies; in de ene het wachtwoord wijzigen; de andere gebruiken | De andere sessie is uitgelogd, de eigen blijft ingelogd (sinds MIT-09) | Idem |
@@ -52,7 +52,7 @@ ID's: `T-`, nooit hergebruiken. Kolom "Nu" is met de hand gemeten op
 | T-24 | MC-13 | Account verwijderen met een `POST` zonder bevestiging en zonder wachtwoord | Lukt | Geweigerd zonder het juiste wachtwoord |
 | T-25 | MC-14 | `whoami` in de app-container; de logs bij het starten | `root`; "WARNING: This is a development server" | Een gewone gebruiker; een productieserver zonder die waarschuwing |
 | T-27 | MC-10 | Titel van 15 en 16 tekens, notitie van 250 en 251 tekens, bij aanmaken en aanpassen | 302, 400, 302, 400 | Idem; dit is het bewijs voor MIT-04 |
-| T-30 | MC-15 | Na het wachtwoord 5 foute codes, daarna de juiste code, ook vanuit een nieuwe sessie | 5e fout: op slot; de juiste code geweigerd, ook in de nieuwe sessie | Idem; dit is het bewijs voor MIT-06 |
+| T-30 | MC-15 | Na het wachtwoord 5 foute codes, daarna de juiste code, ook vanuit een nieuwe sessie; daarna nog twee keer 5 fouten na het verlopen van de blokkade | 5e fout: 15 minuten op slot, de juiste code geweigerd, ook in de nieuwe sessie; daarna 30 en 60 minuten | Idem; dit is het bewijs voor MIT-06 |
 | T-31 | MC-16 | Een geaccepteerde code nog eens gebruiken, en twee gelijktijdige verzoeken met dezelfde nieuwe code | Geweigerd; van de twee komt er precies één binnen | Idem; dit is het bewijs voor MIT-07 |
 | T-32 | MC-03 | Met alleen het juiste wachtwoord van een account met tweestapsverificatie naar `/`, `/account` en een notitie aanmaken | Alle drie 302 naar `/login` | Idem; dit is het bewijs voor MIT-05 |
 | T-33 | MC-15 | Een halve login die ouder is dan 5 minuten | Weggegooid, naar `/login` met de melding "Dat duurde te lang" (gemeten met de testclient van Flask) | Idem |
@@ -61,3 +61,8 @@ ID's: `T-`, nooit hergebruiken. Kolom "Nu" is met de hand gemeten op
 | T-36 | MC-17 | Headers van `/account/2fa` en `/account/2fa/qr.svg`; de QR-code opvragen nadat het instellen klaar is | `Cache-Control: no-store`; 404 | Idem; dit is het bewijs voor MIT-08 |
 | T-37 | MC-04 | Een sessie van vóór het aanzetten van tweestapsverificatie gebruiken, nadat het in een andere sessie is aangezet | 302 naar `/login` | Idem; bewijs voor MIT-09 |
 | T-38 | MC-12 | Halve login (alleen wachtwoord), dan in een andere sessie het wachtwoord wijzigen, dan de juiste code invullen | 302 naar `/login`: de halve login is vervallen | Idem; bewijs voor MIT-09 |
+| T-39 | MC-03 | 20 foute wachtwoorden vanaf één adres, telkens voor een andere naam; daarna een bestaand account met het juiste wachtwoord | De 20e geeft 429; het bestaande account wordt vanaf dat adres ook geweigerd | Idem; bewijs voor MIT-10 |
+| T-40 | MC-03 | Na een verlopen blokkade opnieuw 5 foute wachtwoorden, een paar keer achter elkaar | 15, 30, 60, 60 minuten | Idem |
+| T-41 | MC-03 | Een paar foute wachtwoorden, dan een geslaagde login; daarna `auth_throttle` bekijken | De teller van het account is weg, die van het adres staat er nog | Idem |
+| T-42 | MC-03 | De inhoud van `auth_throttle` doorzoeken op gebruikersnamen en IP-adressen | Alleen HMAC's, geen leesbare namen of adressen | Idem |
+| T-43 | MC-18 | Een ander account vanaf hetzelfde adres terwijl één account geblokkeerd is; een onbekende naam fout invullen | Het andere account komt binnen; de onbekende naam krijgt dezelfde melding als een bestaande | Idem |

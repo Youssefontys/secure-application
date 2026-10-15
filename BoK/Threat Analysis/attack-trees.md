@@ -32,7 +32,7 @@ Account overnemen
   OR  Inloggen als het slachtoffer
         AND het wachtwoord kennen
               OR  uit de database lezen (MC-01)                            [open]
-              OR  raden of stuffing (MC-03)                                [open]
+              OR  raden of stuffing (MC-03)                                [MIT-10, deels]
                     AND gebruikersnaam kennen (MC-09)                      [open]
         AND de code kennen, als tweestapsverificatie aan staat             [MIT-05]
               OR  de code raden (MC-15)                                    [MIT-06]
@@ -61,4 +61,5 @@ Dienst onbruikbaar
   OR  Alle notities wissen via MC-02                                       [open]
   OR  De database weggooien na overname van de app (MC-08)                 [open]
   OR  De ontwikkelserver van Flask overbelasten (MC-14)                    [open]
+  OR  Een gebruiker buitensluiten met de blokkade (MC-18)                  [open]
 ```

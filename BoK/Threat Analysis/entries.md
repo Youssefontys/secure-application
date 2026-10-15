@@ -96,8 +96,8 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
   - OR  1. Veelgebruikte wachtwoorden proberen tegen een account (brute force)
   - OR  2. Een lijst gelekte wachtwoorden proberen tegen veel accounts (credential stuffing)
   - AND 3. Zwakke wachtwoorden worden bij registratie en bij wijzigen niet geweigerd
-- Mitigaties: MIT-05 (stap 1 en 2, alleen voor accounts met tweestapsverificatie: een geraden wachtwoord geeft dan een halve login). Verder geen: geen limiet op pogingen, geen sterkte-eis
-- Restrisico: onbeperkt aantal pogingen. Tweestapsverificatie is een keuze van de gebruiker, dus accounts zonder blijven op één factor. En wie raadt, ziet aan de doorverwijzing naar `/login/2fa` dat het wachtwoord klopt
+- Mitigaties: MIT-10 (stap 1 en 2: 20 fouten per IP-adres en 5 per account vanaf één adres, daarna een oplopende blokkade). MIT-05 (stap 1 en 2, alleen voor accounts met tweestapsverificatie: een geraden wachtwoord geeft dan een halve login). Nog geen sterkte-eis (stap 3)
+- Restrisico: wie vanaf veel IP-adressen tegelijk raadt (een botnet), wordt per account niet begrensd; dat is bewust, zie MC-18. Tweestapsverificatie is een keuze van de gebruiker, dus accounts zonder blijven op één factor. En wie raadt, ziet aan de doorverwijzing naar `/login/2fa` dat het wachtwoord klopt
 - Status: open
 - Sinds: baseline
 
@@ -263,7 +263,7 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
   - AND 1. Het wachtwoord kennen, zodat `/login/2fa` bereikbaar is
   - AND 2. Codes proberen. Per poging is de kans hoogstens 3 op 1.000.000: de code van nu en die van één stap ervoor en erna tellen
 - Mitigaties: MIT-06 (stap 2)
-- Restrisico: zonder blokkade zou het bij 100 pogingen per seconde gemiddeld ongeveer een uur duren. Met 5 pogingen per 15 minuten is de kans 0,14% per dag, maar ongeveer 41% als iemand een jaar lang volhoudt (berekend als 1 - (1 - 3/10^6)^n). Een blokkade die oploopt bij herhaling zou dat verder drukken. Wie het wachtwoord kent, kan met de blokkade ook de echte gebruiker 15 minuten buitensluiten
+- Restrisico: zonder blokkade zou het bij 100 pogingen per seconde gemiddeld ongeveer een uur duren. Met een vaste blokkade van 15 minuten was de kans ongeveer 41% als iemand een jaar volhoudt. Met de verdubbelende blokkade (15 minuten tot 24 uur) zijn dat ongeveer 1.855 pogingen per jaar: 0,56% (berekend als 1 - (1 - 3/10^6)^n). Wie het wachtwoord kent, kan met de blokkade ook de echte gebruiker buitensluiten (MC-18)
 - Status: gebouwd
 - Sinds: 96626e2
 
@@ -293,6 +293,19 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 - Restrisico: een databaselek levert wachtwoord en geheim samen, en dan helpt tweestapsverificatie niet meer
 - Status: open
 - Sinds: 18e1424
+
+### MC-18 Iemand anders buitensluiten met de blokkade
+- Aanvallersdoel: een gebruiker niet meer laten inloggen
+- Aanvaller: wie een gebruikersnaam kent en hetzelfde IP-adres heeft als het slachtoffer (zelfde netwerk, NAT, of iedereen achter een proxy); voor de codestap: wie het wachtwoord kent
+- Assets / onderdelen: C-02, AU-01, AU-05
+- Gerelateerde use case: UC-02
+- Stappen:
+  - OR  1. Vanaf het adres van het slachtoffer 5 foute wachtwoorden voor zijn naam invullen, of 20 voor willekeurige namen
+  - OR  2. Met het wachtwoord 5 foute codes invullen: de codestap van het account gaat op slot, oplopend tot 24 uur
+- Mitigaties: in het ontwerp van MIT-10: de wachtwoordstap blokkeert nooit een account over alle adressen, alleen per adres. Wie een naam kent maar niet op het netwerk van het slachtoffer zit, kan hem niet buitensluiten
+- Restrisico: op een gedeeld netwerk of achter een proxy delen gebruikers één adres. Achter een proxy moet de app het echte clientadres krijgen (bijvoorbeeld met `ProxyFix` en het juiste aantal proxies), anders telt iedereen als één adres. Stap 2 kan alleen wie het wachtwoord al heeft
+- Status: open
+- Sinds: 484eca3
 
 ## Mitigaties
 
@@ -333,10 +346,10 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 
 ### MIT-06 Blokkade na 5 foute codes
 - Houdt tegen: MC-15 stap 2
-- Wat: foute codes worden per account in de database geteld (`totp_failures`), niet in de sessie, want een sessie kan de aanvaller gewoon opnieuw beginnen. Bij de 5e fout op rij zit de codestap 15 minuten op slot (`totp_locked_until`), en dan wordt ook de juiste code geweigerd. Een geldige code zet de teller op 0
-- Waar: `check_code()` in `app/auth.py`
+- Wat: foute codes worden per account in de database geteld (`auth_throttle`, via `throttle.py`), niet in de sessie, want een sessie kan de aanvaller gewoon opnieuw beginnen. Na 5 fouten in 15 minuten zit de codestap op slot, en dan wordt ook de juiste code geweigerd. De eerste blokkade duurt 15 minuten, elke volgende twee keer zo lang, tot 24 uur. Een geldige code wist de teller. De controle op de blokkade zit ook in de UPDATE die de code accepteert
+- Waar: `check_code()` in `app/auth.py`, `app/throttle.py`
 - Status: gebouwd
-- Sinds: 18e1424
+- Sinds: 18e1424; verdubbelend sinds 484eca3
 
 ### MIT-07 Elke code werkt één keer
 - Houdt tegen: MC-16 stap 2
@@ -358,3 +371,10 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 - Waar: `load_user()`, `start_session()`, `end_other_sessions()`, `login_code()` en `logout()` in `app/auth.py`; `change_password()`, `setup_2fa()` en `disable_2fa()` in `app/account.py`
 - Status: gebouwd
 - Sinds: 587955a
+
+### MIT-10 Blokkade op de wachtwoordstap
+- Houdt tegen: MC-03 stap 1 en 2
+- Wat: foute wachtwoorden worden geteld per IP-adres (20 in 15 minuten) en per account vanaf één adres (5 in 15 minuten). Daarna volgt een blokkade van 15 minuten, die bij herhaling verdubbelt tot een uur; ook het juiste wachtwoord wordt dan geweigerd, met status 429. De tellers hangen aan wat er is ingevuld en niet aan of het account bestaat, dus een blokkade verraadt geen namen. Een geslaagde login wist alleen de teller van het account, nooit die van het adres: anders zet een aanvaller met een eigen account zijn adresteller steeds terug. Bewust geen blokkade per account over alle adressen (MC-18). IPv6-adressen tellen per /64. De sleutels in `auth_throttle` zijn HMAC's, dus de tabel bevat geen leesbare IP-adressen of gebruikersnamen
+- Waar: `login()` in `app/auth.py`, `app/throttle.py`
+- Status: gebouwd
+- Sinds: 484eca3
