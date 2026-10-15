@@ -41,7 +41,7 @@ Account overnemen
               OR  het TOTP-geheim buitmaken (MC-17)                        [open]
   OR  De sessiecookie hebben (MC-04)
         OR  meelezen op het netwerk (geen TLS)                             [open]
-        OR  kopieren van een gedeelde browser                              [open]
+        OR  kopieren van een gedeelde browser                              [open, MIT-09 na uitloggen]
         OR  zelf ondertekenen met de sessiesleutel                         [open]
   OR  Via een andere site handelen met de cookie van het slachtoffer (MC-05) [open]
   OR  Het wachtwoord zelf wijzigen (MC-12)                                 [open]

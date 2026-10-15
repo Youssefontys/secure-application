@@ -110,9 +110,9 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
   - OR  1. De cookie meelezen op het netwerk (HTTP, geen TLS, geen `Secure`-vlag)
   - OR  2. De cookie kopieren van een gedeelde of onbeheerde browser
   - OR  3. De sessiesleutel (A-05) bemachtigen en zelf een cookie ondertekenen
-  - AND 4. De cookie blijft geldig na uitloggen en na een wachtwoordwijziging, tot hij verloopt (standaard 31 dagen)
-- Mitigaties: geen (de `HttpOnly`-vlag staat standaard aan in Flask; dat houdt JavaScript buiten beeld maar stopt de stappen hierboven niet)
-- Restrisico: een gekopieerde cookie werkt weken. Tweestapsverificatie helpt hier niet: de cookie is van na de code
+  - AND 4. De cookie blijft geldig tot hij verloopt (standaard 31 dagen). Uitloggen, een nieuw wachtwoord en tweestapsverificatie aan- of uitzetten maken hem ongeldig (MIT-09)
+- Mitigaties: MIT-09 (stap 4, zodra de gebruiker uitlogt of een van zijn inloggegevens wijzigt). Verder geen: de `HttpOnly`-vlag staat standaard aan in Flask; dat houdt JavaScript buiten beeld maar stopt stap 1 tot 3 niet
+- Restrisico: een gekopieerde cookie werkt tot de gebruiker uitlogt of zijn wachtwoord of tweestapsverificatie wijzigt, en anders tot 31 dagen. Tweestapsverificatie helpt hier niet: de cookie is van na de code
 - Status: open
 - Sinds: baseline
 
@@ -222,7 +222,7 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
     - OR  1b. Via een formulier op een andere site (MC-05)
   - AND 2. Een nieuw wachtwoord instellen op `/account/password`; het huidige wachtwoord wordt niet gevraagd (AU-04 ontbreekt)
 - Mitigaties: geen
-- Restrisico: een tijdelijke sessie wordt een blijvende overname. Wijzigt het slachtoffer zelf het wachtwoord, dan werkt de sessie van de aanvaller gewoon door (MC-04 stap 4). Staat tweestapsverificatie aan, dan is de overname kleiner: de aanvaller kan die niet uitzetten zonder code (AU-06), dus later opnieuw inloggen vraagt nog steeds de app van het slachtoffer
+- Restrisico: een tijdelijke sessie wordt een blijvende overname. Wijzigt het slachtoffer zelf het wachtwoord of logt het uit, dan vervalt de sessie van de aanvaller wel (MIT-09). Andersom ook: wijzigt de aanvaller het wachtwoord, dan vervallen alle sessies van het slachtoffer. Staat tweestapsverificatie aan, dan is de overname kleiner: de aanvaller kan die niet uitzetten zonder code (AU-06), dus later opnieuw inloggen vraagt nog steeds de app van het slachtoffer
 - Status: open
 - Sinds: 782f0e2
 
@@ -351,3 +351,10 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 - Waar: `setup_2fa()`, `qr_2fa()` en `no_store()` in `app/account.py`
 - Status: gebouwd
 - Sinds: 18e1424
+
+### MIT-09 Sessieversie: oude sessies vervallen
+- Houdt tegen: MC-04 stap 4; maakt MC-12 kleiner
+- Wat: elke gebruiker heeft een `session_version` in de database, en de sessiecookie krijgt die mee. `load_user` accepteert de sessie alleen als beide gelijk zijn; anders wordt de sessie gewist met de melding "Je sessie is niet meer geldig". Uitloggen, een nieuw wachtwoord en tweestapsverificatie aan- of uitzetten verhogen de versie. Na een nieuw wachtwoord of een 2FA-wijziging krijgt de huidige sessie de nieuwe versie en blijft ingelogd; alle andere vervallen. Ook een halve login vervalt als de versie verandert voordat de code is ingevuld. Uitloggen logt alle apparaten van het account uit: zonder sessies op de server bij te houden kan het niet preciezer
+- Waar: `load_user()`, `start_session()`, `end_other_sessions()`, `login_code()` en `logout()` in `app/auth.py`; `change_password()`, `setup_2fa()` en `disable_2fa()` in `app/account.py`
+- Status: gebouwd
+- Sinds: 587955a

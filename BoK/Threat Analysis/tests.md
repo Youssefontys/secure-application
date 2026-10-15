@@ -39,8 +39,8 @@ ID's: `T-`, nooit hergebruiken. Kolom "Nu" is met de hand gemeten op
 | T-11 | MC-02 | Gebruiker B opent, wijzigt en verwijdert een notitie van A via `/notes/<id>/edit` en `/delete` | Lukt | 404, notitie van A ongewijzigd |
 | T-12 | MC-03 | 50 foute inlogpogingen achter elkaar op één account | Allemaal 401, geen vertraging of blokkade | Na een paar pogingen vertraagd of geblokkeerd |
 | T-13 | MC-03 | Registreren of wijzigen naar wachtwoord `a` | Geaccepteerd | Geweigerd met uitleg |
-| T-14 | MC-04 | Cookie kopiëren, uitloggen, gekopieerde cookie gebruiken | Werkt nog | 302 naar `/login` |
-| T-15 | MC-04, MC-12 | Twee sessies; in de ene het wachtwoord wijzigen; de andere gebruiken | Werkt nog | De andere sessie is uitgelogd |
+| T-14 | MC-04 | Cookie kopiëren, uitloggen, gekopieerde cookie gebruiken | 302 naar `/login` met de melding "Je sessie is niet meer geldig" (sinds MIT-09) | Idem; dit is het bewijs voor MIT-09 |
+| T-15 | MC-04, MC-12 | Twee sessies; in de ene het wachtwoord wijzigen; de andere gebruiken | De andere sessie is uitgelogd, de eigen blijft ingelogd (sinds MIT-09) | Idem |
 | T-16 | MC-05 | POST naar `/`, `/account/password` en `/account/delete` zonder token en met `Origin` van een andere site | Geaccepteerd (gemeten voor `/`) | Geweigerd (400 of 403) |
 | T-17 | MC-06 | Inloggen met `' OR '1'='1` als gebruikersnaam en wachtwoord | 401 | 401 (blijft zo; dit is het bewijs voor MIT-02) |
 | T-18 | MC-07 | Notitie met `<script>` opslaan en de pagina ophalen | Staat er als `&lt;script&gt;` | Idem, plus een CSP-header (bewijs voor MIT-01 en de tweede laag) |
@@ -59,3 +59,5 @@ ID's: `T-`, nooit hergebruiken. Kolom "Nu" is met de hand gemeten op
 | T-34 | MC-17 | `users.totp_secret` uitlezen | Het geheim staat leesbaar | Versleuteld |
 | T-35 | MIT-05 | `totp.code_at` tegen de testvectoren van RFC 6238 bijlage B (SHA1, 8 cijfers) en RFC 4226 bijlage D | Alle 16 goed | Idem |
 | T-36 | MC-17 | Headers van `/account/2fa` en `/account/2fa/qr.svg`; de QR-code opvragen nadat het instellen klaar is | `Cache-Control: no-store`; 404 | Idem; dit is het bewijs voor MIT-08 |
+| T-37 | MC-04 | Een sessie van vóór het aanzetten van tweestapsverificatie gebruiken, nadat het in een andere sessie is aangezet | 302 naar `/login` | Idem; bewijs voor MIT-09 |
+| T-38 | MC-12 | Halve login (alleen wachtwoord), dan in een andere sessie het wachtwoord wijzigen, dan de juiste code invullen | 302 naar `/login`: de halve login is vervallen | Idem; bewijs voor MIT-09 |
