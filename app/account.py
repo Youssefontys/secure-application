@@ -37,24 +37,19 @@ def no_store(response):
     return response
 
 
-@bp.route("/2fa/start", methods=["POST"])
-@login_required
-def start_2fa():
-    # Een nieuw geheim, nog niet actief. Pas na een eerste geldige code staat de
-    # tweede factor aan, zodat je jezelf niet buitensluit met een verkeerd ingestelde app.
-    query(
-        "UPDATE users SET totp_secret = %s, totp_last_step = NULL WHERE id = %s AND NOT totp_enabled",
-        (totp.new_secret(), g.user.id),
-    )
-    return redirect(url_for("account.setup_2fa"))
-
-
 @bp.route("/2fa", methods=["GET", "POST"])
 @login_required
 def setup_2fa():
-    user = query("SELECT totp_secret, totp_enabled FROM users WHERE id = %s", (g.user.id,), one=True)
-    if user.totp_enabled or user.totp_secret is None:
+    if g.user.totp_enabled:
         return redirect(url_for("account.index"))
+    # Een nieuw geheim, nog niet actief, als er nog geen is. Pas na een eerste
+    # geldige code staat de tweede factor aan, zodat je jezelf niet buitensluit
+    # met een verkeerd ingestelde app.
+    query(
+        "UPDATE users SET totp_secret = %s, totp_last_step = NULL WHERE id = %s AND totp_secret IS NULL",
+        (totp.new_secret(), g.user.id),
+    )
+    user = query("SELECT totp_secret FROM users WHERE id = %s", (g.user.id,), one=True)
     # De sleutel in groepjes van vier, om over te typen als scannen niet lukt.
     grouped = " ".join(user.totp_secret[i:i + 4] for i in range(0, len(user.totp_secret), 4))
     if request.method == "GET":
@@ -94,11 +89,12 @@ def qr_2fa():
     return Response(svg.getvalue(), mimetype="image/svg+xml")
 
 
-@bp.route("/2fa/disable", methods=["POST"])
+@bp.route("/2fa/reset", methods=["POST"])
 @login_required
-def disable_2fa():
-    # Uitzetten vraagt een geldige code: wie alleen de sessie heeft, kan de
-    # tweede factor niet weghalen.
+def reset_2fa():
+    # Opnieuw instellen, bijvoorbeeld voor een nieuwe telefoon. Vraagt een geldige
+    # code: wie alleen de sessie heeft, kan de tweede factor niet weghalen. Daarna
+    # stuurt login_required meteen naar het instellen (MIT-12).
     error = check_code(g.user.id)
     if error:
         return render_account(error, 400)
@@ -108,8 +104,8 @@ def disable_2fa():
         (g.user.id,),
     )
     end_other_sessions(g.user.id)
-    flash("Tweestapsverificatie staat uit.")
-    return redirect(url_for("account.index"))
+    flash("Stel tweestapsverificatie opnieuw in met je nieuwe telefoon.")
+    return redirect(url_for("account.setup_2fa"))
 
 
 @bp.route("/password", methods=["POST"])

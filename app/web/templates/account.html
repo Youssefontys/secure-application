@@ -18,26 +18,19 @@
 
   <section class="card">
     <h2>Tweestapsverificatie</h2>
-    {% if profile.totp_enabled %}
-      <p class="hint">Staat aan. Inloggen vraagt naast je wachtwoord een code uit je authenticator-app.</p>
-      <form method="post" action="{{ url_for('account.disable_2fa') }}">
-        <label>Code uit je app, om uit te zetten
-          <input name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required>
-        </label>
-        <button type="submit" class="secondary">Uitzetten</button>
-      </form>
-      <form method="post" action="{{ url_for('account.new_recovery') }}">
-        <label>Code uit je app, voor een nieuwe herstelcode
-          <input name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required>
-        </label>
-        <button type="submit" class="secondary">Nieuwe herstelcode</button>
-      </form>
-    {% else %}
-      <p class="hint">Staat uit. Met een code uit een authenticator-app erbij is een gestolen wachtwoord alleen niet meer genoeg om in te loggen.</p>
-      <form method="post" action="{{ url_for('account.start_2fa') }}">
-        <button type="submit">Instellen</button>
-      </form>
-    {% endif %}
+    <p class="hint">Staat aan, en is verplicht. Inloggen vraagt naast je wachtwoord een code uit je authenticator-app.</p>
+    <form method="post" action="{{ url_for('account.new_recovery') }}">
+      <label>Code uit je app, voor een nieuwe herstelcode
+        <input name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required>
+      </label>
+      <button type="submit" class="secondary">Nieuwe herstelcode</button>
+    </form>
+    <form method="post" action="{{ url_for('account.reset_2fa') }}">
+      <label>Code uit je app, om opnieuw in te stellen (nieuwe telefoon)
+        <input name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required>
+      </label>
+      <button type="submit" class="secondary">Opnieuw instellen</button>
+    </form>
   </section>
 
   <form method="post" action="{{ url_for('account.change_password') }}" class="card">

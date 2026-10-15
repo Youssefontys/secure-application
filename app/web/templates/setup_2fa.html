@@ -4,10 +4,13 @@
 {% block content %}
   <header class="bar">
     <h1>Tweestapsverificatie instellen</h1>
-    <a href="{{ url_for('account.index') }}">Annuleren</a>
+    <form method="post" action="{{ url_for('auth.logout') }}">
+      <button type="submit" class="secondary">Uitloggen</button>
+    </form>
   </header>
 
   <div class="card">
+    <p>Tweestapsverificatie is verplicht. Stel hem in voordat je verdergaat; daarna vraagt inloggen naast je wachtwoord een code uit je app.</p>
     <ol class="steps">
       <li>Scan de QR-code met een authenticator-app, zoals Microsoft Authenticator, Google Authenticator of Aegis.</li>
       <li>Lukt scannen niet, vul dan deze sleutel in de app in: <span class="secret">{{ secret }}</span></li>

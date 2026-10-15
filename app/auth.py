@@ -22,6 +22,8 @@ bp = Blueprint("auth", __name__)
 
 # Zo lang heb je na het wachtwoord om de code in te vullen.
 PENDING_MAX_SECONDS = 300
+# Zonder tweestapsverificatie kom je alleen hier (MIT-12).
+SETUP_ENDPOINTS = {"account.setup_2fa", "account.qr_2fa"}
 
 
 @bp.before_app_request
@@ -37,7 +39,7 @@ def load_user():
     user_id = session.get("user_id")
     if user_id is None or request.endpoint == "static":
         return
-    user = query("SELECT id, username, session_version FROM users WHERE id = %s", (user_id,), one=True)
+    user = query("SELECT id, username, session_version, totp_enabled FROM users WHERE id = %s", (user_id,), one=True)
     if user is None or user.session_version != session.get("session_version"):
         session.clear()
         flash("Je sessie is niet meer geldig. Log opnieuw in.")
@@ -65,11 +67,17 @@ def end_other_sessions(user_id):
 
 
 def login_required(view):
-    """Alleen voor ingelogde gebruikers; de rest gaat naar /login (AU-02)."""
+    """Alleen voor ingelogde gebruikers (AU-02), en alleen met tweestapsverificatie (MIT-12).
+
+    Wie nog geen tweestapsverificatie heeft (nieuw account, of na een herstelcode),
+    kan alleen het instellen afmaken; elke andere pagina stuurt daarheen.
+    """
     @wraps(view)
     def wrapper(*args, **kwargs):
         if g.user is None:
             return redirect(url_for("auth.login"))
+        if not g.user.totp_enabled and request.endpoint not in SETUP_ENDPOINTS:
+            return redirect(url_for("account.setup_2fa"))
         return view(*args, **kwargs)
     return wrapper
 
@@ -143,8 +151,9 @@ def login():
         session["pending_version"] = row.session_version
         session["pending_since"] = int(time.time())
         return redirect(url_for("auth.login_code"))
+    # Nog geen tweestapsverificatie: na het wachtwoord eerst instellen (MIT-12).
     start_session(row.id, row.session_version)
-    return redirect(url_for("notes.index"))
+    return redirect(url_for("account.setup_2fa"))
 
 
 def pending_login():
@@ -231,8 +240,8 @@ def login_recover():
         return render_template("login_recover.html", error="Onjuiste herstelcode."), 401
     throttle.reset(k)
     start_session(user_id, row.session_version)
-    flash("Je herstelcode is gebruikt en je tweestapsverificatie staat uit. Stel hem opnieuw in met je nieuwe telefoon.")
-    return redirect(url_for("account.index"))
+    flash("Je herstelcode is gebruikt. Stel tweestapsverificatie opnieuw in met je nieuwe telefoon.")
+    return redirect(url_for("account.setup_2fa"))
 
 
 @bp.route("/logout", methods=["POST"])
