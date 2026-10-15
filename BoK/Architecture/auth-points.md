@@ -24,3 +24,4 @@ Elk punt staat hier, ook als er (nog) geen controle zit. Een rij met
 | AZ-05 | Databaserechten | C-03 | F-03 | Alleen wat de app echt nodig heeft | De app gebruikt de eigenaarrol: alle rechten, ook DDL en andere databases | **ontbreekt** | MC-08 |
 | AZ-06 | Wachtwoord wijzigen | C-02, route `/account/password` (POST) | F-03 | Alleen het eigen wachtwoord | `UPDATE ... WHERE id = %s` met de id uit de sessie, niet uit het formulier | gebouwd | MC-05 (CSRF), MC-12 |
 | AZ-07 | Account verwijderen | C-02, route `/account/delete` (POST) | F-03 | Alleen het eigen account | `DELETE ... WHERE id = %s` met de id van de ingelogde gebruiker; de notities gaan mee via `ON DELETE CASCADE` | gebouwd | MC-05 (CSRF), MC-13 |
+| AZ-08 | Profiel tonen | C-02, route `/account` | F-03 | Alleen het eigen profiel | `WHERE id = %s` met de id van de ingelogde gebruiker; er staat geen id in de URL om te veranderen | gebouwd | |
