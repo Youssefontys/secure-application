@@ -1,8 +1,8 @@
-"""Baseline notitie-app: registreren, inloggen, notities beheren.
+"""Notitie-app: registreren, inloggen, wachtwoord wijzigen, account verwijderen
+en notities beheren.
 
-Bewust het minimale om te werken. Beveiliging komt stap voor stap erbij, en
-elke stap krijgt een entry in BoK/Threat Analysis. Wat hier ontbreekt is dus
-geen vergissing; de bekende gaten staan als misuse case in die map.
+De bekende zwakke plekken staan als misuse case in BoK/Threat Analysis/entries.md.
+Waar zo'n zwakke plek in de code zit, staat het MC-nummer erbij.
 """
 
 import os
@@ -207,8 +207,8 @@ def fetch_notes():
 @app.route("/notes/<int:note_id>/edit", methods=["GET", "POST"])
 @login_required
 def edit_note(note_id):
-    # BASELINE: er wordt gecontroleerd of je bent ingelogd, maar niet of de
-    # notitie van jou is. Zie MC-02 in BoK/Threat Analysis.
+    # Alleen "ingelogd?" wordt gecontroleerd, niet of de notitie van jou is:
+    # met het id van een ander lees en wijzig je zijn notitie (MC-02).
     with db() as conn, conn.cursor() as cur:
         cur.execute("SELECT title, body FROM notes WHERE id = %s", (note_id,))
         note = cur.fetchone()
@@ -228,7 +228,7 @@ def edit_note(note_id):
 @app.route("/notes/<int:note_id>/delete", methods=["POST"])
 @login_required
 def delete_note(note_id):
-    # BASELINE: ook hier geen eigenaarscontrole, zie MC-02.
+    # Ook hier geen controle op de eigenaar (MC-02).
     with db() as conn, conn.cursor() as cur:
         cur.execute("DELETE FROM notes WHERE id = %s", (note_id,))
     return redirect(url_for("notes"))

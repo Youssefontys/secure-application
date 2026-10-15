@@ -1,4 +1,4 @@
-# Lokale baseline: app en database.
+# App en database voor lokaal gebruik.
 
 services:
   db:
@@ -26,8 +26,8 @@ services:
         condition: service_healthy
     environment:
       FLASK_SECRET_KEY: ${FLASK_SECRET_KEY:?zet FLASK_SECRET_KEY in .env}
-      # BASELINE: de app verbindt met dezelfde (eigenaar)rol waarmee de
-      # database is aangemaakt. Zie MC-08 in BoK/Threat Analysis.
+      # De app verbindt met de eigenaarrol waarmee de database is aangemaakt,
+      # en mag daarmee alles, ook tabellen weggooien (MC-08).
       DATABASE_URL: postgresql://notities:${POSTGRES_PASSWORD}@db:5432/notities
     ports:
       - "127.0.0.1:5000:5000"

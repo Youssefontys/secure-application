@@ -1,5 +1,5 @@
 /* Eén stylesheet, geen framework en geen CDN. Dat houdt het aantal
-   dependencies laag en maakt een strikte Content-Security-Policy mogelijk (die er in deze baseline
+   dependencies laag en maakt een strikte Content-Security-Policy mogelijk (die er
    nog niet is): geen externe bronnen, geen inline styles. */
 
 :root {

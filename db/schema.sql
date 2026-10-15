@@ -1,11 +1,10 @@
--- Baseline: alleen wat nodig is om te werken. Draait automatisch bij de
--- eerste start van een leeg databasevolume.
+-- Draait automatisch bij de eerste start van een leeg databasevolume
+-- (zie compose.yaml).
 
 CREATE TABLE users (
     id         SERIAL PRIMARY KEY,
     username   TEXT UNIQUE NOT NULL,
-    -- BASELINE: het wachtwoord staat leesbaar in de database. Dit is bewust
-    -- het beginpunt, zie BoK/Threat Analysis (MC-01).
+    -- Het wachtwoord staat leesbaar opgeslagen (MC-01).
     password   TEXT NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );

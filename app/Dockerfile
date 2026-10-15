@@ -12,6 +12,6 @@ COPY . .
 
 EXPOSE 5000
 
-# BASELINE: de Flask-ontwikkelserver, als root. Geen gunicorn en geen
-# aparte gebruiker; dat komt als eigen stap met een eigen entry in de BoK.
+# De ontwikkelserver van Flask, als root. Werkt, maar is niet voor productie
+# gemaakt, en wie de app overneemt heeft meteen rootrechten in de container.
 CMD ["flask", "--app", "app", "run", "--host", "0.0.0.0", "--port", "5000"]

@@ -1,7 +1,7 @@
 // Decoratieve interactie. Bewust een apart bestand en geen inline script,
 // zodat er later een Content-Security-Policy met script-src 'self' en zonder
 // 'unsafe-inline' op kan: geinjecteerde markup kan dan niets uitvoeren. Die
-// CSP staat er in deze baseline nog niet; het script is er alleen op voorbereid.
+// CSP staat er nog niet; het script is er alleen op voorbereid.
 (function () {
   "use strict";
 
