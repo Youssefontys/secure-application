@@ -22,6 +22,11 @@ app.secret_key = os.environ["FLASK_SECRET_KEY"]
 DATABASE_URL = os.environ["DATABASE_URL"]
 # De app is Nederlandstalig; tijden worden in Nederlandse tijd getoond.
 TIMEZONE = "Europe/Amsterdam"
+# Maximale lengte van een notitie, in tekens (MIT-04). Ook beschikbaar in de
+# templates, voor maxlength.
+TITLE_MAX = 15
+BODY_MAX = 250
+app.jinja_env.globals.update(TITLE_MAX=TITLE_MAX, BODY_MAX=BODY_MAX)
 
 
 def query(sql, params=(), one=False):
@@ -185,7 +190,7 @@ def notes():
     if request.method == "POST":
         title, body, error = read_note_form()
         if error:
-            return render_template("notes.html", notes=fetch_notes(), error=error, form_title=title, form_body=body), 400
+            return render_template("notes.html", notes=fetch_notes(), error=error, title=title, body=body), 400
         query("INSERT INTO notes (user_id, title, body) VALUES (%s, %s, %s)", (g.user.id, title, body))
         return redirect(url_for("notes"))
 
@@ -193,10 +198,16 @@ def notes():
 
 
 def read_note_form():
-    """Titel en inhoud uit het formulier, plus een foutmelding als er een leeg is."""
+    """Titel en inhoud uit het formulier, plus een foutmelding als er een leeg of te lang is."""
     title = request.form.get("title", "").strip()
     body = request.form.get("body", "").strip()
-    error = None if title and body else "Vul een titel en een notitie in."
+    error = None
+    if not title or not body:
+        error = "Vul een titel en een notitie in."
+    elif len(title) > TITLE_MAX:
+        error = f"De titel mag maximaal {TITLE_MAX} tekens zijn."
+    elif len(body) > BODY_MAX:
+        error = f"De notitie mag maximaal {BODY_MAX} tekens zijn."
     return title, body, error
 
 

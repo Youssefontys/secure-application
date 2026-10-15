@@ -8,12 +8,7 @@
   </header>
 
   <form method="post" class="card">
-    <label>Titel
-      <input name="title" required value="{{ title }}">
-    </label>
-    <label>Notitie
-      <textarea name="body" required>{{ body }}</textarea>
-    </label>
+    {% include "_note_fields.html" %}
     <button type="submit">Wijzigingen opslaan</button>
   </form>
 {% endblock %}

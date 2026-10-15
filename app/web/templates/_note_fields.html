@@ -1,0 +1,8 @@
+{# Titel en inhoud, gedeeld door aanmaken en aanpassen. maxlength is gemak in de
+   browser; de echte controle zit in read_note_form (MIT-04). #}
+<label>Titel <small>(max. {{ TITLE_MAX }} tekens)</small>
+  <input name="title" required maxlength="{{ TITLE_MAX }}" value="{{ title or '' }}">
+</label>
+<label>Notitie <small>(max. {{ BODY_MAX }} tekens)</small>
+  <textarea name="body" required maxlength="{{ BODY_MAX }}">{{ body or '' }}</textarea>
+</label>
