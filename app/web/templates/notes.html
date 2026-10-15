@@ -12,7 +12,7 @@
 
   <details class="card composer"{% if not notes or error %} open{% endif %}>
     <summary>Nieuwe notitie</summary>
-    <form method="post">
+    <form method="post" data-validate>
       {% include "_note_fields.html" %}
       <button type="submit">Opslaan</button>
     </form>

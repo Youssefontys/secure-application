@@ -7,7 +7,7 @@
     <a href="{{ url_for('notes') }}">Annuleren</a>
   </header>
 
-  <form method="post" class="card">
+  <form method="post" class="card" data-validate>
     {% include "_note_fields.html" %}
     <button type="submit">Wijzigingen opslaan</button>
   </form>
