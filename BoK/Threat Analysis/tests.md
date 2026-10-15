@@ -47,3 +47,4 @@ ID's: `T-`, nooit hergebruiken. Kolom "Nu" is met de hand gemeten op
 | T-22 | MC-11 | `pip freeze` in de image vergelijken met `requirements.txt`; image scannen | `pip freeze` gelijk; een scan is nog niet gedaan | Gelijk; de scan draait in CI en meldt bekende kwetsbaarheden |
 | T-23 | MC-12 | Wachtwoord wijzigen zonder het huidige te kennen | Lukt | Geweigerd zonder het juiste huidige wachtwoord |
 | T-24 | MC-13 | Account verwijderen met een `POST` zonder bevestiging en zonder wachtwoord | Lukt | Geweigerd zonder het juiste wachtwoord |
+| T-25 | MC-14 | `whoami` in de app-container; de logs bij het starten | `root`; "WARNING: This is a development server" | Een gewone gebruiker; een productieserver zonder die waarschuwing |

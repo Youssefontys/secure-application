@@ -227,6 +227,19 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 - Status: open
 - Sinds: b03197a
 
+### MC-14 Root en de ontwikkelserver in de container
+- Aanvallersdoel: na een overname van de app zo veel mogelijk kunnen in de container, of de dienst onderuit halen
+- Aanvaller: wie de app overneemt (bijvoorbeeld via MC-06 in een toekomstige route, of MC-11); voor stap 2 iedere bezoeker
+- Assets / onderdelen: C-02, A-05, A-06
+- Gerelateerde use case: UC-01 tot UC-05
+- Stappen:
+  - OR  1. Na een overname draait de aanvaller als root in de container: hij kan de code van de app aanpassen en gereedschap installeren, en een uitbraak uit de container begint met rootrechten
+  - OR  2. De ontwikkelserver van Flask belasten; Flask waarschuwt bij het starten zelf dat die niet voor productie bedoeld is
+- Mitigaties: geen
+- Restrisico: een overname van de app is meteen een overname van de hele container
+- Status: open
+- Sinds: baseline
+
 ## Mitigaties
 
 ### MIT-01 Automatisch escapen in Jinja

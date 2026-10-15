@@ -13,5 +13,6 @@ COPY . .
 EXPOSE 5000
 
 # De ontwikkelserver van Flask, als root. Werkt, maar is niet voor productie
-# gemaakt, en wie de app overneemt heeft meteen rootrechten in de container.
+# gemaakt, en wie de app overneemt heeft meteen rootrechten in de container
+# (MC-14).
 CMD ["flask", "--app", "app", "run", "--host", "0.0.0.0", "--port", "5000"]
