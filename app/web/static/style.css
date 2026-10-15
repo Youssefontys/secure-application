@@ -225,6 +225,9 @@ a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
   box-shadow: 0 0 0 1px rgba(53, 224, 192, 0.04), 0 18px 40px -28px #000;
 }
 
+/* Meer formulieren in één kaart, zoals bij tweestapsverificatie op het profiel. */
+.card form + form { margin-top: 1.5rem; }
+
 label {
   display: block;
   margin-bottom: 0.9rem;
