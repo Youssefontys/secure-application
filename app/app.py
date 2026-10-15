@@ -35,6 +35,7 @@ app.jinja_env.globals.update(TITLE_MAX=TITLE_MAX, BODY_MAX=BODY_MAX)
 # Na zoveel foute codes op rij gaat de codestap van dat account op slot (MIT-06).
 TOTP_MAX_FAILURES = 5
 TOTP_LOCK_MINUTES = 15
+TOTP_LOCKED = f"Te veel foute codes. Probeer het over {TOTP_LOCK_MINUTES} minuten opnieuw."
 # Zo lang heb je na het wachtwoord om de code in te vullen.
 PENDING_MAX_SECONDS = 300
 
@@ -211,7 +212,7 @@ def check_code(user_id):
     if user is None or user.totp_secret is None:
         return "Er is geen tweestapsverificatie ingesteld."
     if user.locked:
-        return f"Te veel foute codes. Probeer het over {TOTP_LOCK_MINUTES} minuten opnieuw."
+        return TOTP_LOCKED
     step = totp.matching_step(user.totp_secret, request.form.get("code", ""))
     if step is not None and query(
         "UPDATE users SET totp_last_step = %s, totp_failures = 0, totp_locked_until = NULL"
@@ -231,7 +232,7 @@ def check_code(user_id):
         {"max": TOTP_MAX_FAILURES, "mins": TOTP_LOCK_MINUTES, "id": user_id}, one=True,
     )
     if locked and locked.locked:
-        return f"Te veel foute codes. Probeer het over {TOTP_LOCK_MINUTES} minuten opnieuw."
+        return TOTP_LOCKED
     return "Onjuiste of al gebruikte code."
 
 
@@ -247,9 +248,11 @@ def start_2fa():
     return redirect(url_for("setup_2fa"))
 
 
+@app.after_request
 def no_store(response):
-    """Pagina's met het TOTP-geheim niet in een browser- of proxycache laten staan."""
-    response.headers["Cache-Control"] = "no-store"
+    """De pagina's met het TOTP-geheim niet in een browser- of proxycache laten staan (MIT-08)."""
+    if request.endpoint in ("setup_2fa", "qr_2fa"):
+        response.headers["Cache-Control"] = "no-store"
     return response
 
 
@@ -262,11 +265,11 @@ def setup_2fa():
     # De sleutel in groepjes van vier, om over te typen als scannen niet lukt.
     grouped = " ".join(user.totp_secret[i:i + 4] for i in range(0, len(user.totp_secret), 4))
     if request.method == "GET":
-        return no_store(app.make_response(render_template("setup_2fa.html", secret=grouped)))
+        return render_template("setup_2fa.html", secret=grouped)
 
     error = check_code(g.user.id)
     if error:
-        return no_store(app.make_response((render_template("setup_2fa.html", secret=grouped, error=error), 400)))
+        return render_template("setup_2fa.html", secret=grouped, error=error), 400
     query("UPDATE users SET totp_enabled = true WHERE id = %s", (g.user.id,))
     flash("Tweestapsverificatie staat aan. Inloggen vraagt vanaf nu ook een code uit je app.")
     return redirect(url_for("account"))
@@ -281,7 +284,7 @@ def qr_2fa():
         abort(404)
     svg = io.BytesIO()
     segno.make(totp.provisioning_uri(user.totp_secret, user.username), error="m").save(svg, kind="svg", scale=6, border=2)
-    return no_store(Response(svg.getvalue(), mimetype="image/svg+xml"))
+    return Response(svg.getvalue(), mimetype="image/svg+xml")
 
 
 @app.route("/account/2fa/disable", methods=["POST"])
