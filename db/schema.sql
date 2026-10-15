@@ -6,7 +6,19 @@ CREATE TABLE users (
     username   TEXT UNIQUE NOT NULL,
     -- Het wachtwoord staat leesbaar opgeslagen (MC-01).
     password   TEXT NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+
+    -- Tweestapsverificatie met TOTP (RFC 6238). Het geheim wordt bij het
+    -- instellen gezet, maar telt pas mee als totp_enabled true is: dat gebeurt
+    -- na een eerste geldige code. Het geheim staat leesbaar opgeslagen (MC-17).
+    totp_secret       TEXT,
+    totp_enabled      BOOLEAN NOT NULL DEFAULT false,
+    -- De tijdstap van de laatst geaccepteerde code. Een code van dezelfde of
+    -- een eerdere stap wordt geweigerd, dus elke code werkt maar één keer (MIT-07).
+    totp_last_step    BIGINT,
+    -- Foute codes op rij, en tot wanneer de codestap op slot zit (MIT-06).
+    totp_failures     INTEGER NOT NULL DEFAULT 0,
+    totp_locked_until TIMESTAMPTZ
 );
 
 CREATE TABLE notes (
