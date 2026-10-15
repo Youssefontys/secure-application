@@ -67,6 +67,28 @@ def logout():
     return redirect(url_for("login"))
 
 
+@app.route("/account/password", methods=["GET", "POST"])
+def change_password():
+    user_id = session.get("user_id")
+    if user_id is None:
+        return redirect(url_for("login"))
+    if request.method == "GET":
+        return render_template("change_password.html")
+
+    password = request.form.get("password", "")
+    repeat = request.form.get("password_repeat", "")
+    if not password:
+        return render_template("change_password.html", error="Vul een nieuw wachtwoord in."), 400
+    if password != repeat:
+        return render_template("change_password.html", error="De twee wachtwoorden zijn niet gelijk."), 400
+
+    # Het huidige wachtwoord wordt niet gevraagd: wie de sessie heeft, kan het
+    # wachtwoord wijzigen. Andere sessies blijven geldig. Zie MC-12.
+    with db() as conn, conn.cursor() as cur:
+        cur.execute("UPDATE users SET password = %s WHERE id = %s", (password, user_id))
+    return render_template("change_password.html", message="Je wachtwoord is gewijzigd.")
+
+
 @app.route("/", methods=["GET", "POST"])
 def notes():
     user_id = session.get("user_id")

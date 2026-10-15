@@ -6,6 +6,7 @@
     </svg>
   </summary>
   <nav class="account-menu-panel" aria-label="Account">
+    <a href="{{ url_for('change_password') }}">Wachtwoord wijzigen</a>
     <form method="post" action="{{ url_for('logout') }}">
       <button type="submit">Uitloggen</button>
     </form>
