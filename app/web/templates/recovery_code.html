@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Je herstelcode{% endblock %}
+
+{% block content %}
+  <header class="bar">
+    <h1>Je herstelcode</h1>
+  </header>
+
+  {% if first %}
+    <p class="notice">Tweestapsverificatie staat aan. Inloggen vraagt vanaf nu ook een code uit je app.</p>
+  {% endif %}
+
+  <div class="card">
+    <p>Telefoon kwijt? Dan log je in met je wachtwoord en deze herstelcode in plaats van de code uit je app:</p>
+    <span class="secret">{{ code }}</span>
+    <ul class="steps">
+      <li>Je ziet hem maar één keer. Bewaar hem apart van je telefoon, bijvoorbeeld in een wachtwoordmanager of op papier.</li>
+      <li>Hij werkt één keer. Daarna staat tweestapsverificatie uit en stel je hem opnieuw in met je nieuwe telefoon.</li>
+      {% if not first %}<li>Je vorige herstelcode werkt niet meer.</li>{% endif %}
+    </ul>
+    <a class="button" href="{{ url_for('account.index') }}">Ik heb hem bewaard</a>
+  </div>
+{% endblock %}

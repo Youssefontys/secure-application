@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Inloggen met je herstelcode{% endblock %}
+{% block body_class %}auth{% endblock %}
+{% block scene %}{% include "_scene.html" %}{% endblock %}
+
+{% block content %}
+  <h1>Herstelcode</h1>
+
+  <div class="card">
+    <p class="hint">Vul de herstelcode in die je kreeg toen je tweestapsverificatie aanzette. Daarna staat tweestapsverificatie uit en stel je hem opnieuw in.</p>
+    <form method="post">
+      <label>Herstelcode
+        <input name="code" autocomplete="off" spellcheck="false" maxlength="64" required autofocus>
+      </label>
+      <button type="submit">Inloggen</button>
+    </form>
+  </div>
+
+  <nav class="auth-links hint" aria-label="Accountopties">
+    <a href="{{ url_for('auth.login_code') }}">Toch de code uit de app gebruiken</a>
+  </nav>
+{% endblock %}

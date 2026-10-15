@@ -28,6 +28,8 @@ POLICIES = {
     # Tweede factor, per account. Die stap bereik je alleen met het juiste
     # wachtwoord, dus hier mag het hele account op slot.
     "totp_account": Policy(5, 15, 15, 24 * 60),
+    # Herstelcode, per account: zelfde afweging als de tweede factor (MIT-11).
+    "recovery_account": Policy(5, 15, 15, 24 * 60),
 }
 
 _SECRET = os.environ["FLASK_SECRET_KEY"].encode()

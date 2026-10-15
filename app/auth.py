@@ -4,6 +4,10 @@ Ook de decorators die bepalen wie een route mag openen, en de controle van een
 TOTP-code, die het profiel ook gebruikt bij het aan- en uitzetten.
 """
 
+import hashlib
+import hmac
+import re
+import secrets
 import time
 from functools import wraps
 
@@ -143,23 +147,33 @@ def login():
     return redirect(url_for("notes.index"))
 
 
+def pending_login():
+    """De gebruiker van de halve login (na het wachtwoord), of None als die er niet meer is.
+
+    Een halve login vervalt na PENDING_MAX_SECONDS, en ook als intussen de
+    sessieversie is opgehoogd (nieuw wachtwoord, overal uitgelogd).
+    """
+    user_id = session.get("pending_user_id")
+    if user_id is None:
+        return None
+    if time.time() - session.get("pending_since", 0) > PENDING_MAX_SECONDS:
+        session.clear()
+        flash("Dat duurde te lang. Log opnieuw in.")
+        return None
+    row = query("SELECT session_version FROM users WHERE id = %s", (user_id,), one=True)
+    if row is None or row.session_version != session.get("pending_version"):
+        session.clear()
+        flash("Je sessie is niet meer geldig. Log opnieuw in.")
+        return None
+    return user_id
+
+
 @bp.route("/login/2fa", methods=["GET", "POST"])
 @logged_out_only
 def login_code():
     """De tweede stap: de code uit de authenticator-app (AU-05)."""
-    user_id = session.get("pending_user_id")
+    user_id = pending_login()
     if user_id is None:
-        return redirect(url_for("auth.login"))
-    if time.time() - session.get("pending_since", 0) > PENDING_MAX_SECONDS:
-        session.clear()
-        flash("Dat duurde te lang. Log opnieuw in.")
-        return redirect(url_for("auth.login"))
-    # Is intussen het wachtwoord gewijzigd of overal uitgelogd, dan vervalt ook
-    # deze halve login.
-    version = query("SELECT session_version FROM users WHERE id = %s", (user_id,), one=True)
-    if version is None or version.session_version != session.get("pending_version"):
-        session.clear()
-        flash("Je sessie is niet meer geldig. Log opnieuw in.")
         return redirect(url_for("auth.login"))
     if request.method == "GET":
         return render_template("login_code.html")
@@ -169,8 +183,56 @@ def login_code():
         return render_template("login_code.html", error=error), 401
     # Pas nu is de gebruiker ingelogd. start_session gooit de pending-sessie
     # weg, zodat er niets van de halve login overblijft.
-    start_session(user_id, version.session_version)
+    start_session(user_id, session["pending_version"])
     return redirect(url_for("notes.index"))
+
+
+def new_recovery_code(user_id):
+    """Maakt een nieuwe herstelcode voor dit account en geeft hem terug om één keer te tonen.
+
+    128 willekeurige bits; alleen de SHA-256 wordt bewaard. Een snelle hash is hier
+    genoeg: bij 128 willekeurige bits valt er niets te raden of op te zoeken, anders
+    dan bij een wachtwoord dat iemand zelf verzint. Een eerdere code vervalt.
+    """
+    code = secrets.token_hex(16)
+    query("UPDATE users SET recovery_hash = %s WHERE id = %s", (hashlib.sha256(code.encode()).hexdigest(), user_id))
+    return "-".join(code[i:i + 4] for i in range(0, len(code), 4))
+
+
+@bp.route("/login/recover", methods=["GET", "POST"])
+@logged_out_only
+def login_recover():
+    """De herstelcode in plaats van de code uit de app, voor wie zijn telefoon kwijt is (AU-07)."""
+    user_id = pending_login()
+    if user_id is None:
+        return redirect(url_for("auth.login"))
+    if request.method == "GET":
+        return render_template("login_recover.html")
+
+    k = throttle.key("recovery_account", user_id)
+    minutes = throttle.locked_minutes(k)
+    if minutes:
+        return render_template("login_recover.html", error=throttle.message(minutes)), 429
+    given = hashlib.sha256(re.sub(r"[\s-]", "", request.form.get("code", "")).lower().encode()).hexdigest()
+    stored = query("SELECT recovery_hash FROM users WHERE id = %s", (user_id,), one=True)
+    if not (stored and stored.recovery_hash and hmac.compare_digest(given, stored.recovery_hash)):
+        minutes = throttle.fail("recovery_account", k)
+        error = throttle.message(minutes) if minutes else "Onjuiste herstelcode."
+        return render_template("login_recover.html", error=error), 429 if minutes else 401
+    # De code werkt één keer. Hij zet de tweede factor uit, want de telefoon is
+    # kwijt, en maakt alle andere sessies ongeldig. De WHERE op de hash zorgt dat
+    # twee gelijktijdige verzoeken hem niet allebei kunnen gebruiken.
+    row = query(
+        "UPDATE users SET recovery_hash = NULL, totp_secret = NULL, totp_enabled = false, totp_last_step = NULL,"
+        " session_version = session_version + 1 WHERE id = %s AND recovery_hash = %s RETURNING session_version",
+        (user_id, given), one=True,
+    )
+    if row is None:
+        return render_template("login_recover.html", error="Onjuiste herstelcode."), 401
+    throttle.reset(k)
+    start_session(user_id, row.session_version)
+    flash("Je herstelcode is gebruikt en je tweestapsverificatie staat uit. Stel hem opnieuw in met je nieuwe telefoon.")
+    return redirect(url_for("account.index"))
 
 
 @bp.route("/logout", methods=["POST"])

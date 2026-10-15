@@ -6,7 +6,7 @@ import segno
 from flask import Blueprint, Response, abort, flash, g, redirect, render_template, request, session, url_for
 
 import totp
-from auth import check_code, end_other_sessions, login_required
+from auth import check_code, end_other_sessions, login_required, new_recovery_code
 from db import query
 
 bp = Blueprint("account", __name__, url_prefix="/account")
@@ -32,7 +32,7 @@ def render_account(error=None, status=200):
 @bp.after_request
 def no_store(response):
     """De pagina's met het TOTP-geheim niet in een browser- of proxycache laten staan (MIT-08)."""
-    if request.endpoint in ("account.setup_2fa", "account.qr_2fa"):
+    if request.endpoint in ("account.setup_2fa", "account.qr_2fa", "account.new_recovery"):
         response.headers["Cache-Control"] = "no-store"
     return response
 
@@ -66,8 +66,20 @@ def setup_2fa():
     query("UPDATE users SET totp_enabled = true WHERE id = %s", (g.user.id,))
     # Sessies van vóór de tweede factor zijn met alleen een wachtwoord gestart.
     end_other_sessions(g.user.id)
-    flash("Tweestapsverificatie staat aan. Inloggen vraagt vanaf nu ook een code uit je app.")
-    return redirect(url_for("account.index"))
+    # De herstelcode staat alleen in dit ene antwoord, niet op een pagina die je
+    # later nog eens kunt openen (MIT-11).
+    return render_template("recovery_code.html", code=new_recovery_code(g.user.id), first=True)
+
+
+@bp.route("/2fa/recovery", methods=["POST"])
+@login_required
+def new_recovery():
+    # Een nieuwe herstelcode vraagt een geldige code uit de app: wie alleen de
+    # sessie heeft, kan zo geen herstelcode bemachtigen.
+    error = check_code(g.user.id)
+    if error:
+        return render_account(error, 400)
+    return render_template("recovery_code.html", code=new_recovery_code(g.user.id), first=False)
 
 
 @bp.route("/2fa/qr.svg")
@@ -90,7 +102,11 @@ def disable_2fa():
     error = check_code(g.user.id)
     if error:
         return render_account(error, 400)
-    query("UPDATE users SET totp_secret = NULL, totp_enabled = false, totp_last_step = NULL WHERE id = %s", (g.user.id,))
+    query(
+        "UPDATE users SET totp_secret = NULL, totp_enabled = false, totp_last_step = NULL, recovery_hash = NULL"
+        " WHERE id = %s",
+        (g.user.id,),
+    )
     end_other_sessions(g.user.id)
     flash("Tweestapsverificatie staat uit.")
     return redirect(url_for("account.index"))

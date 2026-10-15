@@ -19,7 +19,9 @@ CREATE TABLE users (
     totp_enabled      BOOLEAN NOT NULL DEFAULT false,
     -- De tijdstap van de laatst geaccepteerde code. Een code van dezelfde of
     -- een eerdere stap wordt geweigerd, dus elke code werkt maar één keer (MIT-07).
-    totp_last_step    BIGINT
+    totp_last_step    BIGINT,
+    -- SHA-256 van de herstelcode (MIT-11); de code zelf wordt nergens bewaard.
+    recovery_hash     TEXT
 );
 
 -- Poginglimieten bij inloggen (MIT-06, MIT-10), zie app/throttle.py. De sleutel
