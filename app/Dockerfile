@@ -1,4 +1,3 @@
-# Nieuwste Python-versie, met de langste support (bugfixes tot oktober 2028).
 FROM python:3.15-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -6,7 +5,6 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-# Eerst alleen requirements, zodat Docker deze laag hergebruikt.
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
