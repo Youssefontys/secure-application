@@ -19,6 +19,9 @@ Notities van een ander lezen of wijzigen
               OR  kwaadaardige nieuwe pakketversie                         [MIT-03]
               OR  kwetsbaarheid of andere image achter de tag              [open]
   OR  Script in een notitie laten uitvoeren (MC-07)                       [MIT-01]
+  OR  Het hele account van het slachtoffer verwijderen (MC-13)            [open]
+        AND handelen als het slachtoffer (cookie van MC-04, of via MC-05)
+        AND POST /account/delete zonder het wachtwoord te kennen
   OR  Als de gebruiker handelen (zie doel 2)
 ```
 

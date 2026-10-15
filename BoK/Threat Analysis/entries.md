@@ -37,6 +37,13 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 - Assets: A-01
 - Sinds: 782f0e2
 
+### UC-05 Account verwijderen
+- Actor: ingelogde gebruiker
+- Doel: het eigen account en alle eigen notities definitief laten verwijderen
+- Onderdelen: C-01, C-02, C-03 (route `/account/delete`, AU-04, AZ-07)
+- Assets: A-01, A-02, A-04
+- Sinds: b03197a
+
 ## Misuse cases
 
 ### MC-01 Wachtwoorden uit de database lezen
@@ -98,11 +105,11 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 ### MC-05 Handelingen laten uitvoeren via een andere site (CSRF)
 - Aanvallersdoel: namens een ingelogde gebruiker notities aanmaken, aanpassen of verwijderen
 - Aanvaller: de eigenaar van een andere website die de gebruiker bezoekt
-- Assets / onderdelen: A-01, A-02, A-03, C-01, C-02, AZ-02, AZ-04, AZ-06
-- Gerelateerde use case: UC-03, UC-04
+- Assets / onderdelen: A-01, A-02, A-03, C-01, C-02, AZ-02, AZ-04, AZ-06, AZ-07
+- Gerelateerde use case: UC-03, UC-04, UC-05
 - Stappen:
   - AND 1. De gebruiker is ingelogd en bezoekt de site van de aanvaller
-  - AND 2. Die site stuurt een formulier naar `/`, `/notes/<id>/delete`, `/account/password` of `/logout`
+  - AND 2. Die site stuurt een formulier naar `/`, `/notes/<id>/delete`, `/account/password`, `/account/delete` of `/logout`
   - AND 3. De browser stuurt de cookie mee
 - Mitigaties: geen (geen CSRF-token; `SameSite` is niet ingesteld, dus het gedrag hangt van de browser af)
 - Restrisico: elke POST-route is aanroepbaar vanaf een andere site
@@ -128,7 +135,7 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 - Assets / onderdelen: A-02, A-03, C-01, C-02, F-02
 - Gerelateerde use case: UC-03
 - Stappen:
-  - AND 1. Een notitie met een script-tag opslaan
+  - AND 1. Een script-tag opslaan in een notitie, of in de gebruikersnaam (die ziet alleen de gebruiker zelf, in de begroeting)
   - AND 2. Een slachtoffer laat die notitie renderen
 - Mitigaties: MIT-01 (stap 2)
 - Restrisico: geen tweede laag. Zonder Content-Security-Policy voert de browser een script uit zodra iemand `|safe` of een andere uitzondering toevoegt
@@ -204,6 +211,21 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 - Restrisico: een tijdelijke sessie wordt een blijvende overname. Wijzigt het slachtoffer zelf het wachtwoord, dan werkt de sessie van de aanvaller gewoon door (MC-04 stap 4)
 - Status: open
 - Sinds: 782f0e2
+
+### MC-13 Account van een ander verwijderen
+- Aanvallersdoel: het account en alle notities van het slachtoffer vernietigen
+- Aanvaller: wie een sessie van het slachtoffer heeft (MC-04), of de browser van het slachtoffer het formulier laat versturen (MC-05)
+- Assets / onderdelen: A-01, A-02, A-04, C-02, C-03, AU-04, AZ-07
+- Gerelateerde use case: UC-05
+- Stappen:
+  - AND 1. Handelen als het slachtoffer
+    - OR  1a. Met een gestolen of gekopieerde sessiecookie (MC-04)
+    - OR  1b. Via een formulier op een andere site (MC-05); de bevestiging uit `confirm.js` komt dan niet in beeld
+  - AND 2. `POST /account/delete`; het wachtwoord wordt niet opnieuw gevraagd (AU-04 ontbreekt)
+- Mitigaties: geen
+- Restrisico: onomkeerbaar; er is geen backup en geen herstel
+- Status: open
+- Sinds: b03197a
 
 ## Mitigaties
 
