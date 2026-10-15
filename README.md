@@ -4,7 +4,7 @@ Professional application for the Yellow Teaming (Security Engineering) specialis
 
 ## What this is
 
-A small notes application that starts as a **deliberately insecure baseline** and gets security features one at a time. The baseline only does what is needed to be functional: register, log in, change the password, delete the account, and create, edit and delete notes. Passwords are stored in plain text, there is no CSRF protection, no rate limiting and no ownership check on notes.
+A small notes application that started as a **deliberately insecure baseline** and gets security features one at a time. The baseline only did what is needed to be functional: register, log in, change the password, delete the account, and create, edit and delete notes, with plain-text passwords, no CSRF protection, no rate limiting and no ownership check on notes. What has been added since is under Status.
 
 Every feature that is added has an entry in `BoK/`: the use case, the misuse case it answers and the mitigation, written at the moment it is built. We build first and write the analysis alongside, not the other way around. The first version of this application (more complete, with Argon2, 2FA, Vault encryption and rate limiting) is in [BOK-SECENGINEER](https://github.com/Youssefontys/BOK-SECENGINEER) and is used as a reference for what to add next.
 
@@ -33,4 +33,4 @@ The baseline plus the first security features, each with an entry in `BoK/Threat
 - pinned dependencies (MIT-03) and a length limit on notes (MIT-04)
 - mandatory two-step verification with TOTP, a recovery code for a lost phone, login limits per IP address and per account, and a session version that ends old sessions (MIT-05 to MIT-12); see `BoK/Subjects/Week 5 Authentication.md`
 
-Passwords are still stored in plain text and there is no CSRF protection. Not safe to expose to the internet.
+Still open: passwords are stored in plain text, there is no CSRF protection and no ownership check on notes. Not safe to expose to the internet.
