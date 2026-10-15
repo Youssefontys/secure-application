@@ -19,10 +19,19 @@ CREATE TABLE users (
     totp_enabled      BOOLEAN NOT NULL DEFAULT false,
     -- De tijdstap van de laatst geaccepteerde code. Een code van dezelfde of
     -- een eerdere stap wordt geweigerd, dus elke code werkt maar één keer (MIT-07).
-    totp_last_step    BIGINT,
-    -- Foute codes op rij, en tot wanneer de codestap op slot zit (MIT-06).
-    totp_failures     INTEGER NOT NULL DEFAULT 0,
-    totp_locked_until TIMESTAMPTZ
+    totp_last_step    BIGINT
+);
+
+-- Poginglimieten bij inloggen (MIT-06, MIT-10), zie app/throttle.py. De sleutel
+-- is een HMAC van wat er geteld wordt (IP-adres, account), dus hier staan geen
+-- leesbare IP-adressen of gebruikersnamen.
+CREATE TABLE auth_throttle (
+    key          TEXT PRIMARY KEY,
+    failures     INTEGER NOT NULL DEFAULT 0,
+    window_start TIMESTAMPTZ NOT NULL DEFAULT now(),
+    locked_until TIMESTAMPTZ,
+    -- Hoe vaak deze sleutel al op slot ging: elke volgende blokkade duurt twee keer zo lang.
+    lock_count   INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE notes (

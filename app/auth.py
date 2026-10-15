@@ -10,15 +10,12 @@ from functools import wraps
 import psycopg
 from flask import Blueprint, flash, g, redirect, render_template, request, session, url_for
 
+import throttle
 import totp
 from db import query
 
 bp = Blueprint("auth", __name__)
 
-# Na zoveel foute codes op rij gaat de codestap van dat account op slot (MIT-06).
-TOTP_MAX_FAILURES = 5
-TOTP_LOCK_MINUTES = 15
-TOTP_LOCKED = f"Te veel foute codes. Probeer het over {TOTP_LOCK_MINUTES} minuten opnieuw."
 # Zo lang heb je na het wachtwoord om de code in te vullen.
 PENDING_MAX_SECONDS = 300
 
@@ -110,12 +107,28 @@ def login():
 
     username = request.form.get("username", "").strip()
     password = request.form.get("password", "")
+    # Twee tellers (MIT-10): per IP-adres, en per account vanaf dat adres. Ze hangen
+    # aan wat er is ingevuld, niet aan of het account bestaat, dus een blokkade
+    # verraadt niet welke namen bestaan.
+    ip = throttle.client_ip(request.remote_addr)
+    ip_key = throttle.key("password_ip", ip)
+    pair_key = throttle.key("password_account_ip", username, ip)
+    minutes = throttle.locked_minutes(ip_key, pair_key)
+    if minutes:
+        return render_template("auth.html", error=throttle.message(minutes)), 429
     row = query(
         "SELECT id, totp_enabled, session_version FROM users WHERE username = %s AND password = %s",
         (username, password), one=True,
     )
     if row is None:
+        minutes = max(throttle.fail("password_ip", ip_key), throttle.fail("password_account_ip", pair_key))
+        if minutes:
+            return render_template("auth.html", error=throttle.message(minutes)), 429
         return render_template("auth.html", error="Onjuiste gebruikersnaam of wachtwoord."), 401
+    # Alleen de teller van dit account wordt gewist, niet die van het IP-adres:
+    # anders zet een aanvaller die steeds even met zijn eigen account inlogt zijn
+    # IP-teller telkens terug.
+    throttle.reset(pair_key)
 
     session.clear()
     if row.totp_enabled:
@@ -174,35 +187,29 @@ def logout():
 def check_code(user_id):
     """Controleert de TOTP-code uit het formulier voor dit account. None als hij klopt, anders de foutmelding.
 
-    - Zit de codestap op slot, dan wordt ook de juiste code geweigerd (MIT-06).
+    - Zit de codestap van dit account op slot, dan wordt ook de juiste code
+      geweigerd (MIT-06, via throttle.py: 5 fouten, dan 15 minuten, verdubbelend tot 24 uur).
     - Een code die al eens is geaccepteerd, werkt niet nog een keer (MIT-07). RFC 6238
       5.2: de verifier MUST NOT accept the second attempt of the OTP.
     Beide controles staan in de WHERE van één UPDATE. Twee gelijktijdige verzoeken met
     dezelfde code kunnen er dus niet allebei door: de database laat er één winnen.
     """
-    user = query("SELECT totp_secret, totp_locked_until > now() AS locked FROM users WHERE id = %s", (user_id,), one=True)
+    k = throttle.key("totp_account", user_id)
+    user = query("SELECT totp_secret FROM users WHERE id = %s", (user_id,), one=True)
     if user is None or user.totp_secret is None:
         return "Er is geen tweestapsverificatie ingesteld."
-    if user.locked:
-        return TOTP_LOCKED
+    minutes = throttle.locked_minutes(k)
+    if minutes:
+        return throttle.message(minutes)
     step = totp.matching_step(user.totp_secret, request.form.get("code", ""))
     if step is not None and query(
-        "UPDATE users SET totp_last_step = %s, totp_failures = 0, totp_locked_until = NULL"
+        "UPDATE users SET totp_last_step = %s"
         " WHERE id = %s AND (totp_last_step IS NULL OR totp_last_step < %s)"
-        " AND (totp_locked_until IS NULL OR totp_locked_until <= now()) RETURNING id",
-        (step, user_id, step), one=True,
+        " AND NOT EXISTS (SELECT 1 FROM auth_throttle WHERE key = %s AND locked_until > now()) RETURNING id",
+        (step, user_id, step, k), one=True,
     ):
+        throttle.reset(k)
         return None
-    # Fout, of al eens gebruikt: telt als mislukte poging. De teller staat in de
-    # database en niet in de sessie, want een sessie kan de aanvaller gewoon opnieuw beginnen.
-    locked = query(
-        "UPDATE users SET"
-        " totp_locked_until = CASE WHEN totp_failures + 1 >= %(max)s"
-        "   THEN now() + make_interval(mins => %(mins)s) ELSE totp_locked_until END,"
-        " totp_failures = CASE WHEN totp_failures + 1 >= %(max)s THEN 0 ELSE totp_failures + 1 END"
-        " WHERE id = %(id)s RETURNING totp_locked_until > now() AS locked",
-        {"max": TOTP_MAX_FAILURES, "mins": TOTP_LOCK_MINUTES, "id": user_id}, one=True,
-    )
-    if locked and locked.locked:
-        return TOTP_LOCKED
-    return "Onjuiste of al gebruikte code."
+    # Fout, of al eens gebruikt: telt als mislukte poging.
+    minutes = throttle.fail("totp_account", k)
+    return throttle.message(minutes) if minutes else "Onjuiste of al gebruikte code."

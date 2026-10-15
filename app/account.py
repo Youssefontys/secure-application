@@ -90,11 +90,7 @@ def disable_2fa():
     error = check_code(g.user.id)
     if error:
         return render_account(error, 400)
-    query(
-        "UPDATE users SET totp_secret = NULL, totp_enabled = false, totp_last_step = NULL,"
-        " totp_failures = 0, totp_locked_until = NULL WHERE id = %s",
-        (g.user.id,),
-    )
+    query("UPDATE users SET totp_secret = NULL, totp_enabled = false, totp_last_step = NULL WHERE id = %s", (g.user.id,))
     end_other_sessions(g.user.id)
     flash("Tweestapsverificatie staat uit.")
     return redirect(url_for("account.index"))
