@@ -1,4 +1,5 @@
-FROM python:3.13-slim
+# Nieuwste Python-versie, met de langste support (bugfixes tot oktober 2028).
+FROM python:3.15-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
