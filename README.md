@@ -10,7 +10,7 @@ Every feature that is added has an entry in `BoK/`: the use case, the misuse cas
 
 ## Structure
 
-- `app/` - the notes application: Python code in `app/`, the website (HTML, CSS, JS) in `app/web/`
+- `app/` - the notes application, one file per part: `app.py` creates the app, `db.py` talks to the database, `auth.py` handles logging in (including the second step), `account.py` the profile, `notes.py` the notes, `totp.py` the TOTP calculation. The website (HTML, CSS, JS) is in `app/web/`
 - `db/` - the database schema, run by the database container on first start
 - `BoK/Architecture/` - components, data flows, trust boundaries and the authentication and authorization points
 - `BoK/Threat Analysis/` - use cases, misuse cases, mitigations, attack trees and the tests that go with them

@@ -306,7 +306,7 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 ### MIT-02 Parameterized queries
 - Houdt tegen: MC-06 stap 1 en 2
 - Wat: alle SQL gaat via één helper, `query(sql, (waarden,))`; de waarden worden los van de SQL-tekst naar de database gestuurd en nooit als SQL gelezen.
-- Waar: `query()` in `app/app.py`
+- Waar: `query()` in `app/db.py`
 - Status: gebouwd
 - Sinds: baseline
 
@@ -320,34 +320,34 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 ### MIT-04 Lengtegrens op titel en notitie
 - Houdt tegen: MC-10 stap 1, voor zover het om het opslaan van te lange notities gaat
 - Wat: de server weigert een titel van meer dan 15 en een notitie van meer dan 250 tekens met een 400, bij aanmaken en bij aanpassen. `maxlength` in de formulieren is alleen gemak in de browser. Het verzoek wordt wel eerst helemaal ingelezen; tegen een groot verzoek zelf helpt dit niet (daarvoor is `MAX_CONTENT_LENGTH` nodig).
-- Waar: `read_note_form()` in `app/app.py`, met `TITLE_MAX` en `BODY_MAX`
+- Waar: `read_note_form()` in `app/notes.py`, met `TITLE_MAX` en `BODY_MAX`
 - Status: gebouwd
 - Sinds: 32c2661
 
 ### MIT-05 Tweede factor bij inloggen (TOTP)
 - Houdt tegen: MC-03 stap 1 en 2, en een gelekt wachtwoord uit MC-01, voor accounts met tweestapsverificatie. Maakt MC-12 kleiner
 - Wat: na het juiste wachtwoord krijgt de sessie alleen een `pending_user_id`. Daarmee opent geen enkele route, want `login_required` en `load_user` kijken naar `user_id`. Pas na een geldige code op `/login/2fa` wordt de sessie gewist en `user_id` gezet. De halve login vervalt na 5 minuten. TOTP volgens RFC 6238: een geheim van 160 bits (RFC 4226 R6), 6 cijfers, 30 seconden, één stap klokverschil (RFC 6238, 5.2), vergeleken in constante tijd. De berekening is zonder dependency geschreven en met de hand tegen alle testvectoren van RFC 6238 en RFC 4226 gecontroleerd (T-35). Aanzetten gebeurt pas na een eerste geldige code. Uitzetten vraagt ook een code (AU-06), zodat wie alleen de sessie heeft de tweede factor niet kan weghalen
-- Waar: `login()`, `login_code()` en `check_code()` in `app/app.py`; `app/totp.py`
+- Waar: `login()`, `login_code()` en `check_code()` in `app/auth.py`; `app/totp.py`
 - Status: gebouwd
 - Sinds: 96626e2
 
 ### MIT-06 Blokkade na 5 foute codes
 - Houdt tegen: MC-15 stap 2
 - Wat: foute codes worden per account in de database geteld (`totp_failures`), niet in de sessie, want een sessie kan de aanvaller gewoon opnieuw beginnen. Bij de 5e fout op rij zit de codestap 15 minuten op slot (`totp_locked_until`), en dan wordt ook de juiste code geweigerd. Een geldige code zet de teller op 0
-- Waar: `check_code()` in `app/app.py`
+- Waar: `check_code()` in `app/auth.py`
 - Status: gebouwd
 - Sinds: 18e1424
 
 ### MIT-07 Elke code werkt één keer
 - Houdt tegen: MC-16 stap 2
 - Wat: de tijdstap van de laatst geaccepteerde code staat in `totp_last_step`. Een code van dezelfde of een eerdere stap wordt geweigerd, zoals RFC 6238 5.2 eist ("MUST NOT accept the second attempt"). De controle zit in de WHERE van dezelfde UPDATE die de stap opslaat, zodat van twee gelijktijdige verzoeken met dezelfde code er maar één wint (T-31)
-- Waar: `check_code()` in `app/app.py`
+- Waar: `check_code()` in `app/auth.py`
 - Status: gebouwd
 - Sinds: 18e1424
 
 ### MIT-08 Het geheim alleen tijdens het instellen, en niet in een cache
 - Houdt tegen: MC-17 stap 3, en het later terugkijken uit stap 2
 - Wat: de QR-code (`/account/2fa/qr.svg`) en de sleutel zijn alleen op te vragen zolang tweestapsverificatie nog niet aan staat; daarna geeft de QR-route een 404. Beide worden verstuurd met `Cache-Control: no-store`. De QR-code komt van een eigen route en staat niet inline in de pagina
-- Waar: `setup_2fa()`, `qr_2fa()` en `no_store()` in `app/app.py`
+- Waar: `setup_2fa()`, `qr_2fa()` en `no_store()` in `app/account.py`
 - Status: gebouwd
 - Sinds: 18e1424
