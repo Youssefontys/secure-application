@@ -5,7 +5,7 @@
 | ID | Naam | Type | Doet | Sinds |
 |----|------|------|------|-------|
 | C-01 | Browser | Client (buiten ons beheer) | Toont de pagina's, voert de decoratieve JS uit (`cyber.js`, `account-menu.js`), bewaart de sessiecookie. | baseline |
-| C-02 | Webapplicatie | Python 3.15 en Flask, Docker-container `app`, draait als root op de ontwikkelserver | Registreren, inloggen, notities aanmaken, tonen, aanpassen en verwijderen. Rendert de HTML (Jinja) en levert de statische bestanden. | baseline |
+| C-02 | Webapplicatie | Python 3.15 en Flask, Docker-container `app`, draait als root op de ontwikkelserver | Registreren, inloggen, wachtwoord wijzigen, notities aanmaken, tonen, aanpassen en verwijderen. Rendert de HTML (Jinja) en levert de statische bestanden. | baseline |
 | C-03 | Database | PostgreSQL 18, Docker-container `db` | Bewaart gebruikers en notities. Draait `db/schema.sql` bij de eerste start. | baseline |
 | C-04 | Databasevolume | Docker-volume `dbdata` | Bewaart de databasebestanden op de host. | baseline |
 

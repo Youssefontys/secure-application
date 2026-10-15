@@ -11,6 +11,7 @@ Elk punt staat hier, ook als er (nog) geen controle zit. Een rij met
 | AU-01 | Inloggen | C-02, route `/login` | F-01 | Dat de gebruiker de eigenaar van het account is | Gebruikersnaam en wachtwoord worden in SQL vergeleken met de leesbaar opgeslagen waarde; één factor; geen limiet op pogingen | gebouwd, zwak | MC-01, MC-03 |
 | AU-02 | Sessie bij elk verzoek | C-02, alle routes behalve `/login` en `/register` | F-01 | Dat het verzoek bij een eerder ingelogde gebruiker hoort | `session["user_id"]` uit de ondertekende Flask-cookie; geen eigen vervaltijd (de standaard van Flask is 31 dagen); geen server-side intrekking; uitloggen wist alleen de cookie in de browser | gebouwd, zwak | MC-04 |
 | AU-03 | Applicatie naar database | C-02 naar C-03 | F-03 | Dat de app de app is | Databasewachtwoord (A-06) in een omgevingsvariabele, rol is de eigenaar; geen TLS | gebouwd, zwak | MC-08 |
+| AU-04 | Herauthenticatie bij wachtwoord wijzigen | C-02, route `/account/password` | F-01 | Dat wie het wachtwoord wijzigt de eigenaar is, en niet alleen iemand met zijn sessie | Geen: alleen de sessie (AU-02) telt, het huidige wachtwoord wordt niet gevraagd | **ontbreekt** | MC-12 |
 
 ## Autorisatie
 
@@ -21,3 +22,4 @@ Elk punt staat hier, ook als er (nog) geen controle zit. Een rij met
 | AZ-03 | Notitie tonen en aanpassen | C-02, route `/notes/<id>/edit` | F-03 | Alleen de eigenaar van de notitie | Alleen "ingelogd?" wordt gecontroleerd, de eigenaar niet | **ontbreekt** | MC-02 |
 | AZ-04 | Notitie verwijderen | C-02, route `/notes/<id>/delete` | F-03 | Alleen de eigenaar van de notitie | Alleen "ingelogd?" wordt gecontroleerd, de eigenaar niet | **ontbreekt** | MC-02 |
 | AZ-05 | Databaserechten | C-03 | F-03 | Alleen wat de app echt nodig heeft | De app gebruikt de eigenaarrol: alle rechten, ook DDL en andere databases | **ontbreekt** | MC-08 |
+| AZ-06 | Wachtwoord wijzigen | C-02, route `/account/password` (POST) | F-03 | Alleen het eigen wachtwoord | `UPDATE ... WHERE id = %s` met de id uit de sessie, niet uit het formulier | gebouwd | MC-05 (CSRF), MC-12 |
