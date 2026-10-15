@@ -15,7 +15,7 @@
 |----|-------|------|-----------------|-------|
 | A-01 | Wachtwoord | `users.password` (C-03), tijdelijk in het verzoek (C-02) | Geeft toegang tot het account; mensen hergebruiken het elders. Staat nu leesbaar. | baseline |
 | A-02 | Notities (titel en inhoud) | `notes` (C-03) | Het doel van de applicatie; privé per gebruiker. Staat nu leesbaar. | baseline |
-| A-03 | Sessiecookie | Browser (C-01) | Wie hem heeft, is die gebruiker. Een ondertekende (niet versleutelde) Flask-cookie met `user_id` en, tot ze getoond zijn, de meldingen van `flash()`. | baseline |
+| A-03 | Sessiecookie | Browser (C-01) | Wie hem heeft, is die gebruiker. Een ondertekende (niet versleutelde) Flask-cookie met `user_id`, de sessieversie (`session_version`) en, tot ze getoond zijn, de meldingen van `flash()`. | baseline |
 | A-04 | Gebruikersnaam | `users.username` (C-03), de begroeting en de profielpagina (F-02) | Identiteit; maakt gericht aanvallen mogelijk. | baseline |
 | A-05 | Sessiesleutel (`FLASK_SECRET_KEY`) | Omgevingsvariabele van C-02 | Wie hem heeft, kan sessiecookies namaken. | baseline |
 | A-06 | Databasewachtwoord (`POSTGRES_PASSWORD`) | Omgevingsvariabele van C-02 en C-03, `.env` | Geeft volledige toegang tot de database. | baseline |
