@@ -174,7 +174,7 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 - Assets / onderdelen: C-02, C-03
 - Gerelateerde use case: UC-01, UC-03
 - Stappen:
-  - OR  1. Zeer grote formulieren sturen (geen maximale grootte, geen lengtegrens op velden)
+  - OR  1. Zeer grote formulieren sturen (geen `MAX_CONTENT_LENGTH`, geen lengtegrens op velden; de standaard `MAX_FORM_MEMORY_SIZE` van Flask, 500 kB, hield een gewoon formulier van 5 MB niet tegen, zie T-21)
   - OR  2. Onbeperkt veel accounts aanmaken
   - OR  3. Onbeperkt veel notities aanmaken en tonen
 - Mitigaties: geen

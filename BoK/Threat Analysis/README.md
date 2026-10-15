@@ -12,17 +12,18 @@ een doel van de aanvaller bovenin, daaronder de manieren om dat te bereiken
 
 - `entries.md`: één entry per use case / misuse case / mitigation, nieuwste onderaan.
 - `attack-trees.md`: per aanvallersdoel de boom, opgebouwd uit de entries.
+- `tests.md`: per use case en misuse case de test die de werking of de aanval laat zien.
 
 ## Hoe een entry werkt
 
-- ID's: `UC-` use case, `MC-` misuse case, `MIT-` mitigation. Nooit hergebruiken.
+- ID's: `UC-` use case, `MC-` misuse case, `MIT-` mitigation, `T-` test. Nooit hergebruiken.
 - Een misuse case noemt het **aanvallersdoel** (de wortel van een boom), de
   **aanvaller**, de getroffen **assets** (`A-`) en **onderdelen** (`C-`), en de
   **stappen**. Per stap staat of hij een OR of AND is ten opzichte van zijn broers.
 - Een mitigation verwijst naar de misuse case(s) en de stap(pen) die hij
   tegenhoudt, en naar de plek in de code. Een stap zonder mitigation blijft
   zichtbaar als open risico.
-- Status: `open`, `gebouwd`, `bewezen` (er is een test of bewijs).
+- Status: `open`, `gebouwd`, `bewezen` (de aanvalstest uit `tests.md` slaagt met de verwachting van na de mitigatie).
 
 ## Sjabloon
 
