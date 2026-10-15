@@ -6,9 +6,11 @@ geen vergissing; de bekende gaten staan als misuse case in die map.
 """
 
 import os
+from functools import wraps
 
 import psycopg
-from flask import Flask, abort, redirect, render_template, request, session, url_for
+from flask import Flask, abort, g, redirect, render_template, request, session, url_for
+from psycopg.rows import namedtuple_row
 
 # De website (HTML-templates en statische bestanden) staat in web/, los van de code.
 app = Flask(__name__, template_folder="web/templates", static_folder="web/static")
@@ -19,11 +21,53 @@ DATABASE_URL = os.environ["DATABASE_URL"]
 
 
 def db():
-    """Nieuwe databaseverbinding per aanroep. Het with-blok commit bij succes."""
-    return psycopg.connect(DATABASE_URL)
+    """Nieuwe databaseverbinding per aanroep. Het with-blok commit bij succes.
+
+    Rijen komen terug als namedtuple, zodat code en templates `note.title`
+    schrijven in plaats van `note[1]`.
+    """
+    return psycopg.connect(DATABASE_URL, row_factory=namedtuple_row)
+
+
+@app.before_request
+def load_user():
+    """Haalt de ingelogde gebruiker één keer per verzoek op, in g.user.
+
+    Staat de id uit de sessie niet meer in de database, bijvoorbeeld omdat het
+    account in een andere sessie is verwijderd, dan geldt het verzoek als niet
+    ingelogd.
+    """
+    g.user = None
+    user_id = session.get("user_id")
+    if user_id is None or request.endpoint == "static":
+        return
+    with db() as conn, conn.cursor() as cur:
+        cur.execute("SELECT id, username FROM users WHERE id = %s", (user_id,))
+        g.user = cur.fetchone()
+
+
+def login_required(view):
+    """Alleen voor ingelogde gebruikers; de rest gaat naar /login (AU-02)."""
+    @wraps(view)
+    def wrapper(*args, **kwargs):
+        if g.user is None:
+            return redirect(url_for("login"))
+        return view(*args, **kwargs)
+    return wrapper
+
+
+def logged_out_only(view):
+    """Wie al is ingelogd, hoeft niet opnieuw in te loggen of te registreren."""
+    @wraps(view)
+    def wrapper(*args, **kwargs):
+        if g.user is not None:
+            return redirect(url_for("notes"))
+        return view(*args, **kwargs)
+    return wrapper
 
 
 @app.route("/register", methods=["GET", "POST"])
+@logged_out_only
 def register():
     if request.method == "GET":
         return render_template("register.html")
@@ -44,6 +88,7 @@ def register():
 
 
 @app.route("/login", methods=["GET", "POST"])
+@logged_out_only
 def login():
     if request.method == "GET":
         return render_template("login.html")
@@ -57,7 +102,7 @@ def login():
         return render_template("login.html", error="Onjuiste gebruikersnaam of wachtwoord."), 401
 
     session.clear()
-    session["user_id"] = row[0]
+    session["user_id"] = row.id
     return redirect(url_for("notes"))
 
 
@@ -68,10 +113,8 @@ def logout():
 
 
 @app.route("/account/password", methods=["GET", "POST"])
+@login_required
 def change_password():
-    user_id = session.get("user_id")
-    if user_id is None:
-        return redirect(url_for("login"))
     if request.method == "GET":
         return render_template("change_password.html")
 
@@ -85,45 +128,40 @@ def change_password():
     # Het huidige wachtwoord wordt niet gevraagd: wie de sessie heeft, kan het
     # wachtwoord wijzigen. Andere sessies blijven geldig. Zie MC-12.
     with db() as conn, conn.cursor() as cur:
-        cur.execute("UPDATE users SET password = %s WHERE id = %s", (password, user_id))
+        cur.execute("UPDATE users SET password = %s WHERE id = %s", (password, g.user.id))
     return render_template("change_password.html", message="Je wachtwoord is gewijzigd.")
 
 
 @app.route("/", methods=["GET", "POST"])
+@login_required
 def notes():
-    user_id = session.get("user_id")
-    if user_id is None:
-        return redirect(url_for("login"))
-
     if request.method == "POST":
         title = request.form.get("title", "").strip()
         body = request.form.get("body", "").strip()
         if not title or not body:
             return render_template(
-                "notes.html", notes=fetch_notes(user_id), error="Vul een titel en een notitie in.",
+                "notes.html", notes=fetch_notes(), error="Vul een titel en een notitie in.",
                 form_title=title, form_body=body,
             ), 400
         with db() as conn, conn.cursor() as cur:
-            cur.execute("INSERT INTO notes (user_id, title, body) VALUES (%s, %s, %s)", (user_id, title, body))
+            cur.execute("INSERT INTO notes (user_id, title, body) VALUES (%s, %s, %s)", (g.user.id, title, body))
         return redirect(url_for("notes"))
 
-    return render_template("notes.html", notes=fetch_notes(user_id))
+    return render_template("notes.html", notes=fetch_notes())
 
 
-def fetch_notes(user_id):
+def fetch_notes():
     with db() as conn, conn.cursor() as cur:
         cur.execute(
             "SELECT id, title, body, created_at FROM notes WHERE user_id = %s ORDER BY created_at DESC",
-            (user_id,),
+            (g.user.id,),
         )
         return cur.fetchall()
 
 
 @app.route("/notes/<int:note_id>/edit", methods=["GET", "POST"])
+@login_required
 def edit_note(note_id):
-    if session.get("user_id") is None:
-        return redirect(url_for("login"))
-
     # BASELINE: er wordt gecontroleerd of je bent ingelogd, maar niet of de
     # notitie van jou is. Zie MC-02 in BoK/Threat Analysis.
     with db() as conn, conn.cursor() as cur:
@@ -137,14 +175,13 @@ def edit_note(note_id):
             if title and body:
                 cur.execute("UPDATE notes SET title = %s, body = %s WHERE id = %s", (title, body, note_id))
                 return redirect(url_for("notes"))
-            note = (title, body)
-    return render_template("edit_note.html", title=note[0], body=note[1])
+            return render_template("edit_note.html", title=title, body=body)
+    return render_template("edit_note.html", title=note.title, body=note.body)
 
 
 @app.route("/notes/<int:note_id>/delete", methods=["POST"])
+@login_required
 def delete_note(note_id):
-    if session.get("user_id") is None:
-        return redirect(url_for("login"))
     # BASELINE: ook hier geen eigenaarscontrole, zie MC-02.
     with db() as conn, conn.cursor() as cur:
         cur.execute("DELETE FROM notes WHERE id = %s", (note_id,))
