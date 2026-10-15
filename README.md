@@ -27,4 +27,9 @@ Then open http://127.0.0.1:5000.
 
 ## Status
 
-Baseline only. Not safe to expose to the internet.
+The baseline plus the first security features, each with an entry in `BoK/Threat Analysis/entries.md`:
+
+- pinned dependencies (MIT-03) and a length limit on notes (MIT-04)
+- two-step verification with TOTP, which users can turn on from their profile (MIT-05 to MIT-08)
+
+Passwords are still stored in plain text and there is no CSRF protection. Not safe to expose to the internet.
