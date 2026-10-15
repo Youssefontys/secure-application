@@ -10,7 +10,7 @@ Every feature that is added has an entry in `BoK/`: the use case, the misuse cas
 
 ## Structure
 
-- `app/` - the notes application, one file per part: `app.py` creates the app, `db.py` talks to the database, `auth.py` handles logging in (including the second step), `account.py` the profile, `notes.py` the notes, `totp.py` the TOTP calculation. The website (HTML, CSS, JS) is in `app/web/`
+- `app/` - the notes application, one file per part: `app.py` creates the app, `db.py` talks to the database, `auth.py` handles logging in (including the second step), `account.py` the profile, `notes.py` the notes, `totp.py` the TOTP calculation, `throttle.py` the login limits. The website (HTML, CSS, JS) is in `app/web/`
 - `db/` - the database schema, run by the database container on first start
 - `BoK/Architecture/` - components, data flows, trust boundaries and the authentication and authorization points
 - `BoK/Threat Analysis/` - use cases, misuse cases, mitigations, attack trees and the tests that go with them
@@ -31,6 +31,6 @@ Then open http://127.0.0.1:5000.
 The baseline plus the first security features, each with an entry in `BoK/Threat Analysis/entries.md`:
 
 - pinned dependencies (MIT-03) and a length limit on notes (MIT-04)
-- two-step verification with TOTP, which users can turn on from their profile (MIT-05 to MIT-08)
+- mandatory two-step verification with TOTP, a recovery code for a lost phone, login limits per IP address and per account, and a session version that ends old sessions (MIT-05 to MIT-12); see `BoK/Subjects/Week 5 Authentication.md`
 
 Passwords are still stored in plain text and there is no CSRF protection. Not safe to expose to the internet.
