@@ -53,10 +53,17 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 
 ### UC-07 Tweestapsverificatie instellen en uitzetten
 - Actor: ingelogde gebruiker
-- Doel: een authenticator-app koppelen, zodat inloggen naast het wachtwoord een code vraagt; en dat weer uitzetten
-- Onderdelen: C-01, C-02, C-03 (`/account/2fa/start`, `/account/2fa`, `/account/2fa/qr.svg`, `/account/2fa/disable`; AU-06, AZ-09)
-- Assets: A-07
+- Doel: een authenticator-app koppelen, zodat inloggen naast het wachtwoord een code vraagt; een herstelcode krijgen of vervangen; en dat weer uitzetten
+- Onderdelen: C-01, C-02, C-03 (`/account/2fa/start`, `/account/2fa`, `/account/2fa/qr.svg`, `/account/2fa/recovery`, `/account/2fa/disable`; AU-06, AZ-09)
+- Assets: A-07, A-08
 - Sinds: 18e1424
+
+### UC-08 Inloggen met de herstelcode
+- Actor: gebruiker die zijn telefoon kwijt is
+- Doel: met het wachtwoord en de herstelcode toch inloggen, en daarna tweestapsverificatie opnieuw instellen
+- Onderdelen: C-01, C-02, C-03 (route `/login/recover`, AU-07)
+- Assets: A-01, A-08
+- Sinds: dc7d258
 
 ## Misuse cases
 
@@ -307,6 +314,23 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 - Status: open
 - Sinds: 484eca3
 
+### MC-19 De herstelcode raden of buitmaken
+- Aanvallersdoel: inloggen als een gebruiker met tweestapsverificatie, zonder zijn telefoon
+- Aanvaller: wie het wachtwoord al heeft (MC-01, MC-03)
+- Assets / onderdelen: A-01, A-08, C-01, C-03, AU-07
+- Gerelateerde use case: UC-08
+- Stappen:
+  - AND 1. Het wachtwoord kennen, zodat `/login/recover` bereikbaar is
+  - AND 2. De herstelcode hebben
+    - OR  2a. Raden: 128 willekeurige bits
+    - OR  2b. De code vinden waar de gebruiker hem bewaart (papier, wachtwoordmanager, screenshot)
+    - OR  2c. Uit de database of een backup halen
+    - OR  2d. Uit een browser- of proxycache halen
+- Mitigaties: MIT-11 (2a: 128 bits en een blokkade; 2c: alleen de SHA-256 staat in de database; 2d: `no-store`), nog geen (2b)
+- Restrisico: wie wachtwoord en bewaarde herstelcode heeft, komt binnen en zet daarmee de tweede factor uit; zo is het bedoeld, en de code is zo veilig als de plek waar hij ligt. De gebruiker krijgt van het gebruik geen bericht buiten de app (er is geen e-mail)
+- Status: open
+- Sinds: dc7d258
+
 ## Mitigaties
 
 ### MIT-01 Automatisch escapen in Jinja
@@ -378,3 +402,10 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 - Waar: `login()` in `app/auth.py`, `app/throttle.py`
 - Status: gebouwd
 - Sinds: 484eca3
+
+### MIT-11 Herstelcode
+- Houdt tegen: MC-19 stap 2a, 2c en 2d; maakt tweestapsverificatie mogelijk zonder dat een kwijtgeraakte telefoon het account onbereikbaar maakt
+- Wat: bij het aanzetten van tweestapsverificatie krijgt de gebruiker één keer een herstelcode van 128 willekeurige bits te zien. Alleen de SHA-256 wordt bewaard; een snelle hash is genoeg bij 128 willekeurige bits, anders dan bij een zelfverzonnen wachtwoord. Inloggen met de code kan alleen na het juiste wachtwoord. De code werkt één keer: hij zet tweestapsverificatie uit en verhoogt de sessieversie, zodat de gebruiker hem opnieuw instelt met een nieuwe telefoon. Het verbruik zit in een UPDATE met de hash in de WHERE, dus twee gelijktijdige verzoeken kunnen hem niet allebei gebruiken. 5 fouten in 15 minuten geven een blokkade (via `throttle.py`). Een nieuwe code maken vraagt een code uit de app (AU-06) en maakt de vorige ongeldig. De pagina's met de code worden met `Cache-Control: no-store` verstuurd
+- Waar: `new_recovery_code()` en `login_recover()` in `app/auth.py`; `setup_2fa()` en `new_recovery()` in `app/account.py`
+- Status: gebouwd
+- Sinds: dc7d258

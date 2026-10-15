@@ -39,6 +39,7 @@ Account overnemen
               OR  een onderschepte code meteen gebruiken (MC-16)           [open]
               OR  een onderschepte code later gebruiken (MC-16)            [MIT-07]
               OR  het TOTP-geheim buitmaken (MC-17)                        [open]
+              OR  de herstelcode gebruiken (MC-19)                         [MIT-11, deels]
   OR  De sessiecookie hebben (MC-04)
         OR  meelezen op het netwerk (geen TLS)                             [open]
         OR  kopieren van een gedeelde browser                              [open, MIT-09 na uitloggen]

@@ -30,6 +30,8 @@ ID's: `T-`, nooit hergebruiken. Kolom "Nu" is met de hand gemeten op
 | T-26 | UC-06 | `/account` openen als ingelogde gebruiker, en zonder in te loggen | Eigen gebruikersnaam, aanmaakdatum en aantal notities; zonder login 302 naar `/login` |
 | T-28 | UC-07 | Tweestapsverificatie instellen: foute code, juiste code, daarna de QR-code opvragen; uitzetten met foute en juiste code | 400; aan; QR-code 404; 400; uit |
 | T-29 | UC-02 | Inloggen met een account met tweestapsverificatie, en met een account zonder | Met: na het wachtwoord naar `/login/2fa`, na de code naar `/`. Zonder: na het wachtwoord meteen naar `/` |
+| T-44 | UC-08 | Met wachtwoord en herstelcode inloggen (ook met hoofdletters, spaties en streepjes) | Ingelogd, met de melding dat de herstelcode is gebruikt; tweestapsverificatie staat uit |
+| T-45 | UC-07 | Een nieuwe herstelcode maken met een foute en met een juiste code uit de app | 400; daarna een nieuwe code, en de vorige werkt niet meer |
 
 ## Aanval
 
@@ -66,3 +68,7 @@ ID's: `T-`, nooit hergebruiken. Kolom "Nu" is met de hand gemeten op
 | T-41 | MC-03 | Een paar foute wachtwoorden, dan een geslaagde login; daarna `auth_throttle` bekijken | De teller van het account is weg, die van het adres staat er nog | Idem |
 | T-42 | MC-03 | De inhoud van `auth_throttle` doorzoeken op gebruikersnamen en IP-adressen | Alleen HMAC's, geen leesbare namen of adressen | Idem |
 | T-43 | MC-18 | Een ander account vanaf hetzelfde adres terwijl één account geblokkeerd is; een onbekende naam fout invullen | Het andere account komt binnen; de onbekende naam krijgt dezelfde melding als een bestaande | Idem |
+| T-46 | MC-19 | Een al gebruikte herstelcode nog eens; twee gelijktijdige verzoeken met dezelfde code | 401; van de twee komt er één binnen | Idem; bewijs voor MIT-11 |
+| T-47 | MC-19 | `users.recovery_hash` bekijken na het aanzetten | 64 tekens (SHA-256), niet gelijk aan de code | Idem |
+| T-48 | MC-19 | 5 foute herstelcodes | De 5e geeft 429 en een blokkade van 15 minuten | Idem |
+| T-49 | MC-19 | Headers van de pagina's die de herstelcode tonen | `Cache-Control: no-store` | Idem |
