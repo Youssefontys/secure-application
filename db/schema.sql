@@ -7,6 +7,10 @@ CREATE TABLE users (
     -- Het wachtwoord staat leesbaar opgeslagen (MC-01).
     password   TEXT NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    -- Staat ook in de sessiecookie. Bij uitloggen, een nieuw wachtwoord of een
+    -- wijziging aan de tweestapsverificatie gaat hij omhoog; een cookie met een
+    -- oudere versie telt dan niet meer (MIT-09).
+    session_version INTEGER NOT NULL DEFAULT 0,
 
     -- Tweestapsverificatie met TOTP (RFC 6238). Het geheim wordt bij het
     -- instellen gezet, maar telt pas mee als totp_enabled true is: dat gebeurt
