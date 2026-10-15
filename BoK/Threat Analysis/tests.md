@@ -27,6 +27,7 @@ ID's: `T-`, nooit hergebruiken. Kolom "Nu" is met de hand gemeten op
 | T-07 | UC-02 | Begroeting om 05:59, 06:00, 11:59, 12:00, 17:59 en 18:00 | Goedenacht, Goedemorgen, Goedemorgen, Goedemiddag, Goedemiddag, Goedenavond, gevolgd door de gebruikersnaam |
 | T-08 | UC-04 | Wachtwoord wijzigen: leeg, twee verschillende, geldig | 400; 400; daarna werkt het oude niet (401) en het nieuwe wel |
 | T-09 | UC-05 | Account verwijderen | Inloggen geeft 401, de notities zijn weg, een tweede sessie van hetzelfde account geldt als uitgelogd |
+| T-26 | UC-06 | `/account` openen als ingelogde gebruiker, en zonder in te loggen | Eigen gebruikersnaam, aanmaakdatum en aantal notities; zonder login 302 naar `/login` |
 
 ## Aanval
 

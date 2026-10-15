@@ -33,16 +33,23 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 ### UC-04 Wachtwoord wijzigen
 - Actor: ingelogde gebruiker
 - Doel: een nieuw wachtwoord instellen voor het eigen account
-- Onderdelen: C-01, C-02, C-03 (route `/account/password`, AU-04, AZ-06)
+- Onderdelen: C-01, C-02, C-03 (formulier op `/account`, verstuurd naar `/account/password`; AU-04, AZ-06)
 - Assets: A-01
 - Sinds: 782f0e2
 
 ### UC-05 Account verwijderen
 - Actor: ingelogde gebruiker
 - Doel: het eigen account en alle eigen notities definitief laten verwijderen
-- Onderdelen: C-01, C-02, C-03 (route `/account/delete`, AU-04, AZ-07)
+- Onderdelen: C-01, C-02, C-03 (knop op `/account`, verstuurd naar `/account/delete`; AU-04, AZ-07)
 - Assets: A-01, A-02, A-04
 - Sinds: b03197a
+
+### UC-06 Eigen profiel bekijken
+- Actor: ingelogde gebruiker
+- Doel: zien met welk account je bent ingelogd, sinds wanneer het bestaat en hoeveel notities erin staan
+- Onderdelen: C-01, C-02, C-03 (route `/account`, AZ-08)
+- Assets: A-04
+- Sinds: 23e2ed3
 
 ## Misuse cases
 
@@ -135,7 +142,7 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 - Assets / onderdelen: A-02, A-03, C-01, C-02, F-02
 - Gerelateerde use case: UC-03
 - Stappen:
-  - AND 1. Een script-tag opslaan in een notitie, of in de gebruikersnaam (die ziet alleen de gebruiker zelf, in de begroeting)
+  - AND 1. Een script-tag opslaan in een notitie, of in de gebruikersnaam (die ziet alleen de gebruiker zelf, in de begroeting en op de profielpagina)
   - AND 2. Een slachtoffer laat die notitie renderen
 - Mitigaties: MIT-01 (stap 2)
 - Restrisico: geen tweede laag. Zonder Content-Security-Policy voert de browser een script uit zodra iemand `|safe` of een andere uitzondering toevoegt
