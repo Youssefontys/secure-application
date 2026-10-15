@@ -9,3 +9,6 @@ __pycache__/
 
 # Cache van pytest, zodra er tests zijn.
 .pytest_cache/
+
+# De lokale regressietest: staat in de map, maar (nog) niet in de repo.
+tests/regress.py
