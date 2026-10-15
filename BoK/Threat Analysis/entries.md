@@ -18,9 +18,9 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 
 ### UC-02 Inloggen en uitloggen
 - Actor: gebruiker
-- Doel: bewijzen wie je bent, een sessie krijgen, en die weer beeindigen
-- Onderdelen: C-01, C-02, C-03 (routes `/login`, `/logout`, AU-01, AU-02)
-- Assets: A-01, A-03
+- Doel: bewijzen wie je bent, een sessie krijgen, en die weer beeindigen. Staat tweestapsverificatie aan, dan hoort daar een code uit de authenticator-app bij
+- Onderdelen: C-01, C-02, C-03 (routes `/login`, `/login/2fa`, `/logout`, AU-01, AU-02, AU-05)
+- Assets: A-01, A-03, A-07
 - Sinds: baseline
 
 ### UC-03 Eigen notities beheren
@@ -51,6 +51,13 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 - Assets: A-04
 - Sinds: 23e2ed3
 
+### UC-07 Tweestapsverificatie instellen en uitzetten
+- Actor: ingelogde gebruiker
+- Doel: een authenticator-app koppelen, zodat inloggen naast het wachtwoord een code vraagt; en dat weer uitzetten
+- Onderdelen: C-01, C-02, C-03 (`/account/2fa/start`, `/account/2fa`, `/account/2fa/qr.svg`, `/account/2fa/disable`; AU-06, AZ-09)
+- Assets: A-07
+- Sinds: 18e1424
+
 ## Misuse cases
 
 ### MC-01 Wachtwoorden uit de database lezen
@@ -63,7 +70,7 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
   - OR  2. Het databasevolume of een backup lezen (C-04)
   - OR  3. De webapplicatie overnemen en de wachtwoorden via F-03 opvragen
 - Mitigaties: geen (het wachtwoord staat leesbaar)
-- Restrisico: elk gelezen wachtwoord is direct bruikbaar
+- Restrisico: elk gelezen wachtwoord is direct bruikbaar. Bij een account met tweestapsverificatie is het wachtwoord alleen niet genoeg (MIT-05), maar wie de database leest, leest ook het TOTP-geheim (MC-17)
 - Status: open
 - Sinds: baseline
 
@@ -89,8 +96,8 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
   - OR  1. Veelgebruikte wachtwoorden proberen tegen een account (brute force)
   - OR  2. Een lijst gelekte wachtwoorden proberen tegen veel accounts (credential stuffing)
   - AND 3. Zwakke wachtwoorden worden bij registratie en bij wijzigen niet geweigerd
-- Mitigaties: geen (geen limiet op pogingen, geen sterkte-eis, een factor)
-- Restrisico: onbeperkt aantal pogingen
+- Mitigaties: MIT-05 (stap 1 en 2, alleen voor accounts met tweestapsverificatie: een geraden wachtwoord geeft dan een halve login). Verder geen: geen limiet op pogingen, geen sterkte-eis
+- Restrisico: onbeperkt aantal pogingen. Tweestapsverificatie is een keuze van de gebruiker, dus accounts zonder blijven op één factor. En wie raadt, ziet aan de doorverwijzing naar `/login/2fa` dat het wachtwoord klopt
 - Status: open
 - Sinds: baseline
 
@@ -105,7 +112,7 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
   - OR  3. De sessiesleutel (A-05) bemachtigen en zelf een cookie ondertekenen
   - AND 4. De cookie blijft geldig na uitloggen en na een wachtwoordwijziging, tot hij verloopt (standaard 31 dagen)
 - Mitigaties: geen (de `HttpOnly`-vlag staat standaard aan in Flask; dat houdt JavaScript buiten beeld maar stopt de stappen hierboven niet)
-- Restrisico: een gekopieerde cookie werkt weken
+- Restrisico: een gekopieerde cookie werkt weken. Tweestapsverificatie helpt hier niet: de cookie is van na de code
 - Status: open
 - Sinds: baseline
 
@@ -215,7 +222,7 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
     - OR  1b. Via een formulier op een andere site (MC-05)
   - AND 2. Een nieuw wachtwoord instellen op `/account/password`; het huidige wachtwoord wordt niet gevraagd (AU-04 ontbreekt)
 - Mitigaties: geen
-- Restrisico: een tijdelijke sessie wordt een blijvende overname. Wijzigt het slachtoffer zelf het wachtwoord, dan werkt de sessie van de aanvaller gewoon door (MC-04 stap 4)
+- Restrisico: een tijdelijke sessie wordt een blijvende overname. Wijzigt het slachtoffer zelf het wachtwoord, dan werkt de sessie van de aanvaller gewoon door (MC-04 stap 4). Staat tweestapsverificatie aan, dan is de overname kleiner: de aanvaller kan die niet uitzetten zonder code (AU-06), dus later opnieuw inloggen vraagt nog steeds de app van het slachtoffer
 - Status: open
 - Sinds: 782f0e2
 
@@ -247,6 +254,46 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 - Status: open
 - Sinds: baseline
 
+### MC-15 De code van de tweede stap raden
+- Aanvallersdoel: inloggen als een gebruiker met tweestapsverificatie
+- Aanvaller: wie het wachtwoord al heeft (MC-01, MC-03, of hergebruik van een elders gelekt wachtwoord)
+- Assets / onderdelen: A-03, A-07, C-02, AU-05
+- Gerelateerde use case: UC-02
+- Stappen:
+  - AND 1. Het wachtwoord kennen, zodat `/login/2fa` bereikbaar is
+  - AND 2. Codes proberen. Per poging is de kans hoogstens 3 op 1.000.000: de code van nu en die van één stap ervoor en erna tellen
+- Mitigaties: MIT-06 (stap 2)
+- Restrisico: zonder blokkade zou het bij 100 pogingen per seconde gemiddeld ongeveer een uur duren. Met 5 pogingen per 15 minuten is de kans 0,14% per dag, maar ongeveer 41% als iemand een jaar lang volhoudt (berekend als 1 - (1 - 3/10^6)^n). Een blokkade die oploopt bij herhaling zou dat verder drukken. Wie het wachtwoord kent, kan met de blokkade ook de echte gebruiker 15 minuten buitensluiten
+- Status: gebouwd
+- Sinds: 96626e2
+
+### MC-16 Een code onderscheppen en gebruiken
+- Aanvallersdoel: inloggen als een gebruiker met tweestapsverificatie
+- Aanvaller: een nepsite die wachtwoord en code meteen doorgeeft aan de echte app (phishing in real time), of iemand die meekijkt of het verkeer meeleest (geen TLS, MC-04)
+- Assets / onderdelen: A-01, A-03, C-01, C-02, F-01, AU-05
+- Gerelateerde use case: UC-02
+- Stappen:
+  - OR  1. De code meteen gebruiken, binnen de stap waarin hij geldt (30 seconden, plus één stap klokverschil)
+  - OR  2. De code later nog eens gebruiken (replay)
+- Mitigaties: MIT-07 (stap 2), nog geen (stap 1)
+- Restrisico: TOTP is niet bestand tegen phishing: een nepsite die direct doorgeeft, komt binnen. Daartegen helpt alleen een factor die aan het domein gebonden is, zoals WebAuthn of passkeys
+- Status: open
+- Sinds: 96626e2
+
+### MC-17 Het TOTP-geheim buitmaken
+- Aanvallersdoel: zelf geldige codes maken, zodat de tweede factor wegvalt
+- Aanvaller: iemand met leestoegang tot de database of een backup; iemand die meekijkt tijdens het instellen; of iemand met toegang tot een gedeelde browser- of proxycache
+- Assets / onderdelen: A-07, C-01, C-03, C-04, F-02
+- Gerelateerde use case: UC-07
+- Stappen:
+  - OR  1. `users.totp_secret` lezen uit de database of het volume; het geheim staat leesbaar, net als het wachtwoord (MC-01)
+  - OR  2. Meekijken of een screenshot maken van de QR-code of de sleutel tijdens het instellen
+  - OR  3. De instelpagina of de QR-code uit een cache halen
+- Mitigaties: MIT-08 (stap 3, en stap 2 voor zover het om later terugkijken gaat), nog geen (stap 1)
+- Restrisico: een databaselek levert wachtwoord en geheim samen, en dan helpt tweestapsverificatie niet meer
+- Status: open
+- Sinds: 18e1424
+
 ## Mitigaties
 
 ### MIT-01 Automatisch escapen in Jinja
@@ -276,3 +323,31 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 - Waar: `read_note_form()` in `app/app.py`, met `TITLE_MAX` en `BODY_MAX`
 - Status: gebouwd
 - Sinds: 32c2661
+
+### MIT-05 Tweede factor bij inloggen (TOTP)
+- Houdt tegen: MC-03 stap 1 en 2, en een gelekt wachtwoord uit MC-01, voor accounts met tweestapsverificatie. Maakt MC-12 kleiner
+- Wat: na het juiste wachtwoord krijgt de sessie alleen een `pending_user_id`. Daarmee opent geen enkele route, want `login_required` en `load_user` kijken naar `user_id`. Pas na een geldige code op `/login/2fa` wordt de sessie gewist en `user_id` gezet. De halve login vervalt na 5 minuten. TOTP volgens RFC 6238: een geheim van 160 bits (RFC 4226 R6), 6 cijfers, 30 seconden, één stap klokverschil (RFC 6238, 5.2), vergeleken in constante tijd. De berekening is zonder dependency geschreven en met de hand tegen alle testvectoren van RFC 6238 en RFC 4226 gecontroleerd (T-35). Aanzetten gebeurt pas na een eerste geldige code. Uitzetten vraagt ook een code (AU-06), zodat wie alleen de sessie heeft de tweede factor niet kan weghalen
+- Waar: `login()`, `login_code()` en `check_code()` in `app/app.py`; `app/totp.py`
+- Status: gebouwd
+- Sinds: 96626e2
+
+### MIT-06 Blokkade na 5 foute codes
+- Houdt tegen: MC-15 stap 2
+- Wat: foute codes worden per account in de database geteld (`totp_failures`), niet in de sessie, want een sessie kan de aanvaller gewoon opnieuw beginnen. Bij de 5e fout op rij zit de codestap 15 minuten op slot (`totp_locked_until`), en dan wordt ook de juiste code geweigerd. Een geldige code zet de teller op 0
+- Waar: `check_code()` in `app/app.py`
+- Status: gebouwd
+- Sinds: 18e1424
+
+### MIT-07 Elke code werkt één keer
+- Houdt tegen: MC-16 stap 2
+- Wat: de tijdstap van de laatst geaccepteerde code staat in `totp_last_step`. Een code van dezelfde of een eerdere stap wordt geweigerd, zoals RFC 6238 5.2 eist ("MUST NOT accept the second attempt"). De controle zit in de WHERE van dezelfde UPDATE die de stap opslaat, zodat van twee gelijktijdige verzoeken met dezelfde code er maar één wint (T-31)
+- Waar: `check_code()` in `app/app.py`
+- Status: gebouwd
+- Sinds: 18e1424
+
+### MIT-08 Het geheim alleen tijdens het instellen, en niet in een cache
+- Houdt tegen: MC-17 stap 3, en het later terugkijken uit stap 2
+- Wat: de QR-code (`/account/2fa/qr.svg`) en de sleutel zijn alleen op te vragen zolang tweestapsverificatie nog niet aan staat; daarna geeft de QR-route een 404. Beide worden verstuurd met `Cache-Control: no-store`. De QR-code komt van een eigen route en staat niet inline in de pagina
+- Waar: `setup_2fa()`, `qr_2fa()` en `no_store()` in `app/app.py`
+- Status: gebouwd
+- Sinds: 18e1424

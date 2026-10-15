@@ -29,10 +29,16 @@ Notities van een ander lezen of wijzigen
 
 ```
 Account overnemen
-  OR  Het wachtwoord kennen
-        OR  uit de database lezen (MC-01)                                  [open]
-        OR  raden of stuffing (MC-03)                                      [open]
-              AND gebruikersnaam kennen (MC-09)                            [open]
+  OR  Inloggen als het slachtoffer
+        AND het wachtwoord kennen
+              OR  uit de database lezen (MC-01)                            [open]
+              OR  raden of stuffing (MC-03)                                [open]
+                    AND gebruikersnaam kennen (MC-09)                      [open]
+        AND de code kennen, als tweestapsverificatie aan staat             [MIT-05]
+              OR  de code raden (MC-15)                                    [MIT-06]
+              OR  een onderschepte code meteen gebruiken (MC-16)           [open]
+              OR  een onderschepte code later gebruiken (MC-16)            [MIT-07]
+              OR  het TOTP-geheim buitmaken (MC-17)                        [open]
   OR  De sessiecookie hebben (MC-04)
         OR  meelezen op het netwerk (geen TLS)                             [open]
         OR  kopieren van een gedeelde browser                              [open]

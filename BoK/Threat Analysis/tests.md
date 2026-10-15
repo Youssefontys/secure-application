@@ -28,6 +28,8 @@ ID's: `T-`, nooit hergebruiken. Kolom "Nu" is met de hand gemeten op
 | T-08 | UC-04 | Wachtwoord wijzigen: leeg, twee verschillende, geldig | 400; 400; daarna werkt het oude niet (401) en het nieuwe wel |
 | T-09 | UC-05 | Account verwijderen | Inloggen geeft 401, de notities zijn weg, een tweede sessie van hetzelfde account geldt als uitgelogd |
 | T-26 | UC-06 | `/account` openen als ingelogde gebruiker, en zonder in te loggen | Eigen gebruikersnaam, aanmaakdatum en aantal notities; zonder login 302 naar `/login` |
+| T-28 | UC-07 | Tweestapsverificatie instellen: foute code, juiste code, daarna de QR-code opvragen; uitzetten met foute en juiste code | 400; aan; QR-code 404; 400; uit |
+| T-29 | UC-02 | Inloggen met een account met tweestapsverificatie, en met een account zonder | Met: na het wachtwoord naar `/login/2fa`, na de code naar `/`. Zonder: na het wachtwoord meteen naar `/` |
 
 ## Aanval
 
@@ -50,3 +52,10 @@ ID's: `T-`, nooit hergebruiken. Kolom "Nu" is met de hand gemeten op
 | T-24 | MC-13 | Account verwijderen met een `POST` zonder bevestiging en zonder wachtwoord | Lukt | Geweigerd zonder het juiste wachtwoord |
 | T-25 | MC-14 | `whoami` in de app-container; de logs bij het starten | `root`; "WARNING: This is a development server" | Een gewone gebruiker; een productieserver zonder die waarschuwing |
 | T-27 | MC-10 | Titel van 15 en 16 tekens, notitie van 250 en 251 tekens, bij aanmaken en aanpassen | 302, 400, 302, 400 | Idem; dit is het bewijs voor MIT-04 |
+| T-30 | MC-15 | Na het wachtwoord 5 foute codes, daarna de juiste code, ook vanuit een nieuwe sessie | 5e fout: op slot; de juiste code geweigerd, ook in de nieuwe sessie | Idem; dit is het bewijs voor MIT-06 |
+| T-31 | MC-16 | Een geaccepteerde code nog eens gebruiken, en twee gelijktijdige verzoeken met dezelfde nieuwe code | Geweigerd; van de twee komt er precies één binnen | Idem; dit is het bewijs voor MIT-07 |
+| T-32 | MC-03 | Met alleen het juiste wachtwoord van een account met tweestapsverificatie naar `/`, `/account` en een notitie aanmaken | Alle drie 302 naar `/login` | Idem; dit is het bewijs voor MIT-05 |
+| T-33 | MC-15 | Een halve login die ouder is dan 5 minuten | Weggegooid, naar `/login` met de melding "Dat duurde te lang" (gemeten met de testclient van Flask) | Idem |
+| T-34 | MC-17 | `users.totp_secret` uitlezen | Het geheim staat leesbaar | Versleuteld |
+| T-35 | MIT-05 | `totp.code_at` tegen de testvectoren van RFC 6238 bijlage B (SHA1, 8 cijfers) en RFC 4226 bijlage D | Alle 16 goed | Idem |
+| T-36 | MC-17 | Headers van `/account/2fa` en `/account/2fa/qr.svg`; de QR-code opvragen nadat het instellen klaar is | `Cache-Control: no-store`; 404 | Idem; dit is het bewijs voor MIT-08 |
