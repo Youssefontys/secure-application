@@ -2,13 +2,15 @@
 
 services:
   db:
-    image: postgres:17
+    image: postgres:18
     environment:
       POSTGRES_DB: notities
       POSTGRES_USER: notities
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?zet POSTGRES_PASSWORD in .env}
     volumes:
-      - dbdata:/var/lib/postgresql/data
+      # Vanaf PostgreSQL 18 hoort het volume op /var/lib/postgresql. De image
+      # zet de data zelf in een submap per hoofdversie (18/docker).
+      - dbdata:/var/lib/postgresql
       # Draait alleen bij de allereerste start van een leeg volume.
       - ./db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
     healthcheck:
