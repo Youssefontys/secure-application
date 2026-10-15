@@ -48,7 +48,10 @@ Account overnemen
 
 ```
 Dienst onbruikbaar
-  OR  Zeer grote of veel verzoeken sturen (MC-10)                          [open]
+  OR  Zeer grote of veel verzoeken sturen (MC-10)
+        OR  te lange titel of notitie opslaan                              [MIT-04]
+        OR  groot verzoek, dat eerst helemaal wordt ingelezen              [open]
+        OR  veel accounts of notities aanmaken                             [open]
   OR  Alle notities wissen via MC-02                                       [open]
   OR  De database weggooien na overname van de app (MC-08)                 [open]
   OR  De ontwikkelserver van Flask overbelasten (MC-14)                    [open]

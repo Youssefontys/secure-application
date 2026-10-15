@@ -44,8 +44,9 @@ ID's: `T-`, nooit hergebruiken. Kolom "Nu" is met de hand gemeten op
 | T-18 | MC-07 | Notitie met `<script>` opslaan en de pagina ophalen | Staat er als `&lt;script&gt;` | Idem, plus een CSP-header (bewijs voor MIT-01 en de tweede laag) |
 | T-19 | MC-08 | Met de verbinding van de app `CREATE TABLE` en `DROP TABLE` uitvoeren | Lukt | Geweigerd: de app-rol mag alleen lezen en schrijven in zijn eigen tabellen |
 | T-20 | MC-09 | Een bestaande en een nieuwe naam registreren, antwoorden vergelijken | Verschillend antwoord (409 en 302) | Vertraagd of beperkt na een aantal pogingen |
-| T-21 | MC-10 | Een notitie van 5 MB aanmaken | Geaccepteerd | 413 of 400 |
+| T-21 | MC-10 | Een notitie van 5 MB sturen | 400, maar pas nadat de 5 MB is ingelezen (lokaal ongeveer 2,4 s) | 413, voordat het verzoek wordt ingelezen |
 | T-22 | MC-11 | `pip freeze` in de image vergelijken met `requirements.txt`; image scannen | `pip freeze` gelijk; een scan is nog niet gedaan | Gelijk; de scan draait in CI en meldt bekende kwetsbaarheden |
 | T-23 | MC-12 | Wachtwoord wijzigen zonder het huidige te kennen | Lukt | Geweigerd zonder het juiste huidige wachtwoord |
 | T-24 | MC-13 | Account verwijderen met een `POST` zonder bevestiging en zonder wachtwoord | Lukt | Geweigerd zonder het juiste wachtwoord |
 | T-25 | MC-14 | `whoami` in de app-container; de logs bij het starten | `root`; "WARNING: This is a development server" | Een gewone gebruiker; een productieserver zonder die waarschuwing |
+| T-27 | MC-10 | Titel van 15 en 16 tekens, notitie van 250 en 251 tekens, bij aanmaken en aanpassen | 302, 400, 302, 400 | Idem; dit is het bewijs voor MIT-04 |

@@ -181,11 +181,11 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 - Assets / onderdelen: C-02, C-03
 - Gerelateerde use case: UC-01, UC-03
 - Stappen:
-  - OR  1. Zeer grote formulieren sturen (geen `MAX_CONTENT_LENGTH`, geen lengtegrens op velden; de standaard `MAX_FORM_MEMORY_SIZE` van Flask, 500 kB, hield een gewoon formulier van 5 MB niet tegen, zie T-21)
+  - OR  1. Zeer grote formulieren sturen. Titel en notitie hebben een lengtegrens (MIT-04), maar het verzoek wordt eerst helemaal ingelezen: er is geen `MAX_CONTENT_LENGTH`, en de standaard `MAX_FORM_MEMORY_SIZE` van Flask (500 kB) hield een gewoon formulier van 5 MB niet tegen (T-21). Gebruikersnaam en wachtwoord hebben geen lengtegrens
   - OR  2. Onbeperkt veel accounts aanmaken
   - OR  3. Onbeperkt veel notities aanmaken en tonen
-- Mitigaties: geen
-- Restrisico: een enkel account kan opslag en geheugen vullen
+- Mitigaties: MIT-04 (stap 1, alleen voor titel en notitie), nog geen (stap 2 en 3, en de grootte van het verzoek zelf)
+- Restrisico: elk verzoek wordt helemaal ingelezen, het aantal accounts en notities is onbeperkt, en een gebruikersnaam kan elke lengte hebben
 - Status: open
 - Sinds: baseline
 
@@ -269,3 +269,10 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 - Waar: `app/requirements.txt`
 - Status: gebouwd
 - Sinds: db6698e
+
+### MIT-04 Lengtegrens op titel en notitie
+- Houdt tegen: MC-10 stap 1, voor zover het om het opslaan van te lange notities gaat
+- Wat: de server weigert een titel van meer dan 15 en een notitie van meer dan 250 tekens met een 400, bij aanmaken en bij aanpassen. `maxlength` in de formulieren is alleen gemak in de browser. Het verzoek wordt wel eerst helemaal ingelezen; tegen een groot verzoek zelf helpt dit niet (daarvoor is `MAX_CONTENT_LENGTH` nodig).
+- Waar: `read_note_form()` in `app/app.py`, met `TITLE_MAX` en `BODY_MAX`
+- Status: gebouwd
+- Sinds: 32c2661
