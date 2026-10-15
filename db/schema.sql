@@ -15,5 +15,7 @@ CREATE TABLE notes (
     user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     title      TEXT NOT NULL,
     body       TEXT NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    -- Leeg tot de notitie voor het eerst wordt aangepast.
+    updated_at TIMESTAMPTZ
 );

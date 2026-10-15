@@ -18,15 +18,23 @@ app = Flask(__name__, template_folder="web/templates", static_folder="web/static
 app.secret_key = os.environ["FLASK_SECRET_KEY"]
 
 DATABASE_URL = os.environ["DATABASE_URL"]
+# De app is Nederlandstalig; tijden worden in Nederlandse tijd getoond.
+TIMEZONE = "Europe/Amsterdam"
 
 
 def db():
     """Nieuwe databaseverbinding per aanroep. Het with-blok commit bij succes.
 
     Rijen komen terug als namedtuple, zodat code en templates `note.title`
-    schrijven in plaats van `note[1]`.
+    schrijven in plaats van `note[1]`. Tijden komen terug in TIMEZONE; de
+    database zelf staat op UTC.
     """
-    return psycopg.connect(DATABASE_URL, row_factory=namedtuple_row)
+    return psycopg.connect(DATABASE_URL, row_factory=namedtuple_row, options=f"-c TimeZone={TIMEZONE}")
+
+
+@app.template_filter("date")
+def format_date(value):
+    return value.strftime("%d-%m-%Y %H:%M")
 
 
 @app.before_request
@@ -161,7 +169,7 @@ def read_note_form():
 def fetch_notes():
     with db() as conn, conn.cursor() as cur:
         cur.execute(
-            "SELECT id, title, body, created_at FROM notes WHERE user_id = %s ORDER BY created_at DESC",
+            "SELECT id, title, body, created_at, updated_at FROM notes WHERE user_id = %s ORDER BY created_at DESC",
             (g.user.id,),
         )
         return cur.fetchall()
@@ -181,7 +189,9 @@ def edit_note(note_id):
             title, body, error = read_note_form()
             if error:
                 return render_template("edit_note.html", title=title, body=body, error=error), 400
-            cur.execute("UPDATE notes SET title = %s, body = %s WHERE id = %s", (title, body, note_id))
+            cur.execute(
+                "UPDATE notes SET title = %s, body = %s, updated_at = now() WHERE id = %s", (title, body, note_id),
+            )
             return redirect(url_for("notes"))
     return render_template("edit_note.html", title=note.title, body=note.body)
 
