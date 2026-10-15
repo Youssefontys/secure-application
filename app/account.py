@@ -1,0 +1,127 @@
+"""Het eigen account: profiel, tweestapsverificatie, wachtwoord wijzigen, account verwijderen."""
+
+import io
+
+import segno
+from flask import Blueprint, Response, abort, flash, g, redirect, render_template, request, session, url_for
+
+import totp
+from auth import check_code, login_required
+from db import query
+
+bp = Blueprint("account", __name__, url_prefix="/account")
+
+
+@bp.route("")
+@login_required
+def index():
+    return render_account()
+
+
+def render_account(error=None, status=200):
+    """De profielpagina, altijd van de ingelogde gebruiker zelf (AZ-08)."""
+    profile = query(
+        "SELECT username, created_at, totp_enabled,"
+        " (SELECT count(*) FROM notes WHERE user_id = users.id) AS note_count"
+        " FROM users WHERE id = %s",
+        (g.user.id,), one=True,
+    )
+    return render_template("account.html", profile=profile, error=error), status
+
+
+@bp.after_request
+def no_store(response):
+    """De pagina's met het TOTP-geheim niet in een browser- of proxycache laten staan (MIT-08)."""
+    if request.endpoint in ("account.setup_2fa", "account.qr_2fa"):
+        response.headers["Cache-Control"] = "no-store"
+    return response
+
+
+@bp.route("/2fa/start", methods=["POST"])
+@login_required
+def start_2fa():
+    # Een nieuw geheim, nog niet actief. Pas na een eerste geldige code staat de
+    # tweede factor aan, zodat je jezelf niet buitensluit met een verkeerd ingestelde app.
+    query(
+        "UPDATE users SET totp_secret = %s, totp_last_step = NULL WHERE id = %s AND NOT totp_enabled",
+        (totp.new_secret(), g.user.id),
+    )
+    return redirect(url_for("account.setup_2fa"))
+
+
+@bp.route("/2fa", methods=["GET", "POST"])
+@login_required
+def setup_2fa():
+    user = query("SELECT totp_secret, totp_enabled FROM users WHERE id = %s", (g.user.id,), one=True)
+    if user.totp_enabled or user.totp_secret is None:
+        return redirect(url_for("account.index"))
+    # De sleutel in groepjes van vier, om over te typen als scannen niet lukt.
+    grouped = " ".join(user.totp_secret[i:i + 4] for i in range(0, len(user.totp_secret), 4))
+    if request.method == "GET":
+        return render_template("setup_2fa.html", secret=grouped)
+
+    error = check_code(g.user.id)
+    if error:
+        return render_template("setup_2fa.html", secret=grouped, error=error), 400
+    query("UPDATE users SET totp_enabled = true WHERE id = %s", (g.user.id,))
+    flash("Tweestapsverificatie staat aan. Inloggen vraagt vanaf nu ook een code uit je app.")
+    return redirect(url_for("account.index"))
+
+
+@bp.route("/2fa/qr.svg")
+@login_required
+def qr_2fa():
+    # Alleen zolang het instellen loopt. Daarna is het geheim niet meer op te vragen.
+    user = query("SELECT username, totp_secret FROM users WHERE id = %s AND NOT totp_enabled", (g.user.id,), one=True)
+    if user is None or user.totp_secret is None:
+        abort(404)
+    svg = io.BytesIO()
+    segno.make(totp.provisioning_uri(user.totp_secret, user.username), error="m").save(svg, kind="svg", scale=6, border=2)
+    return Response(svg.getvalue(), mimetype="image/svg+xml")
+
+
+@bp.route("/2fa/disable", methods=["POST"])
+@login_required
+def disable_2fa():
+    # Uitzetten vraagt een geldige code: wie alleen de sessie heeft, kan de
+    # tweede factor niet weghalen.
+    error = check_code(g.user.id)
+    if error:
+        return render_account(error, 400)
+    query(
+        "UPDATE users SET totp_secret = NULL, totp_enabled = false, totp_last_step = NULL,"
+        " totp_failures = 0, totp_locked_until = NULL WHERE id = %s",
+        (g.user.id,),
+    )
+    flash("Tweestapsverificatie staat uit.")
+    return redirect(url_for("account.index"))
+
+
+@bp.route("/password", methods=["POST"])
+@login_required
+def change_password():
+    password = request.form.get("password", "")
+    repeat = request.form.get("password_repeat", "")
+    if not password:
+        return render_account("Vul een nieuw wachtwoord in.", 400)
+    if password != repeat:
+        return render_account("De twee wachtwoorden zijn niet gelijk.", 400)
+
+    # Het huidige wachtwoord wordt niet gevraagd: wie de sessie heeft, kan het
+    # wachtwoord wijzigen. Andere sessies blijven geldig. Zie MC-12.
+    query("UPDATE users SET password = %s WHERE id = %s", (password, g.user.id))
+    flash("Je wachtwoord is gewijzigd.")
+    return redirect(url_for("account.index"))
+
+
+@bp.route("/delete", methods=["POST"])
+@login_required
+def delete_account():
+    # Ook hier wordt het wachtwoord niet opnieuw gevraagd: wie de sessie
+    # heeft, kan het account verwijderen (MC-13). De notities gaan mee via
+    # ON DELETE CASCADE in db/schema.sql; andere sessies van dit account
+    # gelden daarna als uitgelogd (load_user).
+    query("DELETE FROM users WHERE id = %s", (g.user.id,))
+    session.clear()
+    flash("Je account en je notities zijn verwijderd.")
+    return redirect(url_for("auth.login"))

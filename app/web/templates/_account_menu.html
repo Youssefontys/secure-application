@@ -6,8 +6,8 @@
     </svg>
   </summary>
   <nav class="account-menu-panel" aria-label="Account">
-    <a href="{{ url_for('account') }}">Profiel</a>
-    <form method="post" action="{{ url_for('logout') }}">
+    <a href="{{ url_for('account.index') }}">Profiel</a>
+    <form method="post" action="{{ url_for('auth.logout') }}">
       <button type="submit">Uitloggen</button>
     </form>
   </nav>

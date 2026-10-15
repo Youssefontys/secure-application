@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {# Inloggen en registreren zijn hetzelfde formulier; alleen de teksten verschillen. #}
-{% set login = request.endpoint == "login" %}
+{% set login = request.endpoint == "auth.login" %}
 {% block title %}{{ "Inloggen" if login else "Registreren" }}{% endblock %}
 {% block body_class %}auth{% endblock %}
 {% block scene %}{% include "_scene.html" %}{% endblock %}
@@ -22,9 +22,9 @@
 
   <nav class="auth-links hint" aria-label="Accountopties">
     {% if login %}
-      <a href="{{ url_for('register') }}">Nog geen account? Registreren</a>
+      <a href="{{ url_for('auth.register') }}">Nog geen account? Registreren</a>
     {% else %}
-      <a href="{{ url_for('login') }}">Al een account? Inloggen</a>
+      <a href="{{ url_for('auth.login') }}">Al een account? Inloggen</a>
     {% endif %}
   </nav>
 {% endblock %}

@@ -4,7 +4,7 @@
 {% block content %}
   <header class="bar">
     <h1>Profiel</h1>
-    <a href="{{ url_for('notes') }}">Terug naar notities</a>
+    <a href="{{ url_for('notes.index') }}">Terug naar notities</a>
   </header>
 
   <dl class="card profile-details">
@@ -20,7 +20,7 @@
     <h2>Tweestapsverificatie</h2>
     {% if profile.totp_enabled %}
       <p class="hint">Staat aan. Inloggen vraagt naast je wachtwoord een code uit je authenticator-app.</p>
-      <form method="post" action="{{ url_for('disable_2fa') }}">
+      <form method="post" action="{{ url_for('account.disable_2fa') }}">
         <label>Code uit je app, om uit te zetten
           <input name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required>
         </label>
@@ -28,13 +28,13 @@
       </form>
     {% else %}
       <p class="hint">Staat uit. Met een code uit een authenticator-app erbij is een gestolen wachtwoord alleen niet meer genoeg om in te loggen.</p>
-      <form method="post" action="{{ url_for('start_2fa') }}">
+      <form method="post" action="{{ url_for('account.start_2fa') }}">
         <button type="submit">Instellen</button>
       </form>
     {% endif %}
   </section>
 
-  <form method="post" action="{{ url_for('change_password') }}" class="card">
+  <form method="post" action="{{ url_for('account.change_password') }}" class="card">
     <h2>Wachtwoord wijzigen</h2>
     <label>Nieuw wachtwoord
       <input name="password" type="password" autocomplete="new-password" required>
@@ -45,7 +45,7 @@
     <button type="submit">Wachtwoord opslaan</button>
   </form>
 
-  <form method="post" action="{{ url_for('delete_account') }}" class="card"
+  <form method="post" action="{{ url_for('account.delete_account') }}" class="card"
         data-confirm="Je account en al je notities worden definitief verwijderd. Doorgaan?">
     <h2>Account verwijderen</h2>
     <p class="hint">Je account en al je notities worden definitief verwijderd. Dit kan niet ongedaan worden gemaakt.</p>
