@@ -157,6 +157,20 @@ def change_password():
     return redirect(url_for("notes"))
 
 
+@app.route("/account/delete", methods=["POST"])
+@login_required
+def delete_account():
+    # Ook hier wordt het wachtwoord niet opnieuw gevraagd: wie de sessie
+    # heeft, kan het account verwijderen (MC-13). De notities gaan mee via
+    # ON DELETE CASCADE in db/schema.sql; andere sessies van dit account
+    # gelden daarna als uitgelogd (load_user).
+    with db() as conn, conn.cursor() as cur:
+        cur.execute("DELETE FROM users WHERE id = %s", (g.user.id,))
+    session.clear()
+    flash("Je account en je notities zijn verwijderd.")
+    return redirect(url_for("login"))
+
+
 @app.route("/", methods=["GET", "POST"])
 @login_required
 def notes():

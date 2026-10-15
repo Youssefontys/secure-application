@@ -10,5 +10,9 @@
     <form method="post" action="{{ url_for('logout') }}">
       <button type="submit">Uitloggen</button>
     </form>
+    <form method="post" action="{{ url_for('delete_account') }}"
+          data-confirm="Je account en al je notities worden definitief verwijderd. Doorgaan?">
+      <button type="submit">Account verwijderen</button>
+    </form>
   </nav>
 </details>
