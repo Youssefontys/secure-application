@@ -24,14 +24,18 @@ DATABASE_URL = os.environ["DATABASE_URL"]
 TIMEZONE = "Europe/Amsterdam"
 
 
-def db():
-    """Nieuwe databaseverbinding per aanroep. Het with-blok commit bij succes.
+def query(sql, params=(), one=False):
+    """Voert één SQL-opdracht uit in een eigen verbinding, commit, en geeft de rijen terug.
 
-    Rijen komen terug als namedtuple, zodat code en templates `note.title`
-    schrijven in plaats van `note[1]`. Tijden komen terug in TIMEZONE; de
-    database zelf staat op UTC.
+    De waarden in params gaan los van de SQL-tekst naar de database, dus invoer
+    wordt nooit als SQL uitgevoerd (MIT-02). Rijen zijn namedtuples, zodat code en
+    templates `note.title` schrijven in plaats van `note[1]`. Tijden komen terug in
+    TIMEZONE; de database zelf staat op UTC. Met one=True: de eerste rij of None.
     """
-    return psycopg.connect(DATABASE_URL, row_factory=namedtuple_row, options=f"-c TimeZone={TIMEZONE}")
+    with psycopg.connect(DATABASE_URL, row_factory=namedtuple_row, options=f"-c TimeZone={TIMEZONE}") as conn:
+        cur = conn.execute(sql, params)
+        rows = cur.fetchall() if cur.description else []
+    return (rows[0] if rows else None) if one else rows
 
 
 @app.template_filter("date")
@@ -64,9 +68,7 @@ def load_user():
     user_id = session.get("user_id")
     if user_id is None or request.endpoint == "static":
         return
-    with db() as conn, conn.cursor() as cur:
-        cur.execute("SELECT id, username FROM users WHERE id = %s", (user_id,))
-        g.user = cur.fetchone()
+    g.user = query("SELECT id, username FROM users WHERE id = %s", (user_id,), one=True)
 
 
 def login_required(view):
@@ -101,10 +103,7 @@ def register():
         return render_template("register.html", error="Vul een gebruikersnaam en wachtwoord in."), 400
 
     try:
-        with db() as conn, conn.cursor() as cur:
-            # De waarden gaan los van de SQL-tekst mee (psycopg), dus invoer
-            # wordt nooit als SQL uitgevoerd.
-            cur.execute("INSERT INTO users (username, password) VALUES (%s, %s)", (username, password))
+        query("INSERT INTO users (username, password) VALUES (%s, %s)", (username, password))
     except psycopg.errors.UniqueViolation:
         return render_template("register.html", error="Die gebruikersnaam is al in gebruik."), 409
     flash("Je account is aangemaakt. Je kunt nu inloggen.")
@@ -119,9 +118,7 @@ def login():
 
     username = request.form.get("username", "").strip()
     password = request.form.get("password", "")
-    with db() as conn, conn.cursor() as cur:
-        cur.execute("SELECT id FROM users WHERE username = %s AND password = %s", (username, password))
-        row = cur.fetchone()
+    row = query("SELECT id FROM users WHERE username = %s AND password = %s", (username, password), one=True)
     if row is None:
         return render_template("login.html", error="Onjuiste gebruikersnaam of wachtwoord."), 401
 
@@ -151,8 +148,7 @@ def change_password():
 
     # Het huidige wachtwoord wordt niet gevraagd: wie de sessie heeft, kan het
     # wachtwoord wijzigen. Andere sessies blijven geldig. Zie MC-12.
-    with db() as conn, conn.cursor() as cur:
-        cur.execute("UPDATE users SET password = %s WHERE id = %s", (password, g.user.id))
+    query("UPDATE users SET password = %s WHERE id = %s", (password, g.user.id))
     flash("Je wachtwoord is gewijzigd.")
     return redirect(url_for("notes"))
 
@@ -164,8 +160,7 @@ def delete_account():
     # heeft, kan het account verwijderen (MC-13). De notities gaan mee via
     # ON DELETE CASCADE in db/schema.sql; andere sessies van dit account
     # gelden daarna als uitgelogd (load_user).
-    with db() as conn, conn.cursor() as cur:
-        cur.execute("DELETE FROM users WHERE id = %s", (g.user.id,))
+    query("DELETE FROM users WHERE id = %s", (g.user.id,))
     session.clear()
     flash("Je account en je notities zijn verwijderd.")
     return redirect(url_for("login"))
@@ -177,11 +172,8 @@ def notes():
     if request.method == "POST":
         title, body, error = read_note_form()
         if error:
-            return render_template(
-                "notes.html", notes=fetch_notes(), error=error, form_title=title, form_body=body,
-            ), 400
-        with db() as conn, conn.cursor() as cur:
-            cur.execute("INSERT INTO notes (user_id, title, body) VALUES (%s, %s, %s)", (g.user.id, title, body))
+            return render_template("notes.html", notes=fetch_notes(), error=error, form_title=title, form_body=body), 400
+        query("INSERT INTO notes (user_id, title, body) VALUES (%s, %s, %s)", (g.user.id, title, body))
         return redirect(url_for("notes"))
 
     return render_template("notes.html", notes=fetch_notes())
@@ -196,12 +188,10 @@ def read_note_form():
 
 
 def fetch_notes():
-    with db() as conn, conn.cursor() as cur:
-        cur.execute(
-            "SELECT id, title, body, created_at, updated_at FROM notes WHERE user_id = %s ORDER BY created_at DESC",
-            (g.user.id,),
-        )
-        return cur.fetchall()
+    return query(
+        "SELECT id, title, body, created_at, updated_at FROM notes WHERE user_id = %s ORDER BY created_at DESC",
+        (g.user.id,),
+    )
 
 
 @app.route("/notes/<int:note_id>/edit", methods=["GET", "POST"])
@@ -209,26 +199,22 @@ def fetch_notes():
 def edit_note(note_id):
     # Alleen "ingelogd?" wordt gecontroleerd, niet of de notitie van jou is:
     # met het id van een ander lees en wijzig je zijn notitie (MC-02).
-    with db() as conn, conn.cursor() as cur:
-        cur.execute("SELECT title, body FROM notes WHERE id = %s", (note_id,))
-        note = cur.fetchone()
-        if note is None:
-            abort(404)
-        if request.method == "POST":
-            title, body, error = read_note_form()
-            if error:
-                return render_template("edit_note.html", title=title, body=body, error=error), 400
-            cur.execute(
-                "UPDATE notes SET title = %s, body = %s, updated_at = now() WHERE id = %s", (title, body, note_id),
-            )
-            return redirect(url_for("notes"))
-    return render_template("edit_note.html", title=note.title, body=note.body)
+    note = query("SELECT title, body FROM notes WHERE id = %s", (note_id,), one=True)
+    if note is None:
+        abort(404)
+    if request.method == "GET":
+        return render_template("edit_note.html", title=note.title, body=note.body)
+
+    title, body, error = read_note_form()
+    if error:
+        return render_template("edit_note.html", title=title, body=body, error=error), 400
+    query("UPDATE notes SET title = %s, body = %s, updated_at = now() WHERE id = %s", (title, body, note_id))
+    return redirect(url_for("notes"))
 
 
 @app.route("/notes/<int:note_id>/delete", methods=["POST"])
 @login_required
 def delete_note(note_id):
     # Ook hier geen controle op de eigenaar (MC-02).
-    with db() as conn, conn.cursor() as cur:
-        cur.execute("DELETE FROM notes WHERE id = %s", (note_id,))
+    query("DELETE FROM notes WHERE id = %s", (note_id,))
     return redirect(url_for("notes"))

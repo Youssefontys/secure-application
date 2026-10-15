@@ -251,8 +251,8 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 
 ### MIT-02 Parameterized queries
 - Houdt tegen: MC-06 stap 1 en 2
-- Wat: alle SQL gaat via `cur.execute(sql, (waarden,))`; de waarden worden los van de SQL-tekst naar de database gestuurd en nooit als SQL gelezen.
-- Waar: `app/app.py`
+- Wat: alle SQL gaat via één helper, `query(sql, (waarden,))`; de waarden worden los van de SQL-tekst naar de database gestuurd en nooit als SQL gelezen.
+- Waar: `query()` in `app/app.py`
 - Status: gebouwd
 - Sinds: baseline
 
