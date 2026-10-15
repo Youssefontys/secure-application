@@ -3,7 +3,10 @@
 
 {% block content %}
   <header class="bar">
-    <h1>Mijn notities</h1>
+    <div>
+      <p class="eyebrow">Mijn notities</p>
+      <h1>{{ greeting() }}, {{ g.user.username }}</h1>
+    </div>
     {% include "_account_menu.html" %}
   </header>
 

@@ -6,7 +6,9 @@ geen vergissing; de bekende gaten staan als misuse case in die map.
 """
 
 import os
+from datetime import datetime
 from functools import wraps
+from zoneinfo import ZoneInfo
 
 import psycopg
 from flask import Flask, abort, flash, g, redirect, render_template, request, session, url_for
@@ -35,6 +37,19 @@ def db():
 @app.template_filter("date")
 def format_date(value):
     return value.strftime("%d-%m-%Y %H:%M")
+
+
+@app.template_global()
+def greeting():
+    """Goedemorgen, -middag, -avond of -nacht, naar de Nederlandse tijd."""
+    hour = datetime.now(ZoneInfo(TIMEZONE)).hour
+    if hour < 6:
+        return "Goedenacht"
+    if hour < 12:
+        return "Goedemorgen"
+    if hour < 18:
+        return "Goedemiddag"
+    return "Goedenavond"
 
 
 @app.before_request

@@ -114,7 +114,8 @@ header.bar {
   margin-bottom: 1.5rem;
 }
 
-header.bar h1 { margin-bottom: 0; }
+header.bar h1 { margin-bottom: 0; overflow-wrap: anywhere; }
+header.bar > div { flex: 1; min-width: 0; }
 
 .auth-links {
   display: flex;
@@ -578,8 +579,10 @@ body.alerted .ticker { color: var(--danger); }
 
 .composer[open] summary { margin-bottom: 1rem; }
 
-.count {
-  margin: 1.5rem 0 0.75rem;
+.count { margin: 1.5rem 0 0.75rem; }
+.eyebrow { margin: 0 0 0.3rem; }
+
+.count, .eyebrow {
   font-family: ui-monospace, Consolas, monospace;
   font-size: 0.76rem;
   text-transform: uppercase;
