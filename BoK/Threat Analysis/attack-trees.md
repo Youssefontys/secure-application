@@ -35,6 +35,9 @@ Account overnemen
         OR  kopieren van een gedeelde browser                              [open]
         OR  zelf ondertekenen met de sessiesleutel                         [open]
   OR  Via een andere site handelen met de cookie van het slachtoffer (MC-05) [open]
+  OR  Het wachtwoord zelf wijzigen (MC-12)                                 [open]
+        AND handelen als het slachtoffer (cookie van MC-04, of via MC-05)
+        AND nieuw wachtwoord instellen zonder het huidige te kennen
   OR  Via SQL-injectie het wachtwoord laten zien (MC-06)                   [MIT-02]
 ```
 

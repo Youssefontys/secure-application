@@ -30,6 +30,13 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 - Assets: A-02
 - Sinds: baseline
 
+### UC-04 Wachtwoord wijzigen
+- Actor: ingelogde gebruiker
+- Doel: een nieuw wachtwoord instellen voor het eigen account
+- Onderdelen: C-01, C-02, C-03 (route `/account/password`, AU-04, AZ-06)
+- Assets: A-01
+- Sinds: 782f0e2
+
 ## Misuse cases
 
 ### MC-01 Wachtwoorden uit de database lezen
@@ -63,11 +70,11 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 - Aanvallersdoel: inloggen als een bekende gebruiker
 - Aanvaller: iedereen die de gebruikersnaam kent of kan raden
 - Assets / onderdelen: A-01, A-04, C-02, AU-01
-- Gerelateerde use case: UC-02
+- Gerelateerde use case: UC-02, UC-04
 - Stappen:
   - OR  1. Veelgebruikte wachtwoorden proberen tegen een account (brute force)
   - OR  2. Een lijst gelekte wachtwoorden proberen tegen veel accounts (credential stuffing)
-  - AND 3. Zwakke wachtwoorden worden bij registratie niet geweigerd
+  - AND 3. Zwakke wachtwoorden worden bij registratie en bij wijzigen niet geweigerd
 - Mitigaties: geen (geen limiet op pogingen, geen sterkte-eis, een factor)
 - Restrisico: onbeperkt aantal pogingen
 - Status: open
@@ -82,7 +89,7 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
   - OR  1. De cookie meelezen op het netwerk (HTTP, geen TLS, geen `Secure`-vlag)
   - OR  2. De cookie kopieren van een gedeelde of onbeheerde browser
   - OR  3. De sessiesleutel (A-05) bemachtigen en zelf een cookie ondertekenen
-  - AND 4. De cookie blijft geldig na uitloggen, tot hij verloopt (standaard 31 dagen)
+  - AND 4. De cookie blijft geldig na uitloggen en na een wachtwoordwijziging, tot hij verloopt (standaard 31 dagen)
 - Mitigaties: geen (de `HttpOnly`-vlag staat standaard aan in Flask; dat houdt JavaScript buiten beeld maar stopt de stappen hierboven niet)
 - Restrisico: een gekopieerde cookie werkt weken
 - Status: open
@@ -91,11 +98,11 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 ### MC-05 Handelingen laten uitvoeren via een andere site (CSRF)
 - Aanvallersdoel: namens een ingelogde gebruiker notities aanmaken, aanpassen of verwijderen
 - Aanvaller: de eigenaar van een andere website die de gebruiker bezoekt
-- Assets / onderdelen: A-02, A-03, C-01, C-02, AZ-02, AZ-04
-- Gerelateerde use case: UC-03
+- Assets / onderdelen: A-01, A-02, A-03, C-01, C-02, AZ-02, AZ-04, AZ-06
+- Gerelateerde use case: UC-03, UC-04
 - Stappen:
   - AND 1. De gebruiker is ingelogd en bezoekt de site van de aanvaller
-  - AND 2. Die site stuurt een formulier naar `/`, `/notes/<id>/delete` of `/logout`
+  - AND 2. Die site stuurt een formulier naar `/`, `/notes/<id>/delete`, `/account/password` of `/logout`
   - AND 3. De browser stuurt de cookie mee
 - Mitigaties: geen (geen CSRF-token; `SameSite` is niet ingesteld, dus het gedrag hangt van de browser af)
 - Restrisico: elke POST-route is aanroepbaar vanaf een andere site
@@ -182,6 +189,21 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 - Restrisico: vastzetten maakt stap 1 erger: zonder iets dat waarschuwt (zoals Dependabot) komen ook patches niet meer vanzelf binnen
 - Status: open
 - Sinds: baseline
+
+### MC-12 Wachtwoord wijzigen met andermans sessie
+- Aanvallersdoel: een account blijvend overnemen en de eigenaar buitensluiten
+- Aanvaller: wie een sessie van het slachtoffer heeft (MC-04), of de browser van het slachtoffer het formulier laat versturen (MC-05)
+- Assets / onderdelen: A-01, A-03, C-02, AU-04, AZ-06
+- Gerelateerde use case: UC-04
+- Stappen:
+  - AND 1. Handelen als het slachtoffer
+    - OR  1a. Met een gestolen of gekopieerde sessiecookie (MC-04)
+    - OR  1b. Via een formulier op een andere site (MC-05)
+  - AND 2. Een nieuw wachtwoord instellen op `/account/password`; het huidige wachtwoord wordt niet gevraagd (AU-04 ontbreekt)
+- Mitigaties: geen
+- Restrisico: een tijdelijke sessie wordt een blijvende overname. Wijzigt het slachtoffer zelf het wachtwoord, dan werkt de sessie van de aanvaller gewoon door (MC-04 stap 4)
+- Status: open
+- Sinds: 782f0e2
 
 ## Mitigaties
 
