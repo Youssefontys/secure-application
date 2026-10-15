@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Profiel{% endblock %}
+
+{% block content %}
+  <header class="bar">
+    <h1>Profiel</h1>
+    <a href="{{ url_for('notes') }}">Terug naar notities</a>
+  </header>
+
+  <dl class="card profile-details">
+    <dt>Gebruikersnaam</dt>
+    <dd>{{ profile.username }}</dd>
+    <dt>Lid sinds</dt>
+    <dd>{{ profile.created_at|date(time=False) }}</dd>
+    <dt>Notities</dt>
+    <dd>{{ profile.note_count }}</dd>
+  </dl>
+
+  <form method="post" action="{{ url_for('change_password') }}" class="card">
+    <h2>Wachtwoord wijzigen</h2>
+    <label>Nieuw wachtwoord
+      <input name="password" type="password" autocomplete="new-password" required>
+    </label>
+    <label>Herhaal het nieuwe wachtwoord
+      <input name="password_repeat" type="password" autocomplete="new-password" required>
+    </label>
+    <button type="submit">Wachtwoord opslaan</button>
+  </form>
+
+  <form method="post" action="{{ url_for('delete_account') }}" class="card"
+        data-confirm="Je account en al je notities worden definitief verwijderd. Doorgaan?">
+    <h2>Account verwijderen</h2>
+    <p class="hint">Je account en al je notities worden definitief verwijderd. Dit kan niet ongedaan worden gemaakt.</p>
+    <button type="submit" class="danger">Account verwijderen</button>
+  </form>
+{% endblock %}

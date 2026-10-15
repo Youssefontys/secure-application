@@ -181,7 +181,8 @@ header.bar > div { flex: 1; min-width: 0; }
 
 .profile-details { margin: 0 0 1.5rem; }
 .profile-details dt { color: var(--muted); font-size: 0.84rem; }
-.profile-details dd { margin: 0.25rem 0 1rem; }
+.profile-details dd { margin: 0.25rem 0 1rem; overflow-wrap: anywhere; }
+.profile-details dd:last-child { margin-bottom: 0; }
 
 h1 {
   margin: 0 0 1.25rem;

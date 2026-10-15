@@ -39,8 +39,8 @@ def query(sql, params=(), one=False):
 
 
 @app.template_filter("date")
-def format_date(value):
-    return value.strftime("%d-%m-%Y %H:%M")
+def format_date(value, time=True):
+    return value.strftime("%d-%m-%Y %H:%M" if time else "%d-%m-%Y")
 
 
 @app.template_global()
@@ -133,24 +133,37 @@ def logout():
     return redirect(url_for("login"))
 
 
-@app.route("/account/password", methods=["GET", "POST"])
+@app.route("/account")
+@login_required
+def account():
+    return render_account()
+
+
+def render_account(error=None, status=200):
+    """De profielpagina, altijd van de ingelogde gebruiker zelf (AZ-08)."""
+    profile = query(
+        "SELECT username, created_at, (SELECT count(*) FROM notes WHERE user_id = users.id) AS note_count"
+        " FROM users WHERE id = %s",
+        (g.user.id,), one=True,
+    )
+    return render_template("account.html", profile=profile, error=error), status
+
+
+@app.route("/account/password", methods=["POST"])
 @login_required
 def change_password():
-    if request.method == "GET":
-        return render_template("change_password.html")
-
     password = request.form.get("password", "")
     repeat = request.form.get("password_repeat", "")
     if not password:
-        return render_template("change_password.html", error="Vul een nieuw wachtwoord in."), 400
+        return render_account("Vul een nieuw wachtwoord in.", 400)
     if password != repeat:
-        return render_template("change_password.html", error="De twee wachtwoorden zijn niet gelijk."), 400
+        return render_account("De twee wachtwoorden zijn niet gelijk.", 400)
 
     # Het huidige wachtwoord wordt niet gevraagd: wie de sessie heeft, kan het
     # wachtwoord wijzigen. Andere sessies blijven geldig. Zie MC-12.
     query("UPDATE users SET password = %s WHERE id = %s", (password, g.user.id))
     flash("Je wachtwoord is gewijzigd.")
-    return redirect(url_for("notes"))
+    return redirect(url_for("account"))
 
 
 @app.route("/account/delete", methods=["POST"])
