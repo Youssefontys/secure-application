@@ -138,18 +138,24 @@ def change_password():
 @login_required
 def notes():
     if request.method == "POST":
-        title = request.form.get("title", "").strip()
-        body = request.form.get("body", "").strip()
-        if not title or not body:
+        title, body, error = read_note_form()
+        if error:
             return render_template(
-                "notes.html", notes=fetch_notes(), error="Vul een titel en een notitie in.",
-                form_title=title, form_body=body,
+                "notes.html", notes=fetch_notes(), error=error, form_title=title, form_body=body,
             ), 400
         with db() as conn, conn.cursor() as cur:
             cur.execute("INSERT INTO notes (user_id, title, body) VALUES (%s, %s, %s)", (g.user.id, title, body))
         return redirect(url_for("notes"))
 
     return render_template("notes.html", notes=fetch_notes())
+
+
+def read_note_form():
+    """Titel en inhoud uit het formulier, plus een foutmelding als er een leeg is."""
+    title = request.form.get("title", "").strip()
+    body = request.form.get("body", "").strip()
+    error = None if title and body else "Vul een titel en een notitie in."
+    return title, body, error
 
 
 def fetch_notes():
@@ -172,12 +178,11 @@ def edit_note(note_id):
         if note is None:
             abort(404)
         if request.method == "POST":
-            title = request.form.get("title", "").strip()
-            body = request.form.get("body", "").strip()
-            if title and body:
-                cur.execute("UPDATE notes SET title = %s, body = %s WHERE id = %s", (title, body, note_id))
-                return redirect(url_for("notes"))
-            return render_template("edit_note.html", title=title, body=body)
+            title, body, error = read_note_form()
+            if error:
+                return render_template("edit_note.html", title=title, body=body, error=error), 400
+            cur.execute("UPDATE notes SET title = %s, body = %s WHERE id = %s", (title, body, note_id))
+            return redirect(url_for("notes"))
     return render_template("edit_note.html", title=note.title, body=note.body)
 
 
