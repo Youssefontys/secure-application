@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Code invullen{% endblock %}
+{% block body_class %}auth{% endblock %}
+{% block scene %}{% include "_scene.html" %}{% endblock %}
+
+{% block content %}
+  <h1>Code invullen</h1>
+
+  <div class="card">
+    <p class="hint">Vul de code van 6 cijfers in die je authenticator-app nu toont.</p>
+    <form method="post">
+      <label>Code
+        <input name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required autofocus>
+      </label>
+      <button type="submit">Inloggen</button>
+    </form>
+  </div>
+
+  <nav class="auth-links hint" aria-label="Accountopties">
+    <a href="{{ url_for('login') }}">Opnieuw beginnen</a>
+  </nav>
+{% endblock %}

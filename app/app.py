@@ -7,6 +7,7 @@ Waar zo'n zwakke plek in de code zit, staat het MC-nummer erbij.
 
 import io
 import os
+import time
 from datetime import datetime
 from functools import wraps
 from zoneinfo import ZoneInfo
@@ -34,6 +35,8 @@ app.jinja_env.globals.update(TITLE_MAX=TITLE_MAX, BODY_MAX=BODY_MAX)
 # Na zoveel foute codes op rij gaat de codestap van dat account op slot (MIT-06).
 TOTP_MAX_FAILURES = 5
 TOTP_LOCK_MINUTES = 15
+# Zo lang heb je na het wachtwoord om de code in te vullen.
+PENDING_MAX_SECONDS = 300
 
 
 def query(sql, params=(), one=False):
@@ -130,12 +133,45 @@ def login():
 
     username = request.form.get("username", "").strip()
     password = request.form.get("password", "")
-    row = query("SELECT id FROM users WHERE username = %s AND password = %s", (username, password), one=True)
+    row = query(
+        "SELECT id, totp_enabled FROM users WHERE username = %s AND password = %s", (username, password), one=True,
+    )
     if row is None:
         return render_template("auth.html", error="Onjuiste gebruikersnaam of wachtwoord."), 401
 
     session.clear()
+    if row.totp_enabled:
+        # Het wachtwoord is pas de eerste factor. De sessie krijgt alleen een
+        # pending_user_id; daarmee kom je nergens in, want login_required en
+        # load_user kijken naar user_id (MIT-05).
+        session["pending_user_id"] = row.id
+        session["pending_since"] = int(time.time())
+        return redirect(url_for("login_code"))
     session["user_id"] = row.id
+    return redirect(url_for("notes"))
+
+
+@app.route("/login/2fa", methods=["GET", "POST"])
+@logged_out_only
+def login_code():
+    """De tweede stap: de code uit de authenticator-app (AU-05)."""
+    user_id = session.get("pending_user_id")
+    if user_id is None:
+        return redirect(url_for("login"))
+    if time.time() - session.get("pending_since", 0) > PENDING_MAX_SECONDS:
+        session.clear()
+        flash("Dat duurde te lang. Log opnieuw in.")
+        return redirect(url_for("login"))
+    if request.method == "GET":
+        return render_template("login_code.html")
+
+    error = check_code(user_id)
+    if error:
+        return render_template("login_code.html", error=error), 401
+    # Pas nu is de gebruiker ingelogd. session.clear() gooit de pending-sessie
+    # weg, zodat er niets van de halve login overblijft.
+    session.clear()
+    session["user_id"] = user_id
     return redirect(url_for("notes"))
 
 
