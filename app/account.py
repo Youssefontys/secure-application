@@ -6,7 +6,7 @@ import segno
 from flask import Blueprint, Response, abort, flash, g, redirect, render_template, request, session, url_for
 
 import totp
-from auth import check_code, login_required
+from auth import check_code, end_other_sessions, login_required
 from db import query
 
 bp = Blueprint("account", __name__, url_prefix="/account")
@@ -64,6 +64,8 @@ def setup_2fa():
     if error:
         return render_template("setup_2fa.html", secret=grouped, error=error), 400
     query("UPDATE users SET totp_enabled = true WHERE id = %s", (g.user.id,))
+    # Sessies van vóór de tweede factor zijn met alleen een wachtwoord gestart.
+    end_other_sessions(g.user.id)
     flash("Tweestapsverificatie staat aan. Inloggen vraagt vanaf nu ook een code uit je app.")
     return redirect(url_for("account.index"))
 
@@ -93,6 +95,7 @@ def disable_2fa():
         " totp_failures = 0, totp_locked_until = NULL WHERE id = %s",
         (g.user.id,),
     )
+    end_other_sessions(g.user.id)
     flash("Tweestapsverificatie staat uit.")
     return redirect(url_for("account.index"))
 
@@ -108,8 +111,9 @@ def change_password():
         return render_account("De twee wachtwoorden zijn niet gelijk.", 400)
 
     # Het huidige wachtwoord wordt niet gevraagd: wie de sessie heeft, kan het
-    # wachtwoord wijzigen. Andere sessies blijven geldig. Zie MC-12.
+    # wachtwoord wijzigen (MC-12). Alle andere sessies vervallen wel (MIT-09).
     query("UPDATE users SET password = %s WHERE id = %s", (password, g.user.id))
+    end_other_sessions(g.user.id)
     flash("Je wachtwoord is gewijzigd.")
     return redirect(url_for("account.index"))
 

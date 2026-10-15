@@ -27,15 +27,40 @@ PENDING_MAX_SECONDS = 300
 def load_user():
     """Haalt de ingelogde gebruiker één keer per verzoek op, in g.user.
 
-    Staat de id uit de sessie niet meer in de database, bijvoorbeeld omdat het
-    account in een andere sessie is verwijderd, dan geldt het verzoek als niet
-    ingelogd.
+    De sessie telt alleen als het account nog bestaat en de sessieversie in de
+    cookie gelijk is aan die in de database (MIT-09). Na uitloggen, een nieuw
+    wachtwoord of een wijziging aan de tweestapsverificatie is de versie in de
+    database opgehoogd, en dan werkt een oudere cookie niet meer, ook geen kopie.
     """
     g.user = None
     user_id = session.get("user_id")
     if user_id is None or request.endpoint == "static":
         return
-    g.user = query("SELECT id, username FROM users WHERE id = %s", (user_id,), one=True)
+    user = query("SELECT id, username, session_version FROM users WHERE id = %s", (user_id,), one=True)
+    if user is None or user.session_version != session.get("session_version"):
+        session.clear()
+        flash("Je sessie is niet meer geldig. Log opnieuw in.")
+        return
+    g.user = user
+
+
+def start_session(user_id, version):
+    """Een verse sessie voor deze gebruiker, met zijn huidige sessieversie."""
+    session.clear()
+    session["user_id"] = user_id
+    session["session_version"] = version
+
+
+def end_other_sessions(user_id):
+    """Hoogt de sessieversie op, zodat elke andere sessie van dit account niet meer telt.
+
+    De huidige sessie krijgt de nieuwe versie en blijft dus geldig.
+    """
+    row = query(
+        "UPDATE users SET session_version = session_version + 1 WHERE id = %s RETURNING session_version",
+        (user_id,), one=True,
+    )
+    session["session_version"] = row.session_version
 
 
 def login_required(view):
@@ -86,7 +111,8 @@ def login():
     username = request.form.get("username", "").strip()
     password = request.form.get("password", "")
     row = query(
-        "SELECT id, totp_enabled FROM users WHERE username = %s AND password = %s", (username, password), one=True,
+        "SELECT id, totp_enabled, session_version FROM users WHERE username = %s AND password = %s",
+        (username, password), one=True,
     )
     if row is None:
         return render_template("auth.html", error="Onjuiste gebruikersnaam of wachtwoord."), 401
@@ -97,9 +123,10 @@ def login():
         # pending_user_id; daarmee kom je nergens in, want login_required en
         # load_user kijken naar user_id (MIT-05).
         session["pending_user_id"] = row.id
+        session["pending_version"] = row.session_version
         session["pending_since"] = int(time.time())
         return redirect(url_for("auth.login_code"))
-    session["user_id"] = row.id
+    start_session(row.id, row.session_version)
     return redirect(url_for("notes.index"))
 
 
@@ -114,21 +141,32 @@ def login_code():
         session.clear()
         flash("Dat duurde te lang. Log opnieuw in.")
         return redirect(url_for("auth.login"))
+    # Is intussen het wachtwoord gewijzigd of overal uitgelogd, dan vervalt ook
+    # deze halve login.
+    version = query("SELECT session_version FROM users WHERE id = %s", (user_id,), one=True)
+    if version is None or version.session_version != session.get("pending_version"):
+        session.clear()
+        flash("Je sessie is niet meer geldig. Log opnieuw in.")
+        return redirect(url_for("auth.login"))
     if request.method == "GET":
         return render_template("login_code.html")
 
     error = check_code(user_id)
     if error:
         return render_template("login_code.html", error=error), 401
-    # Pas nu is de gebruiker ingelogd. session.clear() gooit de pending-sessie
+    # Pas nu is de gebruiker ingelogd. start_session gooit de pending-sessie
     # weg, zodat er niets van de halve login overblijft.
-    session.clear()
-    session["user_id"] = user_id
+    start_session(user_id, version.session_version)
     return redirect(url_for("notes.index"))
 
 
 @bp.route("/logout", methods=["POST"])
 def logout():
+    # Uitloggen hoogt de sessieversie op: ook een gekopieerde cookie werkt daarna
+    # niet meer (MC-04). De prijs: alle apparaten van dit account zijn uitgelogd.
+    # Preciezer kan alleen met sessies die op de server worden bijgehouden.
+    if g.user is not None:
+        query("UPDATE users SET session_version = session_version + 1 WHERE id = %s", (g.user.id,))
     session.clear()
     return redirect(url_for("auth.login"))
 
