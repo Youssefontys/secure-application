@@ -51,7 +51,7 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 - Assets: A-04
 - Sinds: 23e2ed3
 
-### UC-07 Tweestapsverificatie instellen en uitzetten
+### UC-07 Tweestapsverificatie instellen en opnieuw instellen
 - Actor: ingelogde gebruiker
 - Doel: een authenticator-app koppelen, zodat inloggen naast het wachtwoord een code vraagt; een herstelcode krijgen of vervangen; en opnieuw instellen voor een nieuwe telefoon. Verplicht: zonder kan een gebruiker alleen het instellen afmaken
 - Onderdelen: C-01, C-02, C-03 (`/account/2fa`, `/account/2fa/qr.svg`, `/account/2fa/recovery`, `/account/2fa/reset`; AU-06, AZ-09)
@@ -117,7 +117,7 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
   - OR  1. De cookie meelezen op het netwerk (HTTP, geen TLS, geen `Secure`-vlag)
   - OR  2. De cookie kopieren van een gedeelde of onbeheerde browser
   - OR  3. De sessiesleutel (A-05) bemachtigen en zelf een cookie ondertekenen
-  - AND 4. De cookie blijft geldig tot hij verloopt (standaard 31 dagen). Uitloggen, een nieuw wachtwoord en tweestapsverificatie aan- of uitzetten maken hem ongeldig (MIT-09)
+  - AND 4. De cookie blijft geldig tot hij verloopt (standaard 31 dagen). Uitloggen, een nieuw wachtwoord en tweestapsverificatie aanzetten of opnieuw instellen maken hem ongeldig (MIT-09)
 - Mitigaties: MIT-09 (stap 4, zodra de gebruiker uitlogt of een van zijn inloggegevens wijzigt). Verder geen: de `HttpOnly`-vlag staat standaard aan in Flask; dat houdt JavaScript buiten beeld maar stopt stap 1 tot 3 niet
 - Restrisico: een gekopieerde cookie werkt tot de gebruiker uitlogt of zijn wachtwoord of tweestapsverificatie wijzigt, en anders tot 31 dagen. Tweestapsverificatie helpt hier niet: de cookie is van na de code
 - Status: open
@@ -405,7 +405,7 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 
 ### MIT-09 Sessieversie: oude sessies vervallen
 - Houdt tegen: MC-04 stap 4; maakt MC-12 kleiner
-- Wat: elke gebruiker heeft een `session_version` in de database, en de sessiecookie krijgt die mee. `load_user` accepteert de sessie alleen als beide gelijk zijn; anders wordt de sessie gewist met de melding "Je sessie is niet meer geldig". Uitloggen, een nieuw wachtwoord en tweestapsverificatie aan- of uitzetten verhogen de versie. Na een nieuw wachtwoord of een 2FA-wijziging krijgt de huidige sessie de nieuwe versie en blijft ingelogd; alle andere vervallen. Ook een halve login vervalt als de versie verandert voordat de code is ingevuld. Uitloggen logt alle apparaten van het account uit: zonder sessies op de server bij te houden kan het niet preciezer
+- Wat: elke gebruiker heeft een `session_version` in de database, en de sessiecookie krijgt die mee. `load_user` accepteert de sessie alleen als beide gelijk zijn; anders wordt de sessie gewist met de melding "Je sessie is niet meer geldig". Uitloggen, een nieuw wachtwoord en tweestapsverificatie aanzetten of opnieuw instellen verhogen de versie. Na een nieuw wachtwoord of een 2FA-wijziging krijgt de huidige sessie de nieuwe versie en blijft ingelogd; alle andere vervallen. Ook een halve login vervalt als de versie verandert voordat de code is ingevuld. Uitloggen logt alle apparaten van het account uit: zonder sessies op de server bij te houden kan het niet preciezer
 - Waar: `load_user()`, `start_session()`, `end_other_sessions()`, `login_code()` en `logout()` in `app/auth.py`; `change_password()`, `setup_2fa()` en `disable_2fa()` in `app/account.py`
 - Status: gebouwd
 - Sinds: 587955a
