@@ -18,7 +18,7 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 
 ### UC-02 Inloggen en uitloggen
 - Actor: gebruiker
-- Doel: bewijzen wie je bent, een sessie krijgen, en die weer beeindigen. Staat tweestapsverificatie aan, dan hoort daar een code uit de authenticator-app bij
+- Doel: bewijzen wie je bent, met een wachtwoord en een code uit de authenticator-app (verplicht), een sessie krijgen, en die weer beeindigen
 - Onderdelen: C-01, C-02, C-03 (routes `/login`, `/login/2fa`, `/logout`, AU-01, AU-02, AU-05)
 - Assets: A-01, A-03, A-07
 - Sinds: baseline
@@ -53,8 +53,8 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 
 ### UC-07 Tweestapsverificatie instellen en uitzetten
 - Actor: ingelogde gebruiker
-- Doel: een authenticator-app koppelen, zodat inloggen naast het wachtwoord een code vraagt; een herstelcode krijgen of vervangen; en dat weer uitzetten
-- Onderdelen: C-01, C-02, C-03 (`/account/2fa/start`, `/account/2fa`, `/account/2fa/qr.svg`, `/account/2fa/recovery`, `/account/2fa/disable`; AU-06, AZ-09)
+- Doel: een authenticator-app koppelen, zodat inloggen naast het wachtwoord een code vraagt; een herstelcode krijgen of vervangen; en opnieuw instellen voor een nieuwe telefoon. Verplicht: zonder kan een gebruiker alleen het instellen afmaken
+- Onderdelen: C-01, C-02, C-03 (`/account/2fa`, `/account/2fa/qr.svg`, `/account/2fa/recovery`, `/account/2fa/reset`; AU-06, AZ-09)
 - Assets: A-07, A-08
 - Sinds: 18e1424
 
@@ -103,8 +103,8 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
   - OR  1. Veelgebruikte wachtwoorden proberen tegen een account (brute force)
   - OR  2. Een lijst gelekte wachtwoorden proberen tegen veel accounts (credential stuffing)
   - AND 3. Zwakke wachtwoorden worden bij registratie en bij wijzigen niet geweigerd
-- Mitigaties: MIT-10 (stap 1 en 2: 20 fouten per IP-adres en 5 per account vanaf één adres, daarna een oplopende blokkade). MIT-05 (stap 1 en 2, alleen voor accounts met tweestapsverificatie: een geraden wachtwoord geeft dan een halve login). Nog geen sterkte-eis (stap 3)
-- Restrisico: wie vanaf veel IP-adressen tegelijk raadt (een botnet), wordt per account niet begrensd; dat is bewust, zie MC-18. Tweestapsverificatie is een keuze van de gebruiker, dus accounts zonder blijven op één factor. En wie raadt, ziet aan de doorverwijzing naar `/login/2fa` dat het wachtwoord klopt
+- Mitigaties: MIT-10 (stap 1 en 2: 20 fouten per IP-adres en 5 per account vanaf één adres, daarna een oplopende blokkade). MIT-05 en MIT-12 (stap 1 en 2: tweestapsverificatie is verplicht, dus een geraden wachtwoord geeft alleen een halve login). Nog geen sterkte-eis (stap 3)
+- Restrisico: wie vanaf veel IP-adressen tegelijk raadt (een botnet), wordt per account niet begrensd; dat is bewust, zie MC-18. Een account dat het instellen nog niet heeft afgemaakt, zit nog op één factor (MC-20). En wie raadt, ziet aan de doorverwijzing naar `/login/2fa` dat het wachtwoord klopt
 - Status: open
 - Sinds: baseline
 
@@ -130,7 +130,7 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 - Gerelateerde use case: UC-03, UC-04, UC-05
 - Stappen:
   - AND 1. De gebruiker is ingelogd en bezoekt de site van de aanvaller
-  - AND 2. Die site stuurt een formulier naar `/`, `/notes/<id>/delete`, `/account/password`, `/account/delete`, `/account/2fa/start` of `/logout`. Tweestapsverificatie uitzetten (`/account/2fa/disable`) lukt zo niet, want daarvoor is een code nodig die de andere site niet heeft
+  - AND 2. Die site stuurt een formulier naar `/`, `/notes/<id>/delete`, `/account/password`, `/account/delete` of `/logout`. Tweestapsverificatie opnieuw instellen (`/account/2fa/reset`) of een nieuwe herstelcode maken (`/account/2fa/recovery`) lukt zo niet, want daarvoor is een code nodig die de andere site niet heeft
   - AND 3. De browser stuurt de cookie mee
 - Mitigaties: geen (geen CSRF-token; `SameSite` is niet ingesteld, dus het gedrag hangt van de browser af)
 - Restrisico: elke POST-route is aanroepbaar vanaf een andere site
@@ -229,7 +229,7 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
     - OR  1b. Via een formulier op een andere site (MC-05)
   - AND 2. Een nieuw wachtwoord instellen op `/account/password`; het huidige wachtwoord wordt niet gevraagd (AU-04 ontbreekt)
 - Mitigaties: geen
-- Restrisico: een tijdelijke sessie wordt een blijvende overname. Wijzigt het slachtoffer zelf het wachtwoord of logt het uit, dan vervalt de sessie van de aanvaller wel (MIT-09). Andersom ook: wijzigt de aanvaller het wachtwoord, dan vervallen alle sessies van het slachtoffer. Staat tweestapsverificatie aan, dan is de overname kleiner: de aanvaller kan die niet uitzetten zonder code (AU-06), dus later opnieuw inloggen vraagt nog steeds de app van het slachtoffer
+- Restrisico: een tijdelijke sessie wordt een blijvende overname. Wijzigt het slachtoffer zelf het wachtwoord of logt het uit, dan vervalt de sessie van de aanvaller wel (MIT-09). Andersom ook: wijzigt de aanvaller het wachtwoord, dan vervallen alle sessies van het slachtoffer. Omdat tweestapsverificatie verplicht is, blijft de overname beperkt tot deze sessie: de aanvaller kan de tweede factor niet vervangen zonder code (AU-06), dus later opnieuw inloggen vraagt nog steeds de app van het slachtoffer
 - Status: open
 - Sinds: 782f0e2
 
@@ -331,6 +331,20 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 - Status: open
 - Sinds: dc7d258
 
+### MC-20 De eerste instelling kapen
+- Aanvallersdoel: zijn eigen authenticator aan een account koppelen, zodat de echte gebruiker er niet meer in komt
+- Aanvaller: wie het wachtwoord heeft van een account dat tweestapsverificatie (nog) niet heeft ingesteld
+- Assets / onderdelen: A-01, A-07, A-08, C-02, AU-01, AZ-09
+- Gerelateerde use case: UC-07
+- Stappen:
+  - AND 1. Het wachtwoord kennen (MC-01, MC-03)
+  - AND 2. Het account heeft op dat moment geen tweestapsverificatie: net geregistreerd en nog niet ingesteld, of net een herstelcode gebruikt en het opnieuw instellen niet afgemaakt
+  - AND 3. Inloggen en het instellen afmaken met een eigen app; de aanvaller krijgt dan ook de herstelcode
+- Mitigaties: MIT-12 beperkt het venster: zonder tweestapsverificatie opent alleen het instellen, en een nieuw account of een gebruikte herstelcode gaat er direct naartoe. Nog geen mitigatie voor het venster zelf
+- Restrisico: dit is het bekende "trust on first use"-probleem: wie als eerste instelt, wordt vertrouwd. Daartegen helpt een tweede kanaal bij het aanmaken (zoals een bevestigde e-mail), en dat heeft deze app niet
+- Status: open
+- Sinds: 42ab429
+
 ## Mitigaties
 
 ### MIT-01 Automatisch escapen in Jinja
@@ -362,8 +376,8 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 - Sinds: 32c2661
 
 ### MIT-05 Tweede factor bij inloggen (TOTP)
-- Houdt tegen: MC-03 stap 1 en 2, en een gelekt wachtwoord uit MC-01, voor accounts met tweestapsverificatie. Maakt MC-12 kleiner
-- Wat: na het juiste wachtwoord krijgt de sessie alleen een `pending_user_id`. Daarmee opent geen enkele route, want `login_required` en `load_user` kijken naar `user_id`. Pas na een geldige code op `/login/2fa` wordt de sessie gewist en `user_id` gezet. De halve login vervalt na 5 minuten. TOTP volgens RFC 6238: een geheim van 160 bits (RFC 4226 R6), 6 cijfers, 30 seconden, één stap klokverschil (RFC 6238, 5.2), vergeleken in constante tijd. De berekening is zonder dependency geschreven en met de hand tegen alle testvectoren van RFC 6238 en RFC 4226 gecontroleerd (T-35). Aanzetten gebeurt pas na een eerste geldige code. Uitzetten vraagt ook een code (AU-06), zodat wie alleen de sessie heeft de tweede factor niet kan weghalen
+- Houdt tegen: MC-03 stap 1 en 2, en een gelekt wachtwoord uit MC-01; sinds MIT-12 voor elk account. Maakt MC-12 kleiner
+- Wat: na het juiste wachtwoord krijgt de sessie alleen een `pending_user_id`. Daarmee opent geen enkele route, want `login_required` en `load_user` kijken naar `user_id`. Pas na een geldige code op `/login/2fa` wordt de sessie gewist en `user_id` gezet. De halve login vervalt na 5 minuten. TOTP volgens RFC 6238: een geheim van 160 bits (RFC 4226 R6), 6 cijfers, 30 seconden, één stap klokverschil (RFC 6238, 5.2), vergeleken in constante tijd. De berekening is zonder dependency geschreven en met de hand tegen alle testvectoren van RFC 6238 en RFC 4226 gecontroleerd (T-35). Aanzetten gebeurt pas na een eerste geldige code. Opnieuw instellen vraagt ook een code (AU-06), zodat wie alleen de sessie heeft de tweede factor niet kan vervangen
 - Waar: `login()`, `login_code()` en `check_code()` in `app/auth.py`; `app/totp.py`
 - Status: gebouwd
 - Sinds: 96626e2
@@ -405,7 +419,14 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 
 ### MIT-11 Herstelcode
 - Houdt tegen: MC-19 stap 2a, 2c en 2d; maakt tweestapsverificatie mogelijk zonder dat een kwijtgeraakte telefoon het account onbereikbaar maakt
-- Wat: bij het aanzetten van tweestapsverificatie krijgt de gebruiker één keer een herstelcode van 128 willekeurige bits te zien. Alleen de SHA-256 wordt bewaard; een snelle hash is genoeg bij 128 willekeurige bits, anders dan bij een zelfverzonnen wachtwoord. Inloggen met de code kan alleen na het juiste wachtwoord. De code werkt één keer: hij zet tweestapsverificatie uit en verhoogt de sessieversie, zodat de gebruiker hem opnieuw instelt met een nieuwe telefoon. Het verbruik zit in een UPDATE met de hash in de WHERE, dus twee gelijktijdige verzoeken kunnen hem niet allebei gebruiken. 5 fouten in 15 minuten geven een blokkade (via `throttle.py`). Een nieuwe code maken vraagt een code uit de app (AU-06) en maakt de vorige ongeldig. De pagina's met de code worden met `Cache-Control: no-store` verstuurd
+- Wat: bij het aanzetten van tweestapsverificatie krijgt de gebruiker één keer een herstelcode van 128 willekeurige bits te zien. Alleen de SHA-256 wordt bewaard; een snelle hash is genoeg bij 128 willekeurige bits, anders dan bij een zelfverzonnen wachtwoord. Inloggen met de code kan alleen na het juiste wachtwoord. De code werkt één keer: hij zet tweestapsverificatie uit en verhoogt de sessieversie, en de app stuurt meteen naar het opnieuw instellen met een nieuwe telefoon (MIT-12). Het verbruik zit in een UPDATE met de hash in de WHERE, dus twee gelijktijdige verzoeken kunnen hem niet allebei gebruiken. 5 fouten in 15 minuten geven een blokkade (via `throttle.py`). Een nieuwe code maken vraagt een code uit de app (AU-06) en maakt de vorige ongeldig. De pagina's met de code worden met `Cache-Control: no-store` verstuurd
 - Waar: `new_recovery_code()` en `login_recover()` in `app/auth.py`; `setup_2fa()` en `new_recovery()` in `app/account.py`
 - Status: gebouwd
 - Sinds: dc7d258
+
+### MIT-12 Tweestapsverificatie verplicht
+- Houdt tegen: MC-03 stap 1 en 2 voor alle accounts, niet alleen voor wie het zelf aanzet; beperkt het venster van MC-20
+- Wat: `login_required` laat een ingelogde gebruiker zonder tweestapsverificatie alleen het instellen afmaken (`/account/2fa` en de QR-code); elke andere pagina stuurt daarheen. Dat geldt voor een nieuw account na het eerste wachtwoord, en na het gebruik van een herstelcode. De instelpagina maakt zelf een geheim aan en biedt uitloggen in plaats van annuleren. Uitzetten bestaat niet meer: alleen opnieuw instellen voor een nieuwe telefoon, met een code (AU-06), waarna de app meteen naar het instellen stuurt
+- Waar: `login_required()` en `login()` in `app/auth.py`; `setup_2fa()` en `reset_2fa()` in `app/account.py`
+- Status: gebouwd
+- Sinds: 42ab429

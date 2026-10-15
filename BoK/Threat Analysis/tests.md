@@ -28,9 +28,9 @@ ID's: `T-`, nooit hergebruiken. Kolom "Nu" is met de hand gemeten op
 | T-08 | UC-04 | Wachtwoord wijzigen: leeg, twee verschillende, geldig | 400; 400; daarna werkt het oude niet (401) en het nieuwe wel |
 | T-09 | UC-05 | Account verwijderen | Inloggen geeft 401, de notities zijn weg, een tweede sessie van hetzelfde account geldt als uitgelogd |
 | T-26 | UC-06 | `/account` openen als ingelogde gebruiker, en zonder in te loggen | Eigen gebruikersnaam, aanmaakdatum en aantal notities; zonder login 302 naar `/login` |
-| T-28 | UC-07 | Tweestapsverificatie instellen: foute code, juiste code, daarna de QR-code opvragen; uitzetten met foute en juiste code | 400; aan; QR-code 404; 400; uit |
-| T-29 | UC-02 | Inloggen met een account met tweestapsverificatie, en met een account zonder | Met: na het wachtwoord naar `/login/2fa`, na de code naar `/`. Zonder: na het wachtwoord meteen naar `/` |
-| T-44 | UC-08 | Met wachtwoord en herstelcode inloggen (ook met hoofdletters, spaties en streepjes) | Ingelogd, met de melding dat de herstelcode is gebruikt; tweestapsverificatie staat uit |
+| T-28 | UC-07 | Tweestapsverificatie instellen: foute code, juiste code, daarna de QR-code opvragen; opnieuw instellen met foute en juiste code | 400; aan, met herstelcode; QR-code 404; 400; naar het instellen |
+| T-29 | UC-02 | Inloggen met een account met tweestapsverificatie, en met een account zonder | Met: na het wachtwoord naar `/login/2fa`, na de code naar `/`. Zonder: na het wachtwoord naar `/account/2fa` (MIT-12) |
+| T-44 | UC-08 | Met wachtwoord en herstelcode inloggen (ook met hoofdletters, spaties en streepjes) | Naar `/account/2fa` met de melding dat de herstelcode is gebruikt; tweestapsverificatie moet opnieuw worden ingesteld |
 | T-45 | UC-07 | Een nieuwe herstelcode maken met een foute en met een juiste code uit de app | 400; daarna een nieuwe code, en de vorige werkt niet meer |
 
 ## Aanval
@@ -72,3 +72,5 @@ ID's: `T-`, nooit hergebruiken. Kolom "Nu" is met de hand gemeten op
 | T-47 | MC-19 | `users.recovery_hash` bekijken na het aanzetten | 64 tekens (SHA-256), niet gelijk aan de code | Idem |
 | T-48 | MC-19 | 5 foute herstelcodes | De 5e geeft 429 en een blokkade van 15 minuten | Idem |
 | T-49 | MC-19 | Headers van de pagina's die de herstelcode tonen | `Cache-Control: no-store` | Idem |
+| T-50 | MC-03 | Een account zonder tweestapsverificatie: na het wachtwoord naar `/`, `/account` en een notitie aanmaken | Alle drie 302 naar `/account/2fa` | Idem; bewijs voor MIT-12 |
+| T-51 | MC-20 | Met alleen het wachtwoord van een account zonder tweestapsverificatie het instellen afmaken met een eigen app | Lukt | Geweigerd zonder een tweede kanaal (bijvoorbeeld een bevestigde e-mail) |

@@ -34,12 +34,15 @@ Account overnemen
               OR  uit de database lezen (MC-01)                            [open]
               OR  raden of stuffing (MC-03)                                [MIT-10, deels]
                     AND gebruikersnaam kennen (MC-09)                      [open]
-        AND de code kennen, als tweestapsverificatie aan staat             [MIT-05]
+        AND de code kennen (tweestapsverificatie is verplicht)             [MIT-05, MIT-12]
               OR  de code raden (MC-15)                                    [MIT-06]
               OR  een onderschepte code meteen gebruiken (MC-16)           [open]
               OR  een onderschepte code later gebruiken (MC-16)            [MIT-07]
               OR  het TOTP-geheim buitmaken (MC-17)                        [open]
               OR  de herstelcode gebruiken (MC-19)                         [MIT-11, deels]
+  OR  De tweede factor zelf instellen (MC-20)                              [open]
+        AND het wachtwoord kennen
+        AND het account heeft op dat moment geen tweestapsverificatie
   OR  De sessiecookie hebben (MC-04)
         OR  meelezen op het netwerk (geen TLS)                             [open]
         OR  kopieren van een gedeelde browser                              [open, MIT-09 na uitloggen]
