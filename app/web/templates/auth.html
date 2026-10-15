@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{# Inloggen en registreren zijn hetzelfde formulier; alleen de teksten verschillen. #}
+{% set login = request.endpoint == "login" %}
+{% block title %}{{ "Inloggen" if login else "Registreren" }}{% endblock %}
+{% block body_class %}auth{% endblock %}
+{% block scene %}{% include "_scene.html" %}{% endblock %}
+
+{% block content %}
+  <h1>{{ "Inloggen" if login else "Account aanmaken" }}</h1>
+
+  <div class="card">
+    <form method="post">
+      <label>Gebruikersnaam
+        <input name="username" autocomplete="username" required>
+      </label>
+      <label>Wachtwoord
+        <input name="password" type="password" autocomplete="{{ 'current-password' if login else 'new-password' }}" required>
+      </label>
+      <button type="submit">{{ "Inloggen" if login else "Account aanmaken" }}</button>
+    </form>
+  </div>
+
+  <nav class="auth-links hint" aria-label="Accountopties">
+    {% if login %}
+      <a href="{{ url_for('register') }}">Nog geen account? Registreren</a>
+    {% else %}
+      <a href="{{ url_for('login') }}">Al een account? Inloggen</a>
+    {% endif %}
+  </nav>
+{% endblock %}

@@ -95,17 +95,17 @@ def logged_out_only(view):
 @logged_out_only
 def register():
     if request.method == "GET":
-        return render_template("register.html")
+        return render_template("auth.html")
 
     username = request.form.get("username", "").strip()
     password = request.form.get("password", "")
     if not username or not password:
-        return render_template("register.html", error="Vul een gebruikersnaam en wachtwoord in."), 400
+        return render_template("auth.html", error="Vul een gebruikersnaam en wachtwoord in."), 400
 
     try:
         query("INSERT INTO users (username, password) VALUES (%s, %s)", (username, password))
     except psycopg.errors.UniqueViolation:
-        return render_template("register.html", error="Die gebruikersnaam is al in gebruik."), 409
+        return render_template("auth.html", error="Die gebruikersnaam is al in gebruik."), 409
     flash("Je account is aangemaakt. Je kunt nu inloggen.")
     return redirect(url_for("login"))
 
@@ -114,13 +114,13 @@ def register():
 @logged_out_only
 def login():
     if request.method == "GET":
-        return render_template("login.html")
+        return render_template("auth.html")
 
     username = request.form.get("username", "").strip()
     password = request.form.get("password", "")
     row = query("SELECT id FROM users WHERE username = %s AND password = %s", (username, password), one=True)
     if row is None:
-        return render_template("login.html", error="Onjuiste gebruikersnaam of wachtwoord."), 401
+        return render_template("auth.html", error="Onjuiste gebruikersnaam of wachtwoord."), 401
 
     session.clear()
     session["user_id"] = row.id
