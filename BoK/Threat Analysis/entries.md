@@ -406,7 +406,7 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 ### MIT-09 Sessieversie: oude sessies vervallen
 - Houdt tegen: MC-04 stap 4; maakt MC-12 kleiner
 - Wat: elke gebruiker heeft een `session_version` in de database, en de sessiecookie krijgt die mee. `load_user` accepteert de sessie alleen als beide gelijk zijn; anders wordt de sessie gewist met de melding "Je sessie is niet meer geldig". Uitloggen, een nieuw wachtwoord en tweestapsverificatie aanzetten of opnieuw instellen verhogen de versie. Na een nieuw wachtwoord of een 2FA-wijziging krijgt de huidige sessie de nieuwe versie en blijft ingelogd; alle andere vervallen. Ook een halve login vervalt als de versie verandert voordat de code is ingevuld. Uitloggen logt alle apparaten van het account uit: zonder sessies op de server bij te houden kan het niet preciezer
-- Waar: `load_user()`, `start_session()`, `end_other_sessions()`, `login_code()` en `logout()` in `app/auth.py`; `change_password()`, `setup_2fa()` en `disable_2fa()` in `app/account.py`
+- Waar: `load_user()`, `start_session()`, `end_other_sessions()`, `login_code()` en `logout()` in `app/auth.py`; `change_password()`, `setup_2fa()` en `reset_2fa()` in `app/account.py`
 - Status: gebouwd
 - Sinds: 587955a
 

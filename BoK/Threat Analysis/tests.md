@@ -38,7 +38,7 @@ ID's: `T-`, nooit hergebruiken. Kolom "Nu" is met de hand gemeten op
 | ID | Dekt | Test | Nu | Na de mitigatie |
 |----|------|------|----|-----------------|
 | T-10 | MC-01 | Na registreren `users.password` uitlezen | Het wachtwoord staat er leesbaar | Een hash, niet terug te rekenen |
-| T-11 | MC-02 | Gebruiker B opent, wijzigt en verwijdert een notitie van A via `/notes/<id>/edit` en `/delete` | Lukt | 404, notitie van A ongewijzigd |
+| T-11 | MC-02 | Gebruiker B opent, wijzigt en verwijdert een notitie van A via `/notes/<id>/edit` en `/notes/<id>/delete` | Lukt | 404, notitie van A ongewijzigd |
 | T-12 | MC-03 | Foute wachtwoorden achter elkaar op één account | De 5e geeft 429 en een blokkade van 15 minuten; ook het juiste wachtwoord wordt dan geweigerd (sinds MIT-10) | Idem; dit is het bewijs voor MIT-10 |
 | T-13 | MC-03 | Registreren of wijzigen naar wachtwoord `a` | Geaccepteerd | Geweigerd met uitleg |
 | T-14 | MC-04 | Cookie kopiëren, uitloggen, gekopieerde cookie gebruiken | 302 naar `/login` met de melding "Je sessie is niet meer geldig" (sinds MIT-09) | Idem; dit is het bewijs voor MIT-09 |
