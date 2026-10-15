@@ -1,18 +1,22 @@
-"""Notitie-app: registreren, inloggen, wachtwoord wijzigen, account verwijderen
-en notities beheren.
+"""Notitie-app: registreren, inloggen (met tweestapsverificatie als die aan staat),
+wachtwoord wijzigen, account verwijderen en notities beheren.
 
 De bekende zwakke plekken staan als misuse case in BoK/Threat Analysis/entries.md.
 Waar zo'n zwakke plek in de code zit, staat het MC-nummer erbij.
 """
 
+import io
 import os
 from datetime import datetime
 from functools import wraps
 from zoneinfo import ZoneInfo
 
 import psycopg
-from flask import Flask, abort, flash, g, redirect, render_template, request, session, url_for
+import segno
+from flask import Flask, Response, abort, flash, g, redirect, render_template, request, session, url_for
 from psycopg.rows import namedtuple_row
+
+import totp
 
 # De website (HTML-templates en statische bestanden) staat in web/, los van de code.
 app = Flask(__name__, template_folder="web/templates", static_folder="web/static")
@@ -27,6 +31,9 @@ TIMEZONE = "Europe/Amsterdam"
 TITLE_MAX = 15
 BODY_MAX = 250
 app.jinja_env.globals.update(TITLE_MAX=TITLE_MAX, BODY_MAX=BODY_MAX)
+# Na zoveel foute codes op rij gaat de codestap van dat account op slot (MIT-06).
+TOTP_MAX_FAILURES = 5
+TOTP_LOCK_MINUTES = 15
 
 
 def query(sql, params=(), one=False):
@@ -44,8 +51,8 @@ def query(sql, params=(), one=False):
 
 
 @app.template_filter("date")
-def format_date(value, time=True):
-    return value.strftime("%d-%m-%Y %H:%M" if time else "%d-%m-%Y")
+def format_date(value, with_time=True):
+    return value.strftime("%d-%m-%Y %H:%M" if with_time else "%d-%m-%Y")
 
 
 @app.template_global()
@@ -147,11 +154,115 @@ def account():
 def render_account(error=None, status=200):
     """De profielpagina, altijd van de ingelogde gebruiker zelf (AZ-08)."""
     profile = query(
-        "SELECT username, created_at, (SELECT count(*) FROM notes WHERE user_id = users.id) AS note_count"
+        "SELECT username, created_at, totp_enabled,"
+        " (SELECT count(*) FROM notes WHERE user_id = users.id) AS note_count"
         " FROM users WHERE id = %s",
         (g.user.id,), one=True,
     )
     return render_template("account.html", profile=profile, error=error), status
+
+
+def check_code(user_id):
+    """Controleert de TOTP-code uit het formulier voor dit account. None als hij klopt, anders de foutmelding.
+
+    - Zit de codestap op slot, dan wordt ook de juiste code geweigerd (MIT-06).
+    - Een code die al eens is geaccepteerd, werkt niet nog een keer (MIT-07). RFC 6238
+      5.2: de verifier MUST NOT accept the second attempt of the OTP.
+    Beide controles staan in de WHERE van één UPDATE. Twee gelijktijdige verzoeken met
+    dezelfde code kunnen er dus niet allebei door: de database laat er één winnen.
+    """
+    user = query("SELECT totp_secret, totp_locked_until > now() AS locked FROM users WHERE id = %s", (user_id,), one=True)
+    if user is None or user.totp_secret is None:
+        return "Er is geen tweestapsverificatie ingesteld."
+    if user.locked:
+        return f"Te veel foute codes. Probeer het over {TOTP_LOCK_MINUTES} minuten opnieuw."
+    step = totp.matching_step(user.totp_secret, request.form.get("code", ""))
+    if step is not None and query(
+        "UPDATE users SET totp_last_step = %s, totp_failures = 0, totp_locked_until = NULL"
+        " WHERE id = %s AND (totp_last_step IS NULL OR totp_last_step < %s)"
+        " AND (totp_locked_until IS NULL OR totp_locked_until <= now()) RETURNING id",
+        (step, user_id, step), one=True,
+    ):
+        return None
+    # Fout, of al eens gebruikt: telt als mislukte poging. De teller staat in de
+    # database en niet in de sessie, want een sessie kan de aanvaller gewoon opnieuw beginnen.
+    locked = query(
+        "UPDATE users SET"
+        " totp_locked_until = CASE WHEN totp_failures + 1 >= %(max)s"
+        "   THEN now() + make_interval(mins => %(mins)s) ELSE totp_locked_until END,"
+        " totp_failures = CASE WHEN totp_failures + 1 >= %(max)s THEN 0 ELSE totp_failures + 1 END"
+        " WHERE id = %(id)s RETURNING totp_locked_until > now() AS locked",
+        {"max": TOTP_MAX_FAILURES, "mins": TOTP_LOCK_MINUTES, "id": user_id}, one=True,
+    )
+    if locked and locked.locked:
+        return f"Te veel foute codes. Probeer het over {TOTP_LOCK_MINUTES} minuten opnieuw."
+    return "Onjuiste of al gebruikte code."
+
+
+@app.route("/account/2fa/start", methods=["POST"])
+@login_required
+def start_2fa():
+    # Een nieuw geheim, nog niet actief. Pas na een eerste geldige code staat de
+    # tweede factor aan, zodat je jezelf niet buitensluit met een verkeerd ingestelde app.
+    query(
+        "UPDATE users SET totp_secret = %s, totp_last_step = NULL WHERE id = %s AND NOT totp_enabled",
+        (totp.new_secret(), g.user.id),
+    )
+    return redirect(url_for("setup_2fa"))
+
+
+def no_store(response):
+    """Pagina's met het TOTP-geheim niet in een browser- of proxycache laten staan."""
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
+
+@app.route("/account/2fa", methods=["GET", "POST"])
+@login_required
+def setup_2fa():
+    user = query("SELECT totp_secret, totp_enabled FROM users WHERE id = %s", (g.user.id,), one=True)
+    if user.totp_enabled or user.totp_secret is None:
+        return redirect(url_for("account"))
+    # De sleutel in groepjes van vier, om over te typen als scannen niet lukt.
+    grouped = " ".join(user.totp_secret[i:i + 4] for i in range(0, len(user.totp_secret), 4))
+    if request.method == "GET":
+        return no_store(app.make_response(render_template("setup_2fa.html", secret=grouped)))
+
+    error = check_code(g.user.id)
+    if error:
+        return no_store(app.make_response((render_template("setup_2fa.html", secret=grouped, error=error), 400)))
+    query("UPDATE users SET totp_enabled = true WHERE id = %s", (g.user.id,))
+    flash("Tweestapsverificatie staat aan. Inloggen vraagt vanaf nu ook een code uit je app.")
+    return redirect(url_for("account"))
+
+
+@app.route("/account/2fa/qr.svg")
+@login_required
+def qr_2fa():
+    # Alleen zolang het instellen loopt. Daarna is het geheim niet meer op te vragen.
+    user = query("SELECT username, totp_secret FROM users WHERE id = %s AND NOT totp_enabled", (g.user.id,), one=True)
+    if user is None or user.totp_secret is None:
+        abort(404)
+    svg = io.BytesIO()
+    segno.make(totp.provisioning_uri(user.totp_secret, user.username), error="m").save(svg, kind="svg", scale=6, border=2)
+    return no_store(Response(svg.getvalue(), mimetype="image/svg+xml"))
+
+
+@app.route("/account/2fa/disable", methods=["POST"])
+@login_required
+def disable_2fa():
+    # Uitzetten vraagt een geldige code: wie alleen de sessie heeft, kan de
+    # tweede factor niet weghalen.
+    error = check_code(g.user.id)
+    if error:
+        return render_account(error, 400)
+    query(
+        "UPDATE users SET totp_secret = NULL, totp_enabled = false, totp_last_step = NULL,"
+        " totp_failures = 0, totp_locked_until = NULL WHERE id = %s",
+        (g.user.id,),
+    )
+    flash("Tweestapsverificatie staat uit.")
+    return redirect(url_for("account"))
 
 
 @app.route("/account/password", methods=["POST"])

@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Tweestapsverificatie instellen{% endblock %}
+
+{% block content %}
+  <header class="bar">
+    <h1>Tweestapsverificatie instellen</h1>
+    <a href="{{ url_for('account') }}">Annuleren</a>
+  </header>
+
+  <div class="card">
+    <ol class="steps">
+      <li>Scan de QR-code met een authenticator-app, zoals Microsoft Authenticator, Google Authenticator of Aegis.</li>
+      <li>Lukt scannen niet, vul dan deze sleutel in de app in: <span class="secret">{{ secret }}</span></li>
+      <li>Vul hieronder de code van 6 cijfers in die de app nu toont. Pas daarna staat de tweede factor aan.</li>
+    </ol>
+    {# Het plaatje komt van een eigen route en staat niet inline, zodat een strikte
+       CSP later kan (img-src 'self'). #}
+    <img class="qr" src="{{ url_for('qr_2fa') }}" alt="QR-code voor je authenticator-app" width="232" height="232">
+    <form method="post">
+      <label>Code uit je app
+        <input name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required autofocus>
+      </label>
+      <button type="submit">Aanzetten</button>
+    </form>
+  </div>
+{% endblock %}

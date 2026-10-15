@@ -11,10 +11,28 @@
     <dt>Gebruikersnaam</dt>
     <dd>{{ profile.username }}</dd>
     <dt>Lid sinds</dt>
-    <dd>{{ profile.created_at|date(time=False) }}</dd>
+    <dd>{{ profile.created_at|date(with_time=False) }}</dd>
     <dt>Notities</dt>
     <dd>{{ profile.note_count }}</dd>
   </dl>
+
+  <section class="card">
+    <h2>Tweestapsverificatie</h2>
+    {% if profile.totp_enabled %}
+      <p class="hint">Staat aan. Inloggen vraagt naast je wachtwoord een code uit je authenticator-app.</p>
+      <form method="post" action="{{ url_for('disable_2fa') }}">
+        <label>Code uit je app, om uit te zetten
+          <input name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required>
+        </label>
+        <button type="submit" class="secondary">Uitzetten</button>
+      </form>
+    {% else %}
+      <p class="hint">Staat uit. Met een code uit een authenticator-app erbij is een gestolen wachtwoord alleen niet meer genoeg om in te loggen.</p>
+      <form method="post" action="{{ url_for('start_2fa') }}">
+        <button type="submit">Instellen</button>
+      </form>
+    {% endif %}
+  </section>
 
   <form method="post" action="{{ url_for('change_password') }}" class="card">
     <h2>Wachtwoord wijzigen</h2>

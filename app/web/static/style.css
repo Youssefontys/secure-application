@@ -184,6 +184,20 @@ header.bar > div { flex: 1; min-width: 0; }
 .profile-details dd { margin: 0.25rem 0 1rem; overflow-wrap: anywhere; }
 .profile-details dd:last-child { margin-bottom: 0; }
 
+/* Instellen van tweestapsverificatie: de QR-code op wit, zodat elke camera
+   hem leest, en de sleutel in monospace om over te typen. */
+.steps { margin: 0 0 1.2rem; padding-left: 1.2rem; }
+.steps li { margin-bottom: 0.5rem; }
+.qr { display: block; margin: 0 0 1.2rem; padding: 0.4rem; border-radius: 8px; background: #fff; }
+.secret {
+  display: block;
+  margin-top: 0.35rem;
+  font-family: ui-monospace, Consolas, monospace;
+  letter-spacing: 0.06em;
+  color: var(--accent);
+  overflow-wrap: anywhere;
+}
+
 h1 {
   margin: 0 0 1.25rem;
   font-size: 1.45rem;

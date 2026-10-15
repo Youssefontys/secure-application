@@ -2,6 +2,7 @@
 # Zo bouwt elke build dezelfde versies en klopt een SBoM met wat er draait.
 flask==3.1.3            # webframework: routes, sessies, templates
 psycopg[binary]==3.3.6  # PostgreSQL-driver; [binary] levert eigen libpq en OpenSSL mee, zie psycopg-binary
+segno==1.6.6            # QR-code voor het instellen van tweestapsverificatie; pure Python, geen eigen dependencies
 
 blinker==1.9.0          # via flask: interne signalen (gebeurtenissen binnen Flask)
 click==8.5.0            # via flask: het commando `flask run` uit de Dockerfile
