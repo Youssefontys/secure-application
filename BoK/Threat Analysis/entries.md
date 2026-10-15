@@ -384,10 +384,10 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 
 ### MIT-06 Blokkade na 5 foute codes
 - Houdt tegen: MC-15 stap 2
-- Wat: foute codes worden per account in de database geteld (`auth_throttle`, via `throttle.py`), niet in de sessie, want een sessie kan de aanvaller gewoon opnieuw beginnen. Na 5 fouten in 15 minuten zit de codestap op slot, en dan wordt ook de juiste code geweigerd. De eerste blokkade duurt 15 minuten, elke volgende twee keer zo lang, tot 24 uur. Een geldige code wist de teller. De controle op de blokkade zit ook in de UPDATE die de code accepteert
+- Wat: foute codes worden per account in de database geteld (`auth_throttle`, via `throttle.py`), niet in de sessie, want een sessie kan de aanvaller gewoon opnieuw beginnen. Na 5 fouten in 15 minuten zit de codestap op slot, en dan wordt ook de juiste code geweigerd. De eerste blokkade duurt 15 minuten, elke volgende twee keer zo lang, tot 24 uur. Een geldige code wist de teller. De controle op de blokkade zit ook in de UPDATE die de code accepteert. Tijdens de blokkade antwoordt de app met 429 en `Retry-After`, de resterende tijd in seconden
 - Waar: `check_code()` in `app/auth.py`, `app/throttle.py`
 - Status: gebouwd
-- Sinds: 18e1424; verdubbelend sinds 484eca3
+- Sinds: 18e1424; verdubbelend sinds 484eca3; 429 sinds 5a82eb5
 
 ### MIT-07 Elke code werkt één keer
 - Houdt tegen: MC-16 stap 2
@@ -412,17 +412,17 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 
 ### MIT-10 Blokkade op de wachtwoordstap
 - Houdt tegen: MC-03 stap 1 en 2
-- Wat: foute wachtwoorden worden geteld per IP-adres (20 in 15 minuten) en per account vanaf één adres (5 in 15 minuten). Daarna volgt een blokkade van 15 minuten, die bij herhaling verdubbelt tot een uur; ook het juiste wachtwoord wordt dan geweigerd, met status 429. De tellers hangen aan wat er is ingevuld en niet aan of het account bestaat, dus een blokkade verraadt geen namen. Een geslaagde login wist alleen de teller van het account, nooit die van het adres: anders zet een aanvaller met een eigen account zijn adresteller steeds terug. Bewust geen blokkade per account over alle adressen (MC-18). IPv6-adressen tellen per /64. De sleutels in `auth_throttle` zijn HMAC's, dus de tabel bevat geen leesbare IP-adressen of gebruikersnamen
+- Wat: foute wachtwoorden worden geteld per IP-adres (20 in 15 minuten) en per account vanaf één adres (5 in 15 minuten). Daarna volgt een blokkade van 15 minuten, die bij herhaling verdubbelt tot een uur; ook het juiste wachtwoord wordt dan geweigerd, met status 429 en `Retry-After`. De tellers hangen aan wat er is ingevuld en niet aan of het account bestaat, dus een blokkade verraadt geen namen. Een geslaagde login wist alleen de teller van het account, nooit die van het adres: anders zet een aanvaller met een eigen account zijn adresteller steeds terug. Bewust geen blokkade per account over alle adressen (MC-18). IPv6-adressen tellen per /64. De sleutels in `auth_throttle` zijn HMAC's, dus de tabel bevat geen leesbare IP-adressen of gebruikersnamen
 - Waar: `login()` in `app/auth.py`, `app/throttle.py`
 - Status: gebouwd
-- Sinds: 484eca3
+- Sinds: 484eca3; `Retry-After` sinds 5a82eb5
 
 ### MIT-11 Herstelcode
 - Houdt tegen: MC-19 stap 2a, 2c en 2d; maakt tweestapsverificatie mogelijk zonder dat een kwijtgeraakte telefoon het account onbereikbaar maakt
-- Wat: bij het aanzetten van tweestapsverificatie krijgt de gebruiker één keer een herstelcode van 128 willekeurige bits te zien. Alleen de SHA-256 wordt bewaard; een snelle hash is genoeg bij 128 willekeurige bits, anders dan bij een zelfverzonnen wachtwoord. Inloggen met de code kan alleen na het juiste wachtwoord. De code werkt één keer: hij zet tweestapsverificatie uit en verhoogt de sessieversie, en de app stuurt meteen naar het opnieuw instellen met een nieuwe telefoon (MIT-12). Het verbruik zit in een UPDATE met de hash in de WHERE, dus twee gelijktijdige verzoeken kunnen hem niet allebei gebruiken. 5 fouten in 15 minuten geven een blokkade (via `throttle.py`). Een nieuwe code maken vraagt een code uit de app (AU-06) en maakt de vorige ongeldig. De pagina's met de code worden met `Cache-Control: no-store` verstuurd
+- Wat: bij het aanzetten van tweestapsverificatie krijgt de gebruiker één keer een herstelcode van 128 willekeurige bits te zien. Alleen de SHA-256 wordt bewaard; een snelle hash is genoeg bij 128 willekeurige bits, anders dan bij een zelfverzonnen wachtwoord. Inloggen met de code kan alleen na het juiste wachtwoord. De code werkt één keer: hij zet tweestapsverificatie uit en verhoogt de sessieversie, en de app stuurt meteen naar het opnieuw instellen met een nieuwe telefoon (MIT-12). Het verbruik zit in een UPDATE met de hash in de WHERE, dus twee gelijktijdige verzoeken kunnen hem niet allebei gebruiken. 5 fouten in 15 minuten geven een blokkade (via `throttle.py`, met 429 en `Retry-After`). Een nieuwe code maken vraagt een code uit de app (AU-06) en maakt de vorige ongeldig. De pagina's met de code worden met `Cache-Control: no-store` verstuurd
 - Waar: `new_recovery_code()` en `login_recover()` in `app/auth.py`; `setup_2fa()` en `new_recovery()` in `app/account.py`
 - Status: gebouwd
-- Sinds: dc7d258
+- Sinds: dc7d258; `Retry-After` sinds 5a82eb5
 
 ### MIT-12 Tweestapsverificatie verplicht
 - Houdt tegen: MC-03 stap 1 en 2 voor alle accounts, niet alleen voor wie het zelf aanzet; beperkt het venster van MC-20
