@@ -227,7 +227,7 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 - Stappen:
   - AND 1. Handelen als het slachtoffer
     - OR  1a. Met een gestolen of gekopieerde sessiecookie (MC-04)
-    - OR  1b. Via een formulier op een andere site (MC-05); de bevestiging uit `confirm.js` komt dan niet in beeld
+    - OR  1b. Via een formulier op een andere site (MC-05); de bevestiging uit `forms.js` komt dan niet in beeld
   - AND 2. `POST /account/delete`; het wachtwoord wordt niet opnieuw gevraagd (AU-04 ontbreekt)
 - Mitigaties: geen
 - Restrisico: onomkeerbaar; er is geen backup en geen herstel
