@@ -50,6 +50,7 @@ Systeemauthenticatie is in deze stap niet veranderd: de app logt bij de database
 - **SHA-256 voor de herstelcode, geen Argon2.** Bij 128 willekeurige bits valt er niets te raden of op te zoeken. Trage hashes zijn er voor wachtwoorden die mensen zelf verzinnen.
 - **De herstelcode zet de tweede factor uit.** De telefoon is kwijt, dus het oude geheim is niet meer te vertrouwen. Omdat de tweede factor verplicht is, stuurt de app meteen naar het opnieuw instellen.
 - **Aanzetten pas na een geldige code.** Zo sluit niemand zichzelf buiten met een verkeerd ingestelde app.
+- **400 bij een fout, 429 bij een blokkade, geen 401.** Een 401 moet volgens RFC 9110 een `WWW-Authenticate`-header hebben, en die hoort bij HTTP-authenticatie, niet bij een inlogformulier. 429 is de code voor rate limiting (RFC 6585); `Retry-After` geeft in seconden hoe lang de blokkade nog duurt. Dat verraadt niets nieuws: de melding op de pagina noemt dezelfde tijd.
 
 ## Vergelijking met BOK-SECENGINEER
 
@@ -93,4 +94,6 @@ Opgehaald en gecontroleerd op 15-10-2026.
 
 - RFC 6238, TOTP: https://www.rfc-editor.org/rfc/rfc6238 (paragraaf 5.2 en bijlage B)
 - RFC 4226, HOTP: https://www.rfc-editor.org/rfc/rfc4226 (eis R6 en bijlage D)
+- RFC 9110, HTTP Semantics: https://www.rfc-editor.org/rfc/rfc9110 (paragraaf 10.2.3 en 15.5.2)
+- RFC 6585, Additional HTTP Status Codes: https://www.rfc-editor.org/rfc/rfc6585 (paragraaf 4)
 - Key Uri Format (`otpauth://`): https://github.com/google/google-authenticator/wiki/Key-Uri-Format
