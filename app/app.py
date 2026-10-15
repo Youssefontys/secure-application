@@ -9,7 +9,7 @@ import os
 from functools import wraps
 
 import psycopg
-from flask import Flask, abort, g, redirect, render_template, request, session, url_for
+from flask import Flask, abort, flash, g, redirect, render_template, request, session, url_for
 from psycopg.rows import namedtuple_row
 
 # De website (HTML-templates en statische bestanden) staat in web/, los van de code.
@@ -84,6 +84,7 @@ def register():
             cur.execute("INSERT INTO users (username, password) VALUES (%s, %s)", (username, password))
     except psycopg.errors.UniqueViolation:
         return render_template("register.html", error="Die gebruikersnaam is al in gebruik."), 409
+    flash("Je account is aangemaakt. Je kunt nu inloggen.")
     return redirect(url_for("login"))
 
 
@@ -129,7 +130,8 @@ def change_password():
     # wachtwoord wijzigen. Andere sessies blijven geldig. Zie MC-12.
     with db() as conn, conn.cursor() as cur:
         cur.execute("UPDATE users SET password = %s WHERE id = %s", (password, g.user.id))
-    return render_template("change_password.html", message="Je wachtwoord is gewijzigd.")
+    flash("Je wachtwoord is gewijzigd.")
+    return redirect(url_for("notes"))
 
 
 @app.route("/", methods=["GET", "POST"])

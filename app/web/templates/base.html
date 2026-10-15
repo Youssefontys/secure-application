@@ -10,6 +10,12 @@
    figuur, "app" de rustigere variant na inloggen. #}
 <body class="{% block body_class %}app{% endblock %}">
   <main>
+    {# Eén plek voor meldingen: een foutmelding die de route meegeeft, en
+       meldingen die een vorige pagina met flash() heeft klaargezet. #}
+    {% if error %}<p class="error">{{ error }}</p>{% endif %}
+    {% for message in get_flashed_messages() %}
+      <p class="notice success">{{ message }}</p>
+    {% endfor %}
     {% block content %}{% endblock %}
   </main>
 

@@ -7,8 +7,6 @@
     {% include "_account_menu.html" %}
   </header>
 
-  {% if error %}<p class="error">{{ error }}</p>{% endif %}
-
   <details class="card composer"{% if not notes or error %} open{% endif %}>
     <summary>Nieuwe notitie</summary>
     <form method="post">
