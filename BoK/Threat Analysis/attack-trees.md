@@ -14,6 +14,10 @@ Notities van een ander lezen of wijzigen
   OR  De database direct lezen (MC-01, MC-08)                             [open]
         OR  rechtstreekse query met de eigenaarrol
         OR  het volume of een backup lezen
+        OR  de app overnemen via een afhankelijkheid (MC-11)
+              OR  bekende kwetsbaarheid, niet bijgewerkt                   [open]
+              OR  kwaadaardige nieuwe pakketversie                         [MIT-03]
+              OR  kwetsbaarheid of andere image achter de tag              [open]
   OR  Script in een notitie laten uitvoeren (MC-07)                       [MIT-01]
   OR  Als de gebruiker handelen (zie doel 2)
 ```

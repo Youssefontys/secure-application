@@ -4,8 +4,8 @@ Nieuwste onderaan. Sjabloon en regels: zie `README.md` in deze map.
 Status van een mitigatie: `open`, `gebouwd`, `bewezen`.
 
 De baseline bevat bewust geen beveiligingsmaatregelen, behalve twee die het
-framework en de databasebibliotheek al meebrengen (MIT-01 en MIT-02). Alle
-andere misuse cases hieronder zijn dus open.
+framework en de databasebibliotheek al meebrengen (MIT-01 en MIT-02). Wat
+daarna is toegevoegd, staat met de commit bij "Sinds".
 
 ## Use cases
 
@@ -134,7 +134,7 @@ andere misuse cases hieronder zijn dus open.
 - Assets / onderdelen: A-01, A-02, A-06, C-02, C-03, F-03, AU-03, AZ-05
 - Gerelateerde use case: UC-01 tot UC-03
 - Stappen:
-  - AND 1. Een kwetsbaarheid in de app benutten (bijvoorbeeld MC-06 in een toekomstige route)
+  - AND 1. Een kwetsbaarheid in de app benutten (bijvoorbeeld MC-06 in een toekomstige route, of een afhankelijkheid uit MC-11)
   - AND 2. Via de verbinding van de app (eigenaarrol) tabellen weggooien of alle data lezen
 - Mitigaties: geen (de app is eigenaar van de database)
 - Restrisico: een app-compromittering is een databasecompromittering
@@ -168,6 +168,21 @@ andere misuse cases hieronder zijn dus open.
 - Status: open
 - Sinds: baseline
 
+### MC-11 Een kwetsbare of kwaadaardige afhankelijkheid
+- Aanvallersdoel: code uitvoeren in de app of de database zonder zelf een fout in onze code te vinden
+- Aanvaller: wie een bekende kwetsbaarheid in een pakket of image misbruikt, of wie een pakket of image zelf overneemt (supply chain)
+- Assets / onderdelen: alle assets, C-02, C-03
+- Gerelateerde use case: UC-01 tot UC-03
+- Stappen:
+  - OR  1. Een bekende kwetsbaarheid in een Python-pakket (Flask, Werkzeug, Jinja2 en de rest in `requirements.txt`) blijft staan omdat niemand bijwerkt
+  - OR  2. Een kwaadaardige nieuwe versie van een pakket komt bij de volgende build vanzelf mee
+  - OR  3. Een kwetsbaarheid in de base images (`python:3.15-slim`, `postgres:18`), bijvoorbeeld in de Debian-systeembibliotheken
+  - OR  4. Een image-tag wijst bij een volgende build naar een andere image dan eerder (tags zijn niet vast)
+- Mitigaties: MIT-03 (stap 2), nog geen (stappen 1, 3 en 4)
+- Restrisico: vastzetten maakt stap 1 erger: zonder iets dat waarschuwt (zoals Dependabot) komen ook patches niet meer vanzelf binnen
+- Status: open
+- Sinds: baseline
+
 ## Mitigaties
 
 ### MIT-01 Automatisch escapen in Jinja
@@ -183,3 +198,10 @@ andere misuse cases hieronder zijn dus open.
 - Waar: `app/app.py`
 - Status: gebouwd
 - Sinds: baseline
+
+### MIT-03 Vastgezette versies van de Python-pakketten
+- Houdt tegen: MC-11 stap 2
+- Wat: elk pakket staat op een exacte versie in `requirements.txt`, ook de pakketten die Flask en psycopg meetrekken. Een nieuwe versie komt dus alleen binnen als iemand hem bewust kiest. Er staan geen hashes bij, dus pip controleert niet of het bestand hetzelfde is als toen de versie werd gekozen. De images staan op een tag en niet op een digest, dus voor stap 4 doet dit niets.
+- Waar: `app/requirements.txt`
+- Status: gebouwd
+- Sinds: db6698e
