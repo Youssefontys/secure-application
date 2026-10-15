@@ -123,7 +123,7 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 - Gerelateerde use case: UC-03, UC-04, UC-05
 - Stappen:
   - AND 1. De gebruiker is ingelogd en bezoekt de site van de aanvaller
-  - AND 2. Die site stuurt een formulier naar `/`, `/notes/<id>/delete`, `/account/password`, `/account/delete` of `/logout`
+  - AND 2. Die site stuurt een formulier naar `/`, `/notes/<id>/delete`, `/account/password`, `/account/delete`, `/account/2fa/start` of `/logout`. Tweestapsverificatie uitzetten (`/account/2fa/disable`) lukt zo niet, want daarvoor is een code nodig die de andere site niet heeft
   - AND 3. De browser stuurt de cookie mee
 - Mitigaties: geen (geen CSRF-token; `SameSite` is niet ingesteld, dus het gedrag hangt van de browser af)
 - Restrisico: elke POST-route is aanroepbaar vanaf een andere site
