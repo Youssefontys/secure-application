@@ -9,6 +9,7 @@ import hmac
 import re
 import secrets
 import time
+from collections import namedtuple
 from functools import wraps
 
 import psycopg
@@ -22,6 +23,8 @@ bp = Blueprint("auth", __name__)
 
 # Zo lang heb je na het wachtwoord om de code in te vullen.
 PENDING_MAX_SECONDS = 300
+# Een geweigerde code: de melding, en hoeveel minuten de blokkade duurt (0 als er geen is).
+CodeError = namedtuple("CodeError", "message minutes")
 # Zonder tweestapsverificatie kom je alleen hier (MIT-12).
 SETUP_ENDPOINTS = {"account.setup_2fa", "account.qr_2fa"}
 
@@ -127,16 +130,15 @@ def login():
     pair_key = throttle.key("password_account_ip", username, ip)
     minutes = throttle.locked_minutes(ip_key, pair_key)
     if minutes:
-        return render_template("auth.html", error=throttle.message(minutes)), 429
+        return render_template("auth.html", error=throttle.message(minutes)), *throttle.refusal(minutes)
     row = query(
         "SELECT id, totp_enabled, session_version FROM users WHERE username = %s AND password = %s",
         (username, password), one=True,
     )
     if row is None:
         minutes = max(throttle.fail("password_ip", ip_key), throttle.fail("password_account_ip", pair_key))
-        if minutes:
-            return render_template("auth.html", error=throttle.message(minutes)), 429
-        return render_template("auth.html", error="Onjuiste gebruikersnaam of wachtwoord."), 401
+        error = throttle.message(minutes) if minutes else "Onjuiste gebruikersnaam of wachtwoord."
+        return render_template("auth.html", error=error), *throttle.refusal(minutes)
     # Alleen de teller van dit account wordt gewist, niet die van het IP-adres:
     # anders zet een aanvaller die steeds even met zijn eigen account inlogt zijn
     # IP-teller telkens terug.
@@ -189,7 +191,7 @@ def login_code():
 
     error = check_code(user_id)
     if error:
-        return render_template("login_code.html", error=error), 401
+        return render_template("login_code.html", error=error.message), *throttle.refusal(error.minutes)
     # Pas nu is de gebruiker ingelogd. start_session gooit de pending-sessie
     # weg, zodat er niets van de halve login overblijft.
     start_session(user_id, session["pending_version"])
@@ -221,13 +223,13 @@ def login_recover():
     k = throttle.key("recovery_account", user_id)
     minutes = throttle.locked_minutes(k)
     if minutes:
-        return render_template("login_recover.html", error=throttle.message(minutes)), 429
+        return render_template("login_recover.html", error=throttle.message(minutes)), *throttle.refusal(minutes)
     given = hashlib.sha256(re.sub(r"[\s-]", "", request.form.get("code", "")).lower().encode()).hexdigest()
     stored = query("SELECT recovery_hash FROM users WHERE id = %s", (user_id,), one=True)
     if not (stored and stored.recovery_hash and hmac.compare_digest(given, stored.recovery_hash)):
         minutes = throttle.fail("recovery_account", k)
         error = throttle.message(minutes) if minutes else "Onjuiste herstelcode."
-        return render_template("login_recover.html", error=error), 429 if minutes else 401
+        return render_template("login_recover.html", error=error), *throttle.refusal(minutes)
     # De code werkt één keer. Hij zet de tweede factor uit, want de telefoon is
     # kwijt, en maakt alle andere sessies ongeldig. De WHERE op de hash zorgt dat
     # twee gelijktijdige verzoeken hem niet allebei kunnen gebruiken.
@@ -237,7 +239,7 @@ def login_recover():
         (user_id, given), one=True,
     )
     if row is None:
-        return render_template("login_recover.html", error="Onjuiste herstelcode."), 401
+        return render_template("login_recover.html", error="Onjuiste herstelcode."), 400
     throttle.reset(k)
     start_session(user_id, row.session_version)
     flash("Je herstelcode is gebruikt. Stel tweestapsverificatie opnieuw in met je nieuwe telefoon.")
@@ -256,7 +258,7 @@ def logout():
 
 
 def check_code(user_id):
-    """Controleert de TOTP-code uit het formulier voor dit account. None als hij klopt, anders de foutmelding.
+    """Controleert de TOTP-code uit het formulier voor dit account. None als hij klopt, anders een CodeError.
 
     - Zit de codestap van dit account op slot, dan wordt ook de juiste code
       geweigerd (MIT-06, via throttle.py: 5 fouten, dan 15 minuten, verdubbelend tot 24 uur).
@@ -268,10 +270,10 @@ def check_code(user_id):
     k = throttle.key("totp_account", user_id)
     user = query("SELECT totp_secret FROM users WHERE id = %s", (user_id,), one=True)
     if user is None or user.totp_secret is None:
-        return "Er is geen tweestapsverificatie ingesteld."
+        return CodeError("Er is geen tweestapsverificatie ingesteld.", 0)
     minutes = throttle.locked_minutes(k)
     if minutes:
-        return throttle.message(minutes)
+        return CodeError(throttle.message(minutes), minutes)
     step = totp.matching_step(user.totp_secret, request.form.get("code", ""))
     if step is not None and query(
         "UPDATE users SET totp_last_step = %s"
@@ -283,4 +285,4 @@ def check_code(user_id):
         return None
     # Fout, of al eens gebruikt: telt als mislukte poging.
     minutes = throttle.fail("totp_account", k)
-    return throttle.message(minutes) if minutes else "Onjuiste of al gebruikte code."
+    return CodeError(throttle.message(minutes) if minutes else "Onjuiste of al gebruikte code.", minutes)

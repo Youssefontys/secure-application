@@ -50,6 +50,17 @@ def message(minutes):
     return f"Te veel foute pogingen. Probeer het over {minutes} minuten opnieuw."
 
 
+def refusal(minutes):
+    """Status en headers van een geweigerde poging: 429 tijdens een blokkade, anders 400.
+
+    429 Too Many Requests is de code voor rate limiting (RFC 6585, 4), met
+    Retry-After in seconden. Geen 401: die vraagt volgens RFC 9110 (15.5.2) een
+    WWW-Authenticate-header, en die hoort bij HTTP-authenticatie, niet bij een
+    inlogformulier.
+    """
+    return (429, {"Retry-After": str(minutes * 60)}) if minutes else (400, {})
+
+
 def locked_minutes(*keys):
     """Hoeveel minuten de langste blokkade onder deze sleutels nog duurt, of 0."""
     row = query(
