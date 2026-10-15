@@ -14,7 +14,7 @@
        meldingen die een vorige pagina met flash() heeft klaargezet. #}
     {% if error %}<p class="error">{{ error }}</p>{% endif %}
     {% for message in get_flashed_messages() %}
-      <p class="notice success">{{ message }}</p>
+      <p class="notice">{{ message }}</p>
     {% endfor %}
     {% block content %}{% endblock %}
   </main>

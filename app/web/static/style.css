@@ -295,25 +295,20 @@ button:focus-visible, .button:focus-visible {
   gap: 0.6rem;
 }
 
-.error {
+/* Meldingen: rood voor een fout, de accentkleur voor een bevestiging. De
+   achtergrond is dezelfde kleur, licht, zodat hij meekleurt met de pagina. */
+.error, .notice {
+  --tone: var(--accent);
   margin: 0 0 1rem;
   padding: 0.7rem 0.9rem;
-  border: 1px solid var(--danger);
+  border: 1px solid var(--tone);
   border-left-width: 3px;
   border-radius: 8px;
-  background: rgba(255, 107, 107, 0.08);
-  color: var(--danger);
+  background: color-mix(in srgb, var(--tone) 9%, transparent);
   font-size: 0.9rem;
 }
 
-.notice.success {
-  margin-bottom: 1.5rem;
-  padding: 1rem 1.2rem;
-  border: 1px solid var(--accent);
-  border-left-width: 4px;
-  border-radius: 10px;
-  background: rgba(53, 224, 192, 0.1);
-}
+.error { --tone: var(--danger); color: var(--danger); }
 
 .hint, small {
   color: var(--muted);
