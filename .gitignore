@@ -1,6 +1,11 @@
+# De echte geheimen (A-05, A-06). Het sjabloon zonder waarden is .env.example.
 .env
+
+# Bytecode die Python maakt als je de code buiten de container draait.
 __pycache__/
-*.py[cod]
+
+# Virtuele omgeving, als je de app of tests buiten Docker draait.
 .venv/
-venv/
+
+# Cache van pytest, zodra er tests zijn.
 .pytest_cache/

@@ -1,2 +1,3 @@
+# Bytecode van een lokale run hoort niet in de image; de container maakt
+# zelf geen bytecode (PYTHONDONTWRITEBYTECODE in de Dockerfile).
 __pycache__/
-*.py[cod]
