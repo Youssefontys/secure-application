@@ -22,9 +22,10 @@
   {# Alleen de inlog- en registratiepagina's nemen de scene op. #}
   {% block scene %}{% endblock %}
 
-  {# Apart bestand, geen inline script, en defer zodat de pagina niet wacht
-     op dit decoratieve stukje. #}
+  {# Aparte bestanden en geen inline script, zodat een strikte CSP later kan.
+     defer, zodat de pagina er niet op wacht. #}
   <script src="{{ url_for('static', filename='cyber.js') }}" defer></script>
   <script src="{{ url_for('static', filename='account-menu.js') }}" defer></script>
+  <script src="{{ url_for('static', filename='confirm.js') }}" defer></script>
 </body>
 </html>
