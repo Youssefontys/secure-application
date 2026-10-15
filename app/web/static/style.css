@@ -283,16 +283,6 @@ button.danger:hover {
   box-shadow: 0 0 18px -4px rgba(255, 107, 107, 0.5);
 }
 
-.button.primary-action {
-  display: flex;
-  width: 100%;
-  padding: 0.85rem 1.15rem;
-  background: var(--accent);
-  color: var(--bg);
-}
-
-.button.primary-action:hover { background: var(--accent); }
-
 button:focus-visible, .button:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 3px;
@@ -303,40 +293,6 @@ button:focus-visible, .button:focus-visible {
   flex-wrap: wrap;
   align-items: center;
   gap: 0.6rem;
-}
-
-.recovery-code {
-  display: block;
-  padding: 0.9rem;
-  margin: 1rem 0;
-  font-size: 1rem;
-  letter-spacing: 0.04em;
-  user-select: all;
-  color: var(--danger);
-  border-color: var(--danger);
-  background: rgba(255, 107, 107, 0.08);
-}
-
-.enrollment-confirm button[hidden] { display: none; }
-.button.primary-action:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
-
-.check-label {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.65rem;
-  margin: 1rem 0;
-  color: var(--text);
-  font: inherit;
-  text-transform: none;
-  letter-spacing: normal;
-}
-
-.check-label input {
-  width: 1.15rem;
-  height: 1.15rem;
-  margin: 0.2rem 0 0;
-  flex-shrink: 0;
-  accent-color: var(--accent);
 }
 
 .error {
@@ -359,10 +315,6 @@ button:focus-visible, .button:focus-visible {
   background: rgba(53, 224, 192, 0.1);
 }
 
-.notice.success h2 { color: var(--accent); }
-.notice.success p { margin: 0.65rem 0 0; }
-#auth-feedback:focus { outline: 2px solid var(--accent); outline-offset: 3px; }
-
 .hint, small {
   color: var(--muted);
   font-size: 0.84rem;
@@ -380,25 +332,6 @@ button:focus-visible, .button:focus-visible {
 .note-body {
   margin: 0;
   white-space: pre-wrap;
-  overflow-wrap: anywhere;
-}
-
-.qr {
-  width: 200px;
-  height: 200px;
-  padding: 0.5rem;
-  background: #fff;
-  border-radius: 8px;
-}
-
-code {
-  padding: 0.15rem 0.4rem;
-  background: #080e15;
-  border: 1px solid var(--border);
-  border-radius: 5px;
-  color: var(--accent);
-  font-family: ui-monospace, Consolas, monospace;
-  font-size: 0.85em;
   overflow-wrap: anywhere;
 }
 
@@ -539,31 +472,6 @@ body.alerted .ticker { color: var(--danger); }
 }
 
 /* ------------------------------------------------- na inloggen (app-modus) */
-
-.granted {
-  margin: 0 0 1.25rem;
-  padding: 0.6rem 0.9rem;
-  border: 1px solid var(--accent);
-  border-left-width: 3px;
-  border-radius: 8px;
-  background: rgba(72, 221, 122, 0.08);
-  color: var(--accent);
-  font-family: ui-monospace, Consolas, monospace;
-  font-size: 0.82rem;
-  text-transform: uppercase;
-  letter-spacing: 0.16em;
-  animation: granted-in 420ms ease-out, granted-out 900ms ease-in 3.4s forwards;
-}
-
-.granted .prompt { opacity: 0.7; }
-
-@keyframes granted-in {
-  from { opacity: 0; transform: translateY(-6px); }
-}
-
-@keyframes granted-out {
-  to { opacity: 0; transform: translateY(-6px); visibility: hidden; }
-}
 
 /* Het aanmaakformulier is inklapbaar, zodat je bij veel notities niet elke
    keer langs een uitgeklapt formulier scrollt. Staat open zolang er nog
