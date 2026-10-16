@@ -34,6 +34,7 @@ regressietest, behalve waar iets anders staat.
 | T-44 | UC-08 | Met wachtwoord en herstelcode inloggen (ook met hoofdletters, spaties en streepjes) | Naar `/account/2fa` met de melding dat de herstelcode is gebruikt; tweestapsverificatie moet opnieuw worden ingesteld |
 | T-45 | UC-07 | Een nieuwe herstelcode maken met een foute en met een juiste code uit de app | 400; daarna een nieuwe code, en de vorige werkt niet meer |
 | T-52 | UC-09 | Wachtwoord vergeten met gebruikersnaam, herstelcode (ook met hoofdletters en spaties), code en twee keer het nieuwe wachtwoord; daarna inloggen | Een nieuwe herstelcode, niet ingelogd; andere sessies zijn uitgelogd; het oude wachtwoord werkt niet meer, het nieuwe wel |
+| T-65 | UC-07 | Tweestapsverificatie half instellen, het geheim onleesbaar maken (zoals na een nieuwe sleutel) en de instelpagina weer openen | Een nieuw geheim, en instellen lukt. Voor 6604f47: 500, en omdat elke pagina naar het instellen stuurt, kwam het account nergens meer |
 
 ## Aanval
 
