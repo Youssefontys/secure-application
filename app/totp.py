@@ -31,7 +31,8 @@ def code_at(secret, step, digits=DIGITS, digest=hashlib.sha1):
 # De tijdstap waar de code bij hoort, binnen WINDOW rond nu, of None.
 def matching_step(secret, code, now=None):
     code = code.replace(" ", "")
-    if len(code) != DIGITS or not code.isdigit():
+    # Alleen 0-9: isdigit() keurt ook andere cijfers goed, en daar loopt compare_digest op vast.
+    if len(code) != DIGITS or not (code.isascii() and code.isdigit()):
         return None
     step = int((time.time() if now is None else now) // STEP)
     # Vergelijken in constante tijd: de responstijd verraadt niet hoeveel cijfers kloppen.
