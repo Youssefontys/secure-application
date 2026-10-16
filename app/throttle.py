@@ -28,13 +28,9 @@ KEEP_ON_SUCCESS = {"password_ip"}
 _SECRET = os.environ["FLASK_SECRET_KEY"].encode()
 
 
-# Een HMAC van soort en waarden: de tabel bevat geen leesbare IP-adressen of namen.
-def key(kind, *parts):
-    return hmac.new(_SECRET, "\x00".join((kind, *map(str, parts))).encode(), hashlib.sha256).hexdigest()
-
-
+# De soort en een HMAC van soort en waarden: de tabel bevat geen leesbare IP-adressen of namen.
 def limit(kind, *parts):
-    return Limit(kind, key(kind, *parts))
+    return Limit(kind, hmac.new(_SECRET, "\x00".join((kind, *map(str, parts))).encode(), hashlib.sha256).hexdigest())
 
 
 # De tellers van inloggen en wachtwoord vergeten: per adres en per naam per adres (MIT-10).
