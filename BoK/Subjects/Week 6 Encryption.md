@@ -32,7 +32,7 @@ Drie verschillende dingen, die in deze app allemaal voorkomen:
 - **Associated data:** de soort (`totp_secret`) en de `user_id` gaan mee. Ze worden gecontroleerd maar niet versleuteld. Dezelfde waarde in een andere rij ontsleutelt dus niet.
 - **Sleutelversie:** elke waarde begint met `v1:`. Een nieuwe sleutel kan later als `v2` naast de oude.
 - **De sleutel (A-09):** `DATA_ENCRYPTION_KEY`, 256 bits, uit de omgeving van de app. Lokaal staat hij in `.env`, op Azure komt hij uit Key Vault zonder dat de code verandert. Hij staat los van `FLASK_SECRET_KEY`, zodat elke sleutel één doel heeft.
-- **Ontsleutelen mislukt:** dan telt het als geen geheim, en wordt elke code geweigerd. Bij twijfel gaat de deur dus dicht.
+- **Ontsleutelen mislukt:** dan telt het als geen geheim, en wordt elke code geweigerd. Bij twijfel gaat de deur dus dicht. Alleen een half ingesteld geheim wordt dan vervangen, want dat werkte nog nergens (T-65).
 - **In de code:** `encrypt()` en `decrypt()` in `app/encryption.py`. Versleuteld wordt in `setup_2fa()`, ontsleuteld in `setup_2fa()`, `qr_2fa()` en `check_code()`.
 
 ## Waarom het veilig is
@@ -41,6 +41,7 @@ Drie verschillende dingen, die in deze app allemaal voorkomen:
 |---|---|---|
 | Het geheim staat niet leesbaar in de database | `users.totp_secret` bevat `v1:` gevolgd door nonce, versleuteld geheim en tag | T-34 |
 | Een waarde werkt alleen op haar eigen plek | De `user_id` gaat mee als associated data | T-63 |
+| Een onleesbaar half ingesteld geheim zet niemand vast | Het wordt vervangen; het werkte nog nergens | T-65 |
 | De sleutel staat niet bij de data | Alleen in de omgeving van de app; niet in de database | T-64 |
 | Geen zelfgeschreven cryptografie | AES-GCM uit `cryptography`, vastgezet op 50.0.2 met `cffi` en `pycparser` (MIT-03) | `pip freeze` gelijk aan `requirements.txt` |
 
@@ -64,7 +65,7 @@ Alleen het TOTP-geheim is versleuteld. Per gegeven waar het staat en waar het ho
 ## Wat het niet oplost
 
 - **Wie de sleutel heeft, leest het geheim (MC-22).** Lokaal staat de sleutel in `.env` en in de omgeving van de container, en de container draait als root (MC-14). Ook met Key Vault heeft de draaiende app de sleutel; wie de app overneemt, heeft hem dus ook.
-- **Sleutel kwijt is geheimen kwijt.** Zonder de sleutel moet elke gebruiker tweestapsverificatie opnieuw instellen. Lokaal is dat geen probleem; op Azure bewaakt Key Vault de sleutel.
+- **Sleutel kwijt is geheimen kwijt.** Zonder de sleutel moet elke gebruiker tweestapsverificatie opnieuw instellen, via de herstelcode. Die werkt nog, want hij is gehasht en niet versleuteld. Lokaal is dat geen probleem; op Azure bewaakt Key Vault de sleutel.
 - **Een nieuwe sleutel is voorbereid, niet gebouwd.** De versie `v1:` staat erin, maar ontsleutelen met een oude naast een nieuwe sleutel moet nog worden geschreven.
 - **Versleuteling beschermt tegen lezen, niet tegen schrijven.** Een eigen geheim in de kolom zetten lukt niet zonder de sleutel. Maar wie de database kan wijzigen (MC-08), zet `totp_enabled` op false, logt in met het leesbare wachtwoord (MC-01) en stelt tweestapsverificatie in met een eigen telefoon. Dat hoort bij databasebeveiliging (eigen rollen voor de app) en bij Argon2 voor de wachtwoorden.
 
