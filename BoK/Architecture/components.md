@@ -6,7 +6,7 @@
 |----|------|------|------|-------|
 | C-01 | Browser | Client (buiten ons beheer) | Toont de pagina's, voert de JS uit (`cyber.js` decoratief, `account-menu.js` voor het menu, `forms.js` voor de bevestiging bij verwijderen en de grijze opslaanknop), bewaart de sessiecookie. | baseline |
 | C-02 | Webapplicatie | Python 3.15 en Flask, Docker-container `app`, draait als root op de ontwikkelserver | Registreren, inloggen met wachtwoord en een code uit een authenticator-app (verplicht), tweestapsverificatie instellen en opnieuw instellen, inloggen met een herstelcode, een vergeten wachtwoord opnieuw instellen met herstelcode en code uit de app, een profielpagina tonen, wachtwoord wijzigen, account verwijderen, notities aanmaken, tonen, aanpassen en verwijderen. Begroet de gebruiker met naam. Rendert de HTML (Jinja) en levert de statische bestanden. | baseline |
-| C-03 | Database | PostgreSQL 18, Docker-container `db` | Bewaart gebruikers, notities en de tellers van de poginglimieten (`auth_throttle`, met HMAC's als sleutel). Draait `db/schema.sql` bij de eerste start. | baseline |
+| C-03 | Database | PostgreSQL 18, Docker-container `db` | Bewaart gebruikers, notities en de tellers van de poginglimieten (`auth_throttle`, met HMAC's als sleutel; tellers waarvan venster en blokkade een dag voorbij zijn, gaan bij een nieuwe blokkade weg). Draait `db/schema.sql` bij de eerste start. | baseline |
 | C-04 | Databasevolume | Docker-volume `dbdata` | Bewaart de databasebestanden op de host. | baseline |
 
 ## Assets (wat beschermd moet worden)
