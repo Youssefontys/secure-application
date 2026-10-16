@@ -15,3 +15,6 @@ tests/regress.py
 
 # Gemaakt door scripts/azuresetup*.py: subscription- en tenant-id van je Azure-omgeving.
 backend.*.conf
+
+# Uitvoer van de scanners (zie de profiles in compose.yaml).
+scan/

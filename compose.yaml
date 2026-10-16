@@ -41,5 +41,28 @@ services:
       timeout: 3s
       retries: 10
 
+  # Scanners, alleen met een profile en voorlopig in commentaar; de CI-stap zet ze aan.
+  # Gebruik daarna: docker compose --profile scan run --rm zap   (of trivy)
+  # Versies vastzetten zoals in requirements.txt (MIT-03); <versie> invullen bij het aanzetten.
+  #
+  # zap:                                        # DAST: valt de draaiende app van buitenaf aan (ZAP baseline)
+  #   image: ghcr.io/zaproxy/zaproxy:<versie>
+  #   profiles: ["scan"]
+  #   depends_on:
+  #     app:
+  #       condition: service_healthy
+  #   command: zap-baseline.py -t http://app:5000/login -r zap-rapport.html
+  #   volumes:
+  #     - ./scan:/zap/wrk
+  #
+  # trivy:                                      # bekende kwetsbaarheden in de pakketten, plus een SBoM (CycloneDX)
+  #   image: aquasec/trivy:<versie>
+  #   profiles: ["scan"]
+  #   # Scant de map, niet de image: de image scannen vraagt de Docker-socket, en die geeft root op de host.
+  #   command: fs --format cyclonedx --output /scan/sbom.json /src
+  #   volumes:
+  #     - ./app:/src:ro
+  #     - ./scan:/scan
+
 volumes:
   dbdata:
