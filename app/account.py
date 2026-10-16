@@ -53,6 +53,10 @@ def setup_2fa():
     )
     user = query("SELECT totp_secret FROM users WHERE id = %s", (g.user.id,), one=True)
     secret = encryption.decrypt(user.totp_secret, "totp_secret", g.user.id)
+    # Ontsleutelt niet meer (bijvoorbeeld een nieuwe sleutel): het geheim werkte nog nergens, dus opnieuw beginnen.
+    if secret is None:
+        query("UPDATE users SET totp_secret = NULL WHERE id = %s AND NOT totp_enabled", (g.user.id,))
+        return redirect(url_for("account.setup_2fa"))
     # De sleutel in groepjes van vier, om over te typen als scannen niet lukt.
     grouped = " ".join(secret[i:i + 4] for i in range(0, len(secret), 4))
     if request.method == "GET":
