@@ -26,6 +26,8 @@ services:
         condition: service_healthy
     environment:
       FLASK_SECRET_KEY: ${FLASK_SECRET_KEY:?zet FLASK_SECRET_KEY in .env}
+      # Versleutelt het TOTP-geheim (MIT-17); los van FLASK_SECRET_KEY, zodat elke sleutel één doel heeft.
+      DATA_ENCRYPTION_KEY: ${DATA_ENCRYPTION_KEY:?zet DATA_ENCRYPTION_KEY in .env}
       # De app verbindt met de eigenaarrol waarmee de database is aangemaakt,
       # en mag daarmee alles, ook tabellen weggooien (MC-08).
       DATABASE_URL: postgresql://notities:${POSTGRES_PASSWORD}@db:5432/notities

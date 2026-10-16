@@ -5,6 +5,7 @@ import io
 import segno
 from flask import Blueprint, Response, abort, flash, g, redirect, render_template, request, session, url_for
 
+import encryption
 import passwords
 import throttle
 import totp
@@ -45,13 +46,15 @@ def setup_2fa():
     if g.user.totp_enabled:
         return redirect(url_for("account.index"))
     # Een nieuw geheim telt pas na een eerste geldige code, zodat je jezelf niet buitensluit.
+    # Het geheim staat alleen versleuteld in de database (MIT-17).
     query(
         "UPDATE users SET totp_secret = %s, totp_last_step = NULL WHERE id = %s AND totp_secret IS NULL",
-        (totp.new_secret(), g.user.id),
+        (encryption.encrypt(totp.new_secret(), "totp_secret", g.user.id), g.user.id),
     )
     user = query("SELECT totp_secret FROM users WHERE id = %s", (g.user.id,), one=True)
+    secret = encryption.decrypt(user.totp_secret, "totp_secret", g.user.id)
     # De sleutel in groepjes van vier, om over te typen als scannen niet lukt.
-    grouped = " ".join(user.totp_secret[i:i + 4] for i in range(0, len(user.totp_secret), 4))
+    grouped = " ".join(secret[i:i + 4] for i in range(0, len(secret), 4))
     if request.method == "GET":
         return render_template("setup_2fa.html", secret=grouped)
 
@@ -80,10 +83,11 @@ def new_recovery():
 def qr_2fa():
     # Alleen zolang het instellen loopt; daarna is het geheim niet meer op te vragen.
     user = query("SELECT username, totp_secret FROM users WHERE id = %s AND NOT totp_enabled", (g.user.id,), one=True)
-    if user is None or user.totp_secret is None:
+    secret = user and user.totp_secret and encryption.decrypt(user.totp_secret, "totp_secret", g.user.id)
+    if not secret:
         abort(404)
     svg = io.BytesIO()
-    segno.make(totp.provisioning_uri(user.totp_secret, user.username), error="m").save(svg, kind="svg", scale=6, border=2)
+    segno.make(totp.provisioning_uri(secret, user.username), error="m").save(svg, kind="svg", scale=6, border=2)
     return Response(svg.getvalue(), mimetype="image/svg+xml")
 
 

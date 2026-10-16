@@ -11,6 +11,7 @@ from functools import wraps
 import psycopg
 from flask import Blueprint, flash, g, redirect, render_template, request, session, url_for
 
+import encryption
 import passwords
 import throttle
 import totp
@@ -276,13 +277,15 @@ def logout():
 def check_code(user_id):
     code_limit = throttle.limit("totp_account", user_id)
     user = query("SELECT totp_secret FROM users WHERE id = %s", (user_id,), one=True)
-    if user is None or user.totp_secret is None:
+    # Niet te ontsleutelen (gewijzigd, verplaatst, andere sleutel) telt als geen geheim: dan wordt elke code geweigerd.
+    secret = user and user.totp_secret and encryption.decrypt(user.totp_secret, "totp_secret", user_id)
+    if not secret:
         return CodeError("Er is geen tweestapsverificatie ingesteld.", 0)
     # Op slot: dan wordt ook de juiste code geweigerd (MIT-06).
     minutes = throttle.attempt(code_limit)
     if minutes:
         return CodeError(throttle.message(minutes), minutes)
-    step = totp.matching_step(user.totp_secret, request.form.get("code", ""))
+    step = totp.matching_step(secret, request.form.get("code", ""))
     # Eenmalig gebruik (MIT-07) en blokkade in één UPDATE: van twee verzoeken wint er één.
     if step is not None and query(
         "UPDATE users SET totp_last_step = %s"
