@@ -41,7 +41,7 @@ regressietest, behalve waar iets anders staat.
 |----|------|------|----|-----------------|
 | T-10 | MC-01 | Na registreren `users.password` uitlezen | Het wachtwoord staat er leesbaar | Een hash, niet terug te rekenen |
 | T-11 | MC-02 | Gebruiker B opent, wijzigt en verwijdert een notitie van A via `/notes/<id>/edit` en `/notes/<id>/delete` | Lukt | 404, notitie van A ongewijzigd |
-| T-12 | MC-03 | Foute wachtwoorden achter elkaar op één account | De 5e geeft 429 met `Retry-After: 900`: een blokkade van 15 minuten; ook het juiste wachtwoord wordt dan geweigerd (sinds MIT-10) | Idem; dit is het bewijs voor MIT-10 |
+| T-12 | MC-03 | Foute wachtwoorden achter elkaar op één account | Na 5 fouten geeft de volgende poging 429 met `Retry-After: 900`: een blokkade van 15 minuten; ook het juiste wachtwoord wordt dan geweigerd (sinds MIT-10) | Idem; dit is het bewijs voor MIT-10 |
 | T-13 | MC-03 | Registreren of wijzigen naar wachtwoord `a` | Geweigerd: 400, "Kies een wachtwoord van 12 tot 64 tekens." (sinds MIT-13, gemeten op 2026-10-16) | Idem; dit is het bewijs voor MIT-13 |
 | T-14 | MC-04 | Cookie kopiëren, uitloggen, gekopieerde cookie gebruiken | 302 naar `/login` met de melding "Je sessie is niet meer geldig" (sinds MIT-09) | Idem; dit is het bewijs voor MIT-09 |
 | T-15 | MC-04, MC-12 | Twee sessies; in de ene het wachtwoord wijzigen; de andere gebruiken | De andere sessie is uitgelogd, de eigen blijft ingelogd (sinds MIT-09) | Idem |
@@ -56,7 +56,7 @@ regressietest, behalve waar iets anders staat.
 | T-24 | MC-13 | Account verwijderen met een `POST` zonder bevestiging en zonder wachtwoord | Lukt | Geweigerd zonder het juiste wachtwoord |
 | T-25 | MC-14 | `whoami` in de app-container; de logs bij het starten | `root`; "WARNING: This is a development server" | Een gewone gebruiker; een productieserver zonder die waarschuwing |
 | T-27 | MC-10 | Titel van 15 en 16 tekens, notitie van 250 en 251 tekens, bij aanmaken en aanpassen | 302, 400, 302, 400 | Idem; dit is het bewijs voor MIT-04 |
-| T-30 | MC-15 | Na het wachtwoord 5 foute codes, daarna de juiste code, ook vanuit een nieuwe sessie; daarna nog twee keer 5 fouten na het verlopen van de blokkade | 5e fout: 429 met `Retry-After: 900`, 15 minuten op slot, de juiste code geweigerd, ook in de nieuwe sessie; daarna 30 en 60 minuten | Idem; dit is het bewijs voor MIT-06 |
+| T-30 | MC-15 | Na het wachtwoord 5 foute codes, daarna de juiste code, ook vanuit een nieuwe sessie; daarna nog twee keer 5 fouten na het verlopen van de blokkade | Na 5 fouten de volgende poging 429 met `Retry-After: 900`, 15 minuten op slot, de juiste code geweigerd, ook in de nieuwe sessie; daarna 30 en 60 minuten | Idem; dit is het bewijs voor MIT-06 |
 | T-31 | MC-16 | Een geaccepteerde code nog eens gebruiken, en twee gelijktijdige verzoeken met dezelfde nieuwe code | Geweigerd; van de twee komt er precies één binnen | Idem; dit is het bewijs voor MIT-07 |
 | T-32 | MC-03 | Met alleen het juiste wachtwoord van een account met tweestapsverificatie naar `/`, `/account` en een notitie aanmaken | Alle drie 302 naar `/login` | Idem; dit is het bewijs voor MIT-05 |
 | T-33 | MC-15 | Een halve login die ouder is dan 5 minuten | Weggegooid, naar `/login` met de melding "Dat duurde te lang" (gemeten met de testclient van Flask) | Idem |
@@ -65,23 +65,23 @@ regressietest, behalve waar iets anders staat.
 | T-36 | MC-17 | Headers van `/account/2fa` en `/account/2fa/qr.svg`; de QR-code opvragen nadat het instellen klaar is | `Cache-Control: no-store`; 404 | Idem; dit is het bewijs voor MIT-08 |
 | T-37 | MC-04 | Een sessie van vóór het aanzetten van tweestapsverificatie gebruiken, nadat het in een andere sessie is aangezet | 302 naar `/login` | Idem; bewijs voor MIT-09 |
 | T-38 | MC-12 | Halve login (alleen wachtwoord), dan in een andere sessie het wachtwoord wijzigen, dan de juiste code invullen | 302 naar `/login`: de halve login is vervallen | Idem; bewijs voor MIT-09 |
-| T-39 | MC-03 | 20 foute wachtwoorden vanaf één adres, telkens voor een andere naam; daarna een bestaand account met het juiste wachtwoord | De 20e geeft 429 met `Retry-After: 900`; het bestaande account wordt vanaf dat adres ook geweigerd | Idem; bewijs voor MIT-10 |
+| T-39 | MC-03 | 20 foute wachtwoorden vanaf één adres, telkens voor een andere naam; daarna een bestaand account met het juiste wachtwoord | De 21e poging geeft 429 met `Retry-After: 900`; het bestaande account wordt vanaf dat adres ook geweigerd | Idem; bewijs voor MIT-10 |
 | T-40 | MC-03 | Na een verlopen blokkade opnieuw 5 foute wachtwoorden, een paar keer achter elkaar | 15, 30, 60, 60 minuten | Idem |
 | T-41 | MC-03 | Een paar foute wachtwoorden, dan een geslaagde login; daarna `auth_throttle` bekijken | De teller van het account is weg, die van het adres staat er nog | Idem |
 | T-42 | MC-03 | De inhoud van `auth_throttle` doorzoeken op gebruikersnamen en IP-adressen | Alleen HMAC's, geen leesbare namen of adressen | Idem |
 | T-43 | MC-18 | Een ander account vanaf hetzelfde adres terwijl één account geblokkeerd is; een onbekende naam fout invullen | Het andere account komt binnen; de onbekende naam krijgt dezelfde melding als een bestaande | Idem |
 | T-46 | MC-19 | Een al gebruikte herstelcode nog eens; twee gelijktijdige verzoeken met dezelfde code | 400; van de twee komt er één binnen, de ander krijgt 400 | Idem; bewijs voor MIT-11 |
 | T-47 | MC-19 | `users.recovery_hash` bekijken na het aanzetten | 64 tekens (SHA-256), niet gelijk aan de code | Idem |
-| T-48 | MC-19 | 5 foute herstelcodes | De 5e geeft 429 met `Retry-After: 900`: een blokkade van 15 minuten | Idem |
+| T-48 | MC-19 | 5 foute herstelcodes | Daarna geeft de 6e poging 429 met `Retry-After: 900`: een blokkade van 15 minuten | Idem |
 | T-49 | MC-19 | Headers van de pagina's die de herstelcode tonen, ook na wachtwoord vergeten | `Cache-Control: no-store` | Idem |
 | T-50 | MC-03 | Een account zonder tweestapsverificatie: na het wachtwoord naar `/`, `/account` en een notitie aanmaken | Alle drie 302 naar `/account/2fa` | Idem; bewijs voor MIT-12 |
 | T-51 | MC-20 | Met alleen het wachtwoord van een account zonder tweestapsverificatie het instellen afmaken met een eigen app | Lukt | Geweigerd zonder een tweede kanaal (bijvoorbeeld een bevestigde e-mail) |
 | T-53 | MC-03 | Een nieuw wachtwoord van 11, 12, 64 en 65 tekens bij registreren; 11 en 65 bij wijzigen; een te kort wachtwoord bij wachtwoord vergeten | 400, 302, 302, 400; 400 en 400; 400 | Idem; bewijs voor MIT-13 |
 | T-54 | MC-21 | Wachtwoord vergeten met een foute herstelcode, voor een bestaande en voor een onbekende naam | Allebei 400 met "Gebruikersnaam, herstelcode of code klopt niet." | Idem; bewijs voor MIT-14 |
-| T-55 | MC-21 | 5 foute herstelcodes voor één naam vanaf één adres, voor een bestaande en voor een onbekende naam | Allebei: de 5e geeft 429 met `Retry-After: 900` | Idem |
-| T-56 | MC-21 | Een juiste herstelcode met 5 foute codes; daarna inloggen met wachtwoord en juiste code | De 5e geeft 429 met `Retry-After: 900`; de codestap bij inloggen is dan ook op slot (MIT-06) | Idem |
+| T-55 | MC-21 | 5 foute herstelcodes voor één naam vanaf één adres, voor een bestaande en voor een onbekende naam | Allebei: na 5 fouten geeft de 6e poging 429 met `Retry-After: 900` | Idem |
+| T-56 | MC-21 | Een juiste herstelcode met 5 foute codes; daarna inloggen met wachtwoord en juiste code | Na 5 foute codes geeft de 6e poging 429 met `Retry-After: 900`; de codestap bij inloggen is dan ook op slot (MIT-06) | Idem |
 | T-57 | MC-21 | Een gebruikte herstelcode nog eens; twee gelijktijdige verzoeken met dezelfde herstelcode en code | 400; van de twee komt er één binnen (200 en 400) | Idem; bewijs voor MIT-14 |
-| T-58 | MC-03 | 40 foute wachtwoorden tegelijk voor één naam vanaf één adres | Hoogstens 5 echt gecontroleerd (gemeten: 4); de verdubbelteller gaat één keer omhoog. Voor 49baae5: minstens 14 gecontroleerd en de teller op 17 | Idem; bewijs voor MIT-06 en MIT-10 |
+| T-58 | MC-03 | 40 foute wachtwoorden tegelijk voor één naam vanaf één adres | Precies 5 gecontroleerd en 35 geweigerd; de verdubbelteller gaat één keer omhoog. Voor 49baae5: minstens 14 gecontroleerd en de teller op 17 | Idem; bewijs voor MIT-06 en MIT-10 |
 | T-59 | MIT-05 | Een code met andere cijfers dan 0-9 (Arabisch-Indisch) bij inloggen en bij het instellen | 400 en geen traceback in de log. Voor ce12d31: 500 | Idem |
 | T-60 | MC-18 | `client_ip()` met een IPv4-adres achter een IPv6-socket (`::ffff:203.0.113.7`), een IPv6-adres en een gewoon IPv4-adres | `203.0.113.7`, `2001:db8::/64`, `192.0.2.1`. Voor 87a5006: elk IPv4-adres achter IPv6 werd `::/64` | Idem; bewijs voor MIT-10 |
 | T-61 | MC-10 | Een teller waarvan venster en blokkade twee dagen oud zijn, en een verse; daarna een nieuwe blokkade | De oude teller is weg, de verse blijft | Idem |

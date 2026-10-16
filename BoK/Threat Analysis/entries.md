@@ -413,10 +413,10 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 
 ### MIT-06 Blokkade na 5 foute codes
 - Houdt tegen: MC-15 stap 2
-- Wat: foute codes worden per account in de database geteld (`auth_throttle`, via `throttle.py`), niet in de sessie, want een sessie kan de aanvaller gewoon opnieuw beginnen. Elke poging telt vóór de controle, in één SQL-statement, zodat ook verzoeken die tegelijk binnenkomen samen niet meer dan 5 pogingen krijgen; blokkade en verdubbelen gaan dan maar één keer omhoog (T-58). Na 5 fouten in 15 minuten zit de codestap op slot, en dan wordt ook de juiste code geweigerd. De eerste blokkade duurt 15 minuten, elke volgende twee keer zo lang, tot 24 uur. Een geldige code wist de teller. De controle op de blokkade zit ook in de UPDATE die de code accepteert. Tijdens de blokkade antwoordt de app met 429 en `Retry-After`, de resterende tijd in seconden
+- Wat: foute codes worden per account in de database geteld (`auth_throttle`, via `throttle.py`), niet in de sessie, want een sessie kan de aanvaller gewoon opnieuw beginnen. Elke poging telt vóór de controle, in één SQL-statement, zodat ook verzoeken die tegelijk binnenkomen samen niet meer dan 5 pogingen krijgen; blokkade en verdubbelen gaan dan maar één keer omhoog (T-58). Na 5 fouten in 15 minuten wordt de volgende poging geweigerd en gaat de codestap op slot, in hetzelfde statement; dan wordt ook de juiste code geweigerd. De eerste blokkade duurt 15 minuten, elke volgende twee keer zo lang, tot 24 uur. Een geldige code wist de teller. De controle op de blokkade zit ook in de UPDATE die de code accepteert. Tijdens de blokkade antwoordt de app met 429 en `Retry-After`, de resterende tijd in seconden
 - Waar: `check_code()` in `app/auth.py`, `app/throttle.py`
 - Status: gebouwd
-- Sinds: 18e1424; verdubbelend sinds 484eca3; 429 sinds 5a82eb5; tellen vóór de controle sinds 49baae5
+- Sinds: 18e1424; verdubbelend sinds 484eca3; 429 sinds 5a82eb5; tellen vóór de controle sinds 49baae5; blokkade in hetzelfde statement sinds 467623d
 
 ### MIT-07 Elke code werkt één keer
 - Houdt tegen: MC-16 stap 2
@@ -444,7 +444,7 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 - Wat: foute wachtwoorden worden geteld per IP-adres (20 in 15 minuten) en per account vanaf één adres (5 in 15 minuten). Daarna volgt een blokkade van 15 minuten, die bij herhaling verdubbelt tot een uur; ook het juiste wachtwoord wordt dan geweigerd, met status 429 en `Retry-After`. De tellers hangen aan wat er is ingevuld en niet aan of het account bestaat, dus een blokkade verraadt geen namen. Elke poging telt vóór de controle, zoals bij MIT-06. Een geslaagde login wist de teller van het account; van de teller van het adres gaat alleen die ene poging af, anders zet een aanvaller met een eigen account de adresteller steeds terug. Bewust geen blokkade per account over alle adressen (MC-18). IPv6-adressen tellen per /64; een IPv4-adres dat via een IPv6-socket binnenkomt, telt als dat IPv4-adres (T-60). De sleutels in `auth_throttle` zijn HMAC's, dus de tabel bevat geen leesbare IP-adressen of gebruikersnamen. Bij een nieuwe blokkade gaan de tellers weg waarvan venster en blokkade meer dan een dag voorbij zijn (T-61)
 - Waar: `login()` in `app/auth.py`, `app/throttle.py`
 - Status: gebouwd
-- Sinds: 484eca3; `Retry-After` sinds 5a82eb5; tellen vóór de controle sinds 49baae5; IPv4 achter IPv6 sinds 87a5006; opruimen sinds db7c907
+- Sinds: 484eca3; `Retry-After` sinds 5a82eb5; tellen vóór de controle sinds 49baae5, blokkade in hetzelfde statement sinds 467623d; IPv4 achter IPv6 sinds 87a5006; opruimen sinds db7c907
 
 ### MIT-11 Herstelcode
 - Houdt tegen: MC-19 stap 2a, 2c en 2d; maakt tweestapsverificatie mogelijk zonder dat een kwijtgeraakte telefoon het account onbereikbaar maakt
