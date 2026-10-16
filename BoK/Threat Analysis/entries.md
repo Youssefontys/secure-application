@@ -306,7 +306,7 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
   - OR  2. Meekijken of een screenshot maken van de QR-code of de sleutel tijdens het instellen
   - OR  3. De instelpagina of de QR-code uit een cache halen
 - Mitigaties: MIT-17 (stap 1: zonder de sleutel is het geheim niet te lezen). MIT-08 (stap 3, en stap 2 voor zover het om later terugkijken gaat)
-- Restrisico: wie naast de database ook de sleutel heeft (MC-22), leest het geheim wel. Meekijken tijdens het instellen (stap 2) blijft mogelijk. Het wachtwoord staat nog leesbaar (MC-01), maar zonder het geheim levert een databaselek geen volledige overname meer op
+- Restrisico: wie naast de database ook de sleutel heeft (MC-22), leest het geheim wel. Meekijken tijdens het instellen (stap 2) blijft mogelijk. Het wachtwoord staat nog leesbaar (MC-01), maar zonder het geheim levert een databaselek geen volledige overname meer op. Versleuteling beschermt tegen lezen, niet tegen schrijven: wie de database kan wijzigen (MC-08), zet `totp_enabled` op false, logt in met het leesbare wachtwoord en stelt tweestapsverificatie in met een eigen telefoon
 - Status: gebouwd
 - Sinds: 18e1424; versleuteld sinds 776931a
 
