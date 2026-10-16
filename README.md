@@ -10,19 +10,21 @@ Every feature that is added has an entry in `BoK/`: the use case, the misuse cas
 
 ## Structure
 
-- `app/` - the notes application, one file per part: `app.py` creates the app, `db.py` talks to the database, `auth.py` handles logging in (including the second step), `account.py` the profile, `notes.py` the notes, `totp.py` the TOTP calculation, `throttle.py` the login limits, `passwords.py` the rule for a new password. The website (HTML, CSS, JS) is in `app/web/`
+- `app/` - the notes application, one file per part: `app.py` creates the app, `db.py` talks to the database, `auth.py` handles logging in (including the second step), `account.py` the profile, `notes.py` the notes, `totp.py` the TOTP calculation, `throttle.py` the login limits, `passwords.py` the rule for a new password, `encryption.py` the encryption of the TOTP secret. The website (HTML, CSS, JS) is in `app/web/`
 - `db/` - the database schema, run by the database container on first start
 - `BoK/Architecture/` - components, data flows, trust boundaries and the authentication and authorization points
 - `BoK/Threat Analysis/` - use cases, misuse cases, mitigations, attack trees and the tests that go with them
 - `BoK/Subjects/` - per BoK subject (week) what was built, why it is safe and what it does not solve
-- `compose.yaml` - app and database for local use
+- `compose.yaml` - app and database for local use, with scanner profiles in comments
+- `scripts/` - `setup.py` to deploy (locally now, Azure follows), and the Terraform state bootstrap scripts imported from BOK-SECENGINEER
 
 ## Run it
 
 ```sh
-cp .env.example .env     # fill in two values
-docker compose up --build
+python scripts/setup.py lokaal   # creates missing secrets in .env and starts the stack
 ```
+
+Or by hand: copy `.env.example` to `.env`, fill in the three values, and run `docker compose up --build`.
 
 Then open http://127.0.0.1:5000.
 
@@ -34,5 +36,6 @@ The baseline plus the first security features, each with an entry in `BoK/Threat
 - mandatory two-step verification with TOTP, a recovery code for a lost phone, login limits per IP address and per account, and a session version that ends old sessions (MIT-05 to MIT-12); see `BoK/Subjects/Week 5 Authentication.md`
 - a rule of 12 to 64 characters for a new password (MIT-13), and a forgotten-password route that uses the recovery code and the app code (MIT-14)
 - an ownership check on every note (MIT-15), and the current password before changing it or deleting the account (MIT-16)
+- the TOTP secret encrypted with AES-256-GCM, with the key outside the database (MIT-17); see `BoK/Subjects/Week 6 Encryption.md`
 
 Still open: passwords are stored in plain text and there is no CSRF protection. Not safe to expose to the internet.
