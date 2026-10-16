@@ -179,11 +179,17 @@ def hash_recovery_code(text):
     return hashlib.sha256(re.sub(r"[\s-]", "", text).lower().encode()).hexdigest()
 
 
-# Een nieuwe herstelcode van 128 bits, om één keer te tonen; een eerdere code vervalt.
-def new_recovery_code(user_id):
+# Een nieuwe herstelcode van 128 bits: de code om één keer te tonen, en de hash om te bewaren.
+def make_recovery_code():
     code = secrets.token_hex(16)
-    query("UPDATE users SET recovery_hash = %s WHERE id = %s", (hash_recovery_code(code), user_id))
-    return "-".join(code[i:i + 4] for i in range(0, len(code), 4))
+    return "-".join(code[i:i + 4] for i in range(0, len(code), 4)), hash_recovery_code(code)
+
+
+# Zet een nieuwe herstelcode voor dit account en geeft hem terug; een eerdere code vervalt.
+def new_recovery_code(user_id):
+    code, recovery_hash = make_recovery_code()
+    query("UPDATE users SET recovery_hash = %s WHERE id = %s", (recovery_hash, user_id))
+    return code
 
 
 # De herstelcode in plaats van de code uit de app, voor wie de telefoon kwijt is (AU-07).
@@ -249,17 +255,18 @@ def forgot_password():
     if code_error:
         error = code_error.message if code_error.minutes else FORGOT_WRONG
         return render_template("login_forgot.html", error=error), *throttle.refusal(code_error.minutes)
-    # Herstelcode op, andere sessies ongeldig; door de hash in de WHERE wint maar één verzoek.
+    # Alles in één UPDATE: wachtwoord, nieuwe herstelcode, sessies; de oude hash in de WHERE.
+    new_code, new_hash = make_recovery_code()
     row = query(
-        "UPDATE users SET password = %s, recovery_hash = NULL, session_version = session_version + 1"
+        "UPDATE users SET password = %s, recovery_hash = %s, session_version = session_version + 1"
         " WHERE id = %s AND recovery_hash = %s RETURNING id",
-        (password, user.id, given), one=True,
+        (password, new_hash, user.id, given), one=True,
     )
     if row is None:
         return render_template("login_forgot.html", error=FORGOT_WRONG), 400
     session.clear()
-    # Niet automatisch ingelogd; wel meteen een nieuwe herstelcode, anders is er geen meer.
-    return render_template("recovery_code.html", code=new_recovery_code(user.id), first=False, reset=True)
+    # Niet automatisch ingelogd; wel meteen de nieuwe herstelcode, anders is er geen meer.
+    return render_template("recovery_code.html", code=new_code, first=False, reset=True)
 
 
 @bp.route("/logout", methods=["POST"])
