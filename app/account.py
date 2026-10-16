@@ -1,4 +1,4 @@
-"""Het eigen account: profiel, tweestapsverificatie, wachtwoord wijzigen, account verwijderen."""
+#Het eigen account: profiel, tweestapsverificatie, wachtwoord wijzigen, account verwijderen.
 
 import io
 
@@ -19,8 +19,7 @@ def index():
     return render_account()
 
 
-def render_account(error=None, status=200, headers=None):
-    """De profielpagina, altijd van de ingelogde gebruiker zelf (AZ-08)."""
+def render_account(error=None, status=200, headers=None):     #De profielpagina, altijd van de ingelogde gebruiker zelf (AZ-08).
     profile = query(
         "SELECT username, created_at, totp_enabled,"
         " (SELECT count(*) FROM notes WHERE user_id = users.id) AS note_count"
@@ -31,8 +30,7 @@ def render_account(error=None, status=200, headers=None):
 
 
 @bp.after_request
-def no_store(response):
-    """De pagina's met het TOTP-geheim niet in een browser- of proxycache laten staan (MIT-08)."""
+def no_store(response):    #De pagina's met het TOTP-geheim niet in een browser- of proxycache laten staan (MIT-08).
     if request.endpoint in ("account.setup_2fa", "account.qr_2fa", "account.new_recovery"):
         response.headers["Cache-Control"] = "no-store"
     return response
@@ -43,9 +41,7 @@ def no_store(response):
 def setup_2fa():
     if g.user.totp_enabled:
         return redirect(url_for("account.index"))
-    # Een nieuw geheim, nog niet actief, als er nog geen is. Pas na een eerste
-    # geldige code staat de tweede factor aan, zodat je jezelf niet buitensluit
-    # met een verkeerd ingestelde app.
+    # Een nieuw geheim, nog niet actief, als er nog geen is. Pas na een eerst geldige code staat de tweede factor aan, zodat je jezelf niet buitensluit met een verkeerd ingestelde app.
     query(
         "UPDATE users SET totp_secret = %s, totp_last_step = NULL WHERE id = %s AND totp_secret IS NULL",
         (totp.new_secret(), g.user.id),
