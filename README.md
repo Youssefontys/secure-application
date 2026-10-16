@@ -33,5 +33,6 @@ The baseline plus the first security features, each with an entry in `BoK/Threat
 - pinned dependencies (MIT-03) and a length limit on notes (MIT-04)
 - mandatory two-step verification with TOTP, a recovery code for a lost phone, login limits per IP address and per account, and a session version that ends old sessions (MIT-05 to MIT-12); see `BoK/Subjects/Week 5 Authentication.md`
 - a rule of 12 to 64 characters for a new password (MIT-13), and a forgotten-password route that uses the recovery code and the app code (MIT-14)
+- an ownership check on every note (MIT-15), and the current password before changing it or deleting the account (MIT-16)
 
-Still open: passwords are stored in plain text, there is no CSRF protection and no ownership check on notes. Not safe to expose to the internet.
+Still open: passwords are stored in plain text and there is no CSRF protection. Not safe to expose to the internet.
