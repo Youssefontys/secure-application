@@ -9,6 +9,8 @@ from collections import namedtuple
 from db import query
 
 Policy = namedtuple("Policy", "max_failures window_minutes lock_minutes max_lock_minutes")
+# Eén teller: de soort (voor de limieten hieronder) en de sleutel in auth_throttle.
+Limit = namedtuple("Limit", "kind key")
 
 POLICIES = {
     # Inloggen en wachtwoord vergeten, per IP-adres: tegen één adres dat veel accounts probeert.
@@ -20,6 +22,8 @@ POLICIES = {
     # Herstelcode, per account: zelfde afweging als de tweede factor (MIT-11).
     "recovery_account": Policy(5, 15, 15, 24 * 60),
 }
+# Een geslaagde poging wist deze teller niet: anders zet een eigen account hem steeds terug.
+KEEP_ON_SUCCESS = {"password_ip"}
 
 _SECRET = os.environ["FLASK_SECRET_KEY"].encode()
 
@@ -27,6 +31,16 @@ _SECRET = os.environ["FLASK_SECRET_KEY"].encode()
 # Een HMAC van soort en waarden: de tabel bevat geen leesbare IP-adressen of namen.
 def key(kind, *parts):
     return hmac.new(_SECRET, "\x00".join((kind, *map(str, parts))).encode(), hashlib.sha256).hexdigest()
+
+
+def limit(kind, *parts):
+    return Limit(kind, key(kind, *parts))
+
+
+# De tellers van inloggen en wachtwoord vergeten: per adres en per naam per adres (MIT-10).
+def password_limits(username, remote_addr):
+    ip = client_ip(remote_addr)
+    return limit("password_ip", ip), limit("password_account_ip", username, ip)
 
 
 # Het IP-adres van de client; bij IPv6 het /64-netwerk, want één aansluiting krijgt er 2^64.
@@ -57,31 +71,53 @@ def locked_minutes(*keys):
     return int(row.minutes or 0)
 
 
-# Telt een foute poging; geeft de duur van een blokkade die nu ingaat, in minuten, anders 0.
-def fail(kind, k):
+# Telt vóór de controle, dus ook gelijktijdige verzoeken blijven binnen de limiet; 0 = mag door.
+def attempt(*limits):
+    for kind, k in limits:
+        policy = POLICIES[kind]
+        # Op slot telt niets; na het venster en na een dag zonder blokkade begint het opnieuw.
+        row = query(
+            "INSERT INTO auth_throttle AS t (key, failures, window_start) VALUES (%(key)s, 1, now())"
+            " ON CONFLICT (key) DO UPDATE SET"
+            "  failures = CASE WHEN t.locked_until > now() THEN t.failures"
+            "   WHEN t.window_start < now() - make_interval(mins => %(window)s) THEN 1 ELSE t.failures + 1 END,"
+            "  window_start = CASE WHEN t.locked_until > now() THEN t.window_start"
+            "   WHEN t.window_start < now() - make_interval(mins => %(window)s) THEN now() ELSE t.window_start END,"
+            "  lock_count = CASE WHEN t.locked_until < now() - interval '1 day' THEN 0 ELSE t.lock_count END"
+            " RETURNING failures, GREATEST(ceil(extract(epoch FROM locked_until - now()) / 60), 0) AS minutes",
+            {"key": k, "window": policy.window_minutes}, one=True,
+        )
+        if row.minutes:
+            return int(row.minutes)
+        if row.failures > policy.max_failures:
+            return _lock(kind, k) or locked_minutes(k)
+    return 0
+
+
+# Na een foute controle: op slot als de limiet nu bereikt is; geeft de minuten, anders 0.
+def failed(*limits):
+    return max(_lock(kind, k) for kind, k in limits)
+
+
+# Na een geslaagde controle: de teller weg, of bij KEEP_ON_SUCCESS alleen deze poging eraf.
+def succeeded(*limits):
+    for kind, k in limits:
+        if kind in KEEP_ON_SUCCESS:
+            query("UPDATE auth_throttle SET failures = GREATEST(failures - 1, 0) WHERE key = %s", (k,))
+        else:
+            query("DELETE FROM auth_throttle WHERE key = %s", (k,))
+
+
+# Op slot als de limiet bereikt is, in één statement: bij gelijktijdige verzoeken maar één keer.
+def _lock(kind, k):
     policy = POLICIES[kind]
-    # Na het venster opnieuw tellen; na een dag zonder blokkade opnieuw verdubbelen.
-    row = query(
-        "INSERT INTO auth_throttle AS t (key, failures, window_start) VALUES (%(key)s, 1, now())"
-        " ON CONFLICT (key) DO UPDATE SET"
-        "  failures = CASE WHEN t.window_start < now() - make_interval(mins => %(window)s) THEN 1 ELSE t.failures + 1 END,"
-        "  window_start = CASE WHEN t.window_start < now() - make_interval(mins => %(window)s) THEN now() ELSE t.window_start END,"
-        "  lock_count = CASE WHEN t.locked_until < now() - interval '1 day' THEN 0 ELSE t.lock_count END"
-        " RETURNING failures, lock_count",
-        {"key": k, "window": policy.window_minutes}, one=True,
-    )
-    if row.failures < policy.max_failures:
-        return 0
     # Elke volgende blokkade duurt twee keer zo lang, tot het maximum.
-    minutes = min(policy.lock_minutes * 2 ** row.lock_count, policy.max_lock_minutes)
-    query(
-        "UPDATE auth_throttle SET locked_until = now() + make_interval(mins => %s), lock_count = lock_count + 1,"
-        " failures = 0, window_start = now() WHERE key = %s",
-        (minutes, k),
+    row = query(
+        "UPDATE auth_throttle SET lock_count = lock_count + 1, failures = 0, window_start = now(),"
+        "  locked_until = now() + make_interval(mins => LEAST(%(lock)s * 2 ^ LEAST(lock_count, 10), %(max)s)::int)"
+        " WHERE key = %(key)s AND failures >= %(limit)s AND (locked_until IS NULL OR locked_until <= now())"
+        " RETURNING ceil(extract(epoch FROM locked_until - now()) / 60) AS minutes",
+        {"key": k, "lock": policy.lock_minutes, "max": policy.max_lock_minutes, "limit": policy.max_failures},
+        one=True,
     )
-    return minutes
-
-
-# Na een geslaagde poging: teller en verdubbeling van deze sleutel weg.
-def reset(k):
-    query("DELETE FROM auth_throttle WHERE key = %s", (k,))
+    return int(row.minutes) if row else 0

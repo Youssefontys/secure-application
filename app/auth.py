@@ -113,10 +113,8 @@ def login():
     username = request.form.get("username", "").strip()
     password = request.form.get("password", "")
     # Tellen per adres en per naam per adres (MIT-10), ook voor onbekende namen: verraadt niets.
-    ip = throttle.client_ip(request.remote_addr)
-    ip_key = throttle.key("password_ip", ip)
-    pair_key = throttle.key("password_account_ip", username, ip)
-    minutes = throttle.locked_minutes(ip_key, pair_key)
+    limits = throttle.password_limits(username, request.remote_addr)
+    minutes = throttle.attempt(*limits)
     if minutes:
         return render_template("auth.html", error=throttle.message(minutes)), *throttle.refusal(minutes)
     row = query(
@@ -124,11 +122,10 @@ def login():
         (username, password), one=True,
     )
     if row is None:
-        minutes = max(throttle.fail("password_ip", ip_key), throttle.fail("password_account_ip", pair_key))
+        minutes = throttle.failed(*limits)
         error = throttle.message(minutes) if minutes else "Onjuiste gebruikersnaam of wachtwoord."
         return render_template("auth.html", error=error), *throttle.refusal(minutes)
-    # Alleen de accountteller weg, zodat een eigen account de adresteller niet kan resetten.
-    throttle.reset(pair_key)
+    throttle.succeeded(*limits)
 
     session.clear()
     if row.totp_enabled:
@@ -199,14 +196,14 @@ def login_recover():
     if request.method == "GET":
         return render_template("login_recover.html")
 
-    k = throttle.key("recovery_account", user_id)
-    minutes = throttle.locked_minutes(k)
+    recovery_limit = throttle.limit("recovery_account", user_id)
+    minutes = throttle.attempt(recovery_limit)
     if minutes:
         return render_template("login_recover.html", error=throttle.message(minutes)), *throttle.refusal(minutes)
     given = hash_recovery_code(request.form.get("code", ""))
     stored = query("SELECT recovery_hash FROM users WHERE id = %s", (user_id,), one=True)
     if not (stored and stored.recovery_hash and hmac.compare_digest(given, stored.recovery_hash)):
-        minutes = throttle.fail("recovery_account", k)
+        minutes = throttle.failed(recovery_limit)
         error = throttle.message(minutes) if minutes else "Onjuiste herstelcode."
         return render_template("login_recover.html", error=error), *throttle.refusal(minutes)
     # Werkt één keer: 2FA uit, sessies ongeldig; de hash in de WHERE laat één verzoek winnen.
@@ -217,7 +214,7 @@ def login_recover():
     )
     if row is None:
         return render_template("login_recover.html", error="Onjuiste herstelcode."), 400
-    throttle.reset(k)
+    throttle.succeeded(recovery_limit)
     start_session(user_id, row.session_version)
     flash("Je herstelcode is gebruikt. Stel tweestapsverificatie opnieuw in met je nieuwe telefoon.")
     return redirect(url_for("account.setup_2fa"))
@@ -236,18 +233,17 @@ def forgot_password():
     if problem:
         return render_template("login_forgot.html", error=problem), 400
     # Bereikbaar zonder wachtwoord, dus dezelfde tellers als bij inloggen: per adres en per naam per adres.
-    ip = throttle.client_ip(request.remote_addr)
-    ip_key = throttle.key("password_ip", ip)
-    pair_key = throttle.key("password_account_ip", username, ip)
-    minutes = throttle.locked_minutes(ip_key, pair_key)
+    limits = throttle.password_limits(username, request.remote_addr)
+    minutes = throttle.attempt(*limits)
     if minutes:
         return render_template("login_forgot.html", error=throttle.message(minutes)), *throttle.refusal(minutes)
     user = query("SELECT id, recovery_hash FROM users WHERE username = %s AND totp_enabled", (username,), one=True)
     given = hash_recovery_code(request.form.get("recovery_code", ""))
     if not (user and user.recovery_hash and hmac.compare_digest(given, user.recovery_hash)):
-        minutes = max(throttle.fail("password_ip", ip_key), throttle.fail("password_account_ip", pair_key))
+        minutes = throttle.failed(*limits)
         error = throttle.message(minutes) if minutes else FORGOT_WRONG
         return render_template("login_forgot.html", error=error), *throttle.refusal(minutes)
+    throttle.succeeded(*limits)
     # De herstelcode klopt; pas nu telt een foute code per account, met de blokkade van de codestap (MIT-06).
     code_error = check_code(user.id)
     if code_error:
@@ -261,7 +257,6 @@ def forgot_password():
     )
     if row is None:
         return render_template("login_forgot.html", error=FORGOT_WRONG), 400
-    throttle.reset(pair_key)
     session.clear()
     # Niet automatisch ingelogd; wel meteen een nieuwe herstelcode, anders is er geen meer.
     return render_template("recovery_code.html", code=new_recovery_code(user.id), first=False, reset=True)
@@ -278,12 +273,12 @@ def logout():
 
 # Controleert de TOTP-code uit het formulier: None als hij klopt, anders een CodeError.
 def check_code(user_id):
-    k = throttle.key("totp_account", user_id)
+    code_limit = throttle.limit("totp_account", user_id)
     user = query("SELECT totp_secret FROM users WHERE id = %s", (user_id,), one=True)
     if user is None or user.totp_secret is None:
         return CodeError("Er is geen tweestapsverificatie ingesteld.", 0)
     # Op slot: dan wordt ook de juiste code geweigerd (MIT-06).
-    minutes = throttle.locked_minutes(k)
+    minutes = throttle.attempt(code_limit)
     if minutes:
         return CodeError(throttle.message(minutes), minutes)
     step = totp.matching_step(user.totp_secret, request.form.get("code", ""))
@@ -292,10 +287,10 @@ def check_code(user_id):
         "UPDATE users SET totp_last_step = %s"
         " WHERE id = %s AND (totp_last_step IS NULL OR totp_last_step < %s)"
         " AND NOT EXISTS (SELECT 1 FROM auth_throttle WHERE key = %s AND locked_until > now()) RETURNING id",
-        (step, user_id, step, k), one=True,
+        (step, user_id, step, code_limit.key), one=True,
     ):
-        throttle.reset(k)
+        throttle.succeeded(code_limit)
         return None
     # Fout, of al eens gebruikt: telt als mislukte poging.
-    minutes = throttle.fail("totp_account", k)
+    minutes = throttle.failed(code_limit)
     return CodeError(throttle.message(minutes) if minutes else "Onjuiste of al gebruikte code.", minutes)
