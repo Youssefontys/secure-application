@@ -122,9 +122,7 @@ def login():
         (username, password), one=True,
     )
     if row is None:
-        minutes = throttle.failed(*limits)
-        error = throttle.message(minutes) if minutes else "Onjuiste gebruikersnaam of wachtwoord."
-        return render_template("auth.html", error=error), *throttle.refusal(minutes)
+        return render_template("auth.html", error="Onjuiste gebruikersnaam of wachtwoord."), 400
     throttle.succeeded(*limits)
 
     session.clear()
@@ -209,9 +207,7 @@ def login_recover():
     given = hash_recovery_code(request.form.get("code", ""))
     stored = query("SELECT recovery_hash FROM users WHERE id = %s", (user_id,), one=True)
     if not (stored and stored.recovery_hash and hmac.compare_digest(given, stored.recovery_hash)):
-        minutes = throttle.failed(recovery_limit)
-        error = throttle.message(minutes) if minutes else "Onjuiste herstelcode."
-        return render_template("login_recover.html", error=error), *throttle.refusal(minutes)
+        return render_template("login_recover.html", error="Onjuiste herstelcode."), 400
     # Werkt één keer: 2FA uit, sessies ongeldig; de hash in de WHERE laat één verzoek winnen.
     row = query(
         "UPDATE users SET recovery_hash = NULL, totp_secret = NULL, totp_enabled = false, totp_last_step = NULL,"
@@ -246,9 +242,7 @@ def forgot_password():
     user = query("SELECT id, recovery_hash FROM users WHERE username = %s AND totp_enabled", (username,), one=True)
     given = hash_recovery_code(request.form.get("recovery_code", ""))
     if not (user and user.recovery_hash and hmac.compare_digest(given, user.recovery_hash)):
-        minutes = throttle.failed(*limits)
-        error = throttle.message(minutes) if minutes else FORGOT_WRONG
-        return render_template("login_forgot.html", error=error), *throttle.refusal(minutes)
+        return render_template("login_forgot.html", error=FORGOT_WRONG), 400
     throttle.succeeded(*limits)
     # De herstelcode klopt; pas nu telt een foute code per account, met de blokkade van de codestap (MIT-06).
     code_error = check_code(user.id)
@@ -298,6 +292,5 @@ def check_code(user_id):
     ):
         throttle.succeeded(code_limit)
         return None
-    # Fout, of al eens gebruikt: telt als mislukte poging.
-    minutes = throttle.failed(code_limit)
-    return CodeError(throttle.message(minutes) if minutes else "Onjuiste of al gebruikte code.", minutes)
+    # Fout, of al eens gebruikt: de poging is al geteld.
+    return CodeError("Onjuiste of al gebruikte code.", 0)
