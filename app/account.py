@@ -1,4 +1,4 @@
-#Het eigen account: profiel, tweestapsverificatie, wachtwoord wijzigen, account verwijderen.
+# Het eigen account: profiel, tweestapsverificatie, wachtwoord wijzigen, account verwijderen.
 
 import io
 
@@ -19,7 +19,8 @@ def index():
     return render_account()
 
 
-def render_account(error=None, status=200, headers=None):     #De profielpagina, altijd van de ingelogde gebruiker zelf (AZ-08).
+# De profielpagina, altijd van de ingelogde gebruiker zelf (AZ-08).
+def render_account(error=None, status=200, headers=None):
     profile = query(
         "SELECT username, created_at, totp_enabled,"
         " (SELECT count(*) FROM notes WHERE user_id = users.id) AS note_count"
@@ -29,8 +30,9 @@ def render_account(error=None, status=200, headers=None):     #De profielpagina,
     return render_template("account.html", profile=profile, error=error), status, headers or {}
 
 
+# Geheim en herstelcode niet in een browser- of proxycache laten staan (MIT-08, MIT-11).
 @bp.after_request
-def no_store(response):    #De pagina's met het TOTP-geheim niet in een browser- of proxycache laten staan (MIT-08).
+def no_store(response):
     if request.endpoint in ("account.setup_2fa", "account.qr_2fa", "account.new_recovery"):
         response.headers["Cache-Control"] = "no-store"
     return response
@@ -41,7 +43,7 @@ def no_store(response):    #De pagina's met het TOTP-geheim niet in een browser-
 def setup_2fa():
     if g.user.totp_enabled:
         return redirect(url_for("account.index"))
-    # Een nieuw geheim, nog niet actief, als er nog geen is. Pas na een eerst geldige code staat de tweede factor aan, zodat je jezelf niet buitensluit met een verkeerd ingestelde app.
+    # Een nieuw geheim telt pas na een eerste geldige code, zodat je jezelf niet buitensluit.
     query(
         "UPDATE users SET totp_secret = %s, totp_last_step = NULL WHERE id = %s AND totp_secret IS NULL",
         (totp.new_secret(), g.user.id),
@@ -58,16 +60,14 @@ def setup_2fa():
     query("UPDATE users SET totp_enabled = true WHERE id = %s", (g.user.id,))
     # Sessies van vóór de tweede factor zijn met alleen een wachtwoord gestart.
     end_other_sessions(g.user.id)
-    # De herstelcode staat alleen in dit ene antwoord, niet op een pagina die je
-    # later nog eens kunt openen (MIT-11).
+    # De herstelcode staat alleen in dit ene antwoord, nergens later terug te zien (MIT-11).
     return render_template("recovery_code.html", code=new_recovery_code(g.user.id), first=True)
 
 
 @bp.route("/2fa/recovery", methods=["POST"])
 @login_required
 def new_recovery():
-    # Een nieuwe herstelcode vraagt een geldige code uit de app: wie alleen de
-    # sessie heeft, kan zo geen herstelcode bemachtigen.
+    # Vraagt een code uit de app: met alleen de sessie krijg je geen herstelcode (AU-06).
     error = check_code(g.user.id)
     if error:
         return render_account(error.message, *throttle.refusal(error.minutes))
@@ -77,7 +77,7 @@ def new_recovery():
 @bp.route("/2fa/qr.svg")
 @login_required
 def qr_2fa():
-    # Alleen zolang het instellen loopt. Daarna is het geheim niet meer op te vragen.
+    # Alleen zolang het instellen loopt; daarna is het geheim niet meer op te vragen.
     user = query("SELECT username, totp_secret FROM users WHERE id = %s AND NOT totp_enabled", (g.user.id,), one=True)
     if user is None or user.totp_secret is None:
         abort(404)
@@ -86,12 +86,11 @@ def qr_2fa():
     return Response(svg.getvalue(), mimetype="image/svg+xml")
 
 
+# Opnieuw instellen voor een nieuwe telefoon; daarna kan alleen het instellen nog (MIT-12).
 @bp.route("/2fa/reset", methods=["POST"])
 @login_required
 def reset_2fa():
-    # Opnieuw instellen, bijvoorbeeld voor een nieuwe telefoon. Vraagt een geldige
-    # code: wie alleen de sessie heeft, kan de tweede factor niet weghalen. Daarna
-    # stuurt login_required meteen naar het instellen (MIT-12).
+    # Vraagt een code: met alleen de sessie haal je de tweede factor niet weg (AU-06).
     error = check_code(g.user.id)
     if error:
         return render_account(error.message, *throttle.refusal(error.minutes))
@@ -115,8 +114,7 @@ def change_password():
     if password != repeat:
         return render_account("De twee wachtwoorden zijn niet gelijk.", 400)
 
-    # Het huidige wachtwoord wordt niet gevraagd: wie de sessie heeft, kan het
-    # wachtwoord wijzigen (MC-12). Alle andere sessies vervallen wel (MIT-09).
+    # Vraagt het huidige wachtwoord niet (MC-12); andere sessies vervallen wel (MIT-09).
     query("UPDATE users SET password = %s WHERE id = %s", (password, g.user.id))
     end_other_sessions(g.user.id)
     flash("Je wachtwoord is gewijzigd.")
@@ -126,10 +124,8 @@ def change_password():
 @bp.route("/delete", methods=["POST"])
 @login_required
 def delete_account():
-    # Ook hier wordt het wachtwoord niet opnieuw gevraagd: wie de sessie
-    # heeft, kan het account verwijderen (MC-13). De notities gaan mee via
-    # ON DELETE CASCADE in db/schema.sql; andere sessies van dit account
-    # gelden daarna als uitgelogd (load_user).
+    # Vraagt het wachtwoord niet opnieuw (MC-13).
+    # De notities gaan mee via ON DELETE CASCADE; andere sessies vervallen via load_user.
     query("DELETE FROM users WHERE id = %s", (g.user.id,))
     session.clear()
     flash("Je account en je notities zijn verwijderd.")

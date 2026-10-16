@@ -1,8 +1,4 @@
-"""Inloggen: registreren, het wachtwoord, de tweede stap met een TOTP-code, uitloggen.
-
-Ook de decorators die bepalen wie een route mag openen, en de controle van een
-TOTP-code, die het profiel ook gebruikt bij het aan- en uitzetten.
-"""
+# Registreren, inloggen met wachtwoord en code, uitloggen, en wie welke route mag openen.
 
 import hashlib
 import hmac
@@ -29,20 +25,15 @@ CodeError = namedtuple("CodeError", "message minutes")
 SETUP_ENDPOINTS = {"account.setup_2fa", "account.qr_2fa"}
 
 
+# Zet de ingelogde gebruiker in g.user, maar alleen als de sessieversie klopt (MIT-09).
 @bp.before_app_request
 def load_user():
-    """Haalt de ingelogde gebruiker één keer per verzoek op, in g.user.
-
-    De sessie telt alleen als het account nog bestaat en de sessieversie in de
-    cookie gelijk is aan die in de database (MIT-09). Na uitloggen, een nieuw
-    wachtwoord of een wijziging aan de tweestapsverificatie is de versie in de
-    database opgehoogd, en dan werkt een oudere cookie niet meer, ook geen kopie.
-    """
     g.user = None
     user_id = session.get("user_id")
     if user_id is None or request.endpoint == "static":
         return
     user = query("SELECT id, username, session_version, totp_enabled FROM users WHERE id = %s", (user_id,), one=True)
+    # Versie lager dan in de database: een oude cookie of een kopie, dus niet meer geldig.
     if user is None or user.session_version != session.get("session_version"):
         session.clear()
         flash("Je sessie is niet meer geldig. Log opnieuw in.")
@@ -50,18 +41,15 @@ def load_user():
     g.user = user
 
 
+# Een verse sessie voor deze gebruiker, met de huidige sessieversie.
 def start_session(user_id, version):
-    """Een verse sessie voor deze gebruiker, met zijn huidige sessieversie."""
     session.clear()
     session["user_id"] = user_id
     session["session_version"] = version
 
 
+# Hoogt de sessieversie op: andere sessies vervallen, de huidige krijgt de nieuwe versie.
 def end_other_sessions(user_id):
-    """Hoogt de sessieversie op, zodat elke andere sessie van dit account niet meer telt.
-
-    De huidige sessie krijgt de nieuwe versie en blijft dus geldig.
-    """
     row = query(
         "UPDATE users SET session_version = session_version + 1 WHERE id = %s RETURNING session_version",
         (user_id,), one=True,
@@ -69,12 +57,8 @@ def end_other_sessions(user_id):
     session["session_version"] = row.session_version
 
 
+# Alleen ingelogd (AU-02) en met tweestapsverificatie; anders alleen het instellen (MIT-12).
 def login_required(view):
-    """Alleen voor ingelogde gebruikers (AU-02), en alleen met tweestapsverificatie (MIT-12).
-
-    Wie nog geen tweestapsverificatie heeft (nieuw account, of na een herstelcode),
-    kan alleen het instellen afmaken; elke andere pagina stuurt daarheen.
-    """
     @wraps(view)
     def wrapper(*args, **kwargs):
         if g.user is None:
@@ -85,8 +69,8 @@ def login_required(view):
     return wrapper
 
 
+# Wie al is ingelogd, hoeft niet opnieuw in te loggen of te registreren.
 def logged_out_only(view):
-    """Wie al is ingelogd, hoeft niet opnieuw in te loggen of te registreren."""
     @wraps(view)
     def wrapper(*args, **kwargs):
         if g.user is not None:
@@ -122,9 +106,7 @@ def login():
 
     username = request.form.get("username", "").strip()
     password = request.form.get("password", "")
-    # Twee tellers (MIT-10): per IP-adres, en per account vanaf dat adres. Ze hangen
-    # aan wat er is ingevuld, niet aan of het account bestaat, dus een blokkade
-    # verraadt niet welke namen bestaan.
+    # Tellen per adres en per naam per adres (MIT-10), ook voor onbekende namen: verraadt niets.
     ip = throttle.client_ip(request.remote_addr)
     ip_key = throttle.key("password_ip", ip)
     pair_key = throttle.key("password_account_ip", username, ip)
@@ -139,16 +121,12 @@ def login():
         minutes = max(throttle.fail("password_ip", ip_key), throttle.fail("password_account_ip", pair_key))
         error = throttle.message(minutes) if minutes else "Onjuiste gebruikersnaam of wachtwoord."
         return render_template("auth.html", error=error), *throttle.refusal(minutes)
-    # Alleen de teller van dit account wordt gewist, niet die van het IP-adres:
-    # anders zet een aanvaller die steeds even met zijn eigen account inlogt zijn
-    # IP-teller telkens terug.
+    # Alleen de accountteller weg, zodat een eigen account de adresteller niet kan resetten.
     throttle.reset(pair_key)
 
     session.clear()
     if row.totp_enabled:
-        # Het wachtwoord is pas de eerste factor. De sessie krijgt alleen een
-        # pending_user_id; daarmee kom je nergens in, want login_required en
-        # load_user kijken naar user_id (MIT-05).
+        # Factor 1 van 2: alleen pending_user_id, en daarmee opent geen enkele route (MIT-05).
         session["pending_user_id"] = row.id
         session["pending_version"] = row.session_version
         session["pending_since"] = int(time.time())
@@ -158,12 +136,8 @@ def login():
     return redirect(url_for("account.setup_2fa"))
 
 
+# De gebruiker van de halve login, of None als die te oud is of de sessieversie veranderde.
 def pending_login():
-    """De gebruiker van de halve login (na het wachtwoord), of None als die er niet meer is.
-
-    Een halve login vervalt na PENDING_MAX_SECONDS, en ook als intussen de
-    sessieversie is opgehoogd (nieuw wachtwoord, overal uitgelogd).
-    """
     user_id = session.get("pending_user_id")
     if user_id is None:
         return None
@@ -179,10 +153,10 @@ def pending_login():
     return user_id
 
 
+# De tweede stap: de code uit de authenticator-app (AU-05).
 @bp.route("/login/2fa", methods=["GET", "POST"])
 @logged_out_only
 def login_code():
-    """De tweede stap: de code uit de authenticator-app (AU-05)."""
     user_id = pending_login()
     if user_id is None:
         return redirect(url_for("auth.login"))
@@ -192,28 +166,23 @@ def login_code():
     error = check_code(user_id)
     if error:
         return render_template("login_code.html", error=error.message), *throttle.refusal(error.minutes)
-    # Pas nu is de gebruiker ingelogd. start_session gooit de pending-sessie
-    # weg, zodat er niets van de halve login overblijft.
+    # Pas nu ingelogd; start_session gooit de halve login helemaal weg.
     start_session(user_id, session["pending_version"])
     return redirect(url_for("notes.index"))
 
 
+# Een nieuwe herstelcode van 128 bits, om één keer te tonen; een eerdere code vervalt.
 def new_recovery_code(user_id):
-    """Maakt een nieuwe herstelcode voor dit account en geeft hem terug om één keer te tonen.
-
-    128 willekeurige bits; alleen de SHA-256 wordt bewaard. Een snelle hash is hier
-    genoeg: bij 128 willekeurige bits valt er niets te raden of op te zoeken, anders
-    dan bij een wachtwoord dat iemand zelf verzint. Een eerdere code vervalt.
-    """
     code = secrets.token_hex(16)
+    # Alleen de SHA-256: bij 128 willekeurige bits is een trage hash niet nodig.
     query("UPDATE users SET recovery_hash = %s WHERE id = %s", (hashlib.sha256(code.encode()).hexdigest(), user_id))
     return "-".join(code[i:i + 4] for i in range(0, len(code), 4))
 
 
+# De herstelcode in plaats van de code uit de app, voor wie de telefoon kwijt is (AU-07).
 @bp.route("/login/recover", methods=["GET", "POST"])
 @logged_out_only
 def login_recover():
-    """De herstelcode in plaats van de code uit de app, voor wie zijn telefoon kwijt is (AU-07)."""
     user_id = pending_login()
     if user_id is None:
         return redirect(url_for("auth.login"))
@@ -230,9 +199,7 @@ def login_recover():
         minutes = throttle.fail("recovery_account", k)
         error = throttle.message(minutes) if minutes else "Onjuiste herstelcode."
         return render_template("login_recover.html", error=error), *throttle.refusal(minutes)
-    # De code werkt één keer. Hij zet de tweede factor uit, want de telefoon is
-    # kwijt, en maakt alle andere sessies ongeldig. De WHERE op de hash zorgt dat
-    # twee gelijktijdige verzoeken hem niet allebei kunnen gebruiken.
+    # Werkt één keer: 2FA uit, sessies ongeldig; de hash in de WHERE laat één verzoek winnen.
     row = query(
         "UPDATE users SET recovery_hash = NULL, totp_secret = NULL, totp_enabled = false, totp_last_step = NULL,"
         " session_version = session_version + 1 WHERE id = %s AND recovery_hash = %s RETURNING session_version",
@@ -248,33 +215,25 @@ def login_recover():
 
 @bp.route("/logout", methods=["POST"])
 def logout():
-    # Uitloggen hoogt de sessieversie op: ook een gekopieerde cookie werkt daarna
-    # niet meer (MC-04). De prijs: alle apparaten van dit account zijn uitgelogd.
-    # Preciezer kan alleen met sessies die op de server worden bijgehouden.
+    # Versie omhoog: ook een gekopieerde cookie vervalt (MC-04), op alle apparaten.
     if g.user is not None:
         query("UPDATE users SET session_version = session_version + 1 WHERE id = %s", (g.user.id,))
     session.clear()
     return redirect(url_for("auth.login"))
 
 
+# Controleert de TOTP-code uit het formulier: None als hij klopt, anders een CodeError.
 def check_code(user_id):
-    """Controleert de TOTP-code uit het formulier voor dit account. None als hij klopt, anders een CodeError.
-
-    - Zit de codestap van dit account op slot, dan wordt ook de juiste code
-      geweigerd (MIT-06, via throttle.py: 5 fouten, dan 15 minuten, verdubbelend tot 24 uur).
-    - Een code die al eens is geaccepteerd, werkt niet nog een keer (MIT-07). RFC 6238
-      5.2: de verifier MUST NOT accept the second attempt of the OTP.
-    Beide controles staan in de WHERE van één UPDATE. Twee gelijktijdige verzoeken met
-    dezelfde code kunnen er dus niet allebei door: de database laat er één winnen.
-    """
     k = throttle.key("totp_account", user_id)
     user = query("SELECT totp_secret FROM users WHERE id = %s", (user_id,), one=True)
     if user is None or user.totp_secret is None:
         return CodeError("Er is geen tweestapsverificatie ingesteld.", 0)
+    # Op slot: dan wordt ook de juiste code geweigerd (MIT-06).
     minutes = throttle.locked_minutes(k)
     if minutes:
         return CodeError(throttle.message(minutes), minutes)
     step = totp.matching_step(user.totp_secret, request.form.get("code", ""))
+    # Eenmalig gebruik (MIT-07) en blokkade in één UPDATE: van twee verzoeken wint er één.
     if step is not None and query(
         "UPDATE users SET totp_last_step = %s"
         " WHERE id = %s AND (totp_last_step IS NULL OR totp_last_step < %s)"

@@ -1,16 +1,5 @@
-"""Notitie-app: registreren, inloggen (met tweestapsverificatie als die aan staat),
-wachtwoord wijzigen, account verwijderen en notities beheren.
-
-Dit bestand maakt de app en hangt de onderdelen eraan:
-- db.py: de databaseverbinding (query)
-- auth.py: registreren, inloggen, de tweede stap, uitloggen, wie wat mag openen
-- account.py: profiel, tweestapsverificatie, wachtwoord, account verwijderen
-- notes.py: notities
-- totp.py: de TOTP-berekening (RFC 6238)
-
-De bekende zwakke plekken staan als misuse case in BoK/Threat Analysis/entries.md.
-Waar zo'n zwakke plek in de code zit, staat het MC-nummer erbij.
-"""
+# Maakt de Flask-app en hangt auth, account en notes eraan; de modules staan in de README.
+# Zwakke plekken staan als misuse case in de BoK; in de code staat het MC-nummer erbij.
 
 import os
 from datetime import datetime
@@ -25,7 +14,7 @@ from db import TIMEZONE
 
 # De website (HTML-templates en statische bestanden) staat in web/, los van de code.
 app = Flask(__name__, template_folder="web/templates", static_folder="web/static")
-# Flask heeft een sleutel nodig om de sessiecookie te ondertekenen.
+# Flask ondertekent de sessiecookie met deze sleutel.
 app.secret_key = os.environ["FLASK_SECRET_KEY"]
 
 for blueprint in (auth.bp, account.bp, notes.bp):
@@ -38,9 +27,9 @@ def format_date(value, with_time=True):
     return value.strftime("%d-%m-%Y %H:%M" if with_time else "%d-%m-%Y")
 
 
+# Goedemorgen, -middag, -avond of -nacht, naar de Nederlandse tijd.
 @app.template_global()
 def greeting():
-    """Goedemorgen, -middag, -avond of -nacht, naar de Nederlandse tijd."""
     hour = datetime.now(ZoneInfo(TIMEZONE)).hour
     if hour < 6:
         return "Goedenacht"

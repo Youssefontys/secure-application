@@ -1,4 +1,4 @@
-"""De databaseverbinding: één helper voor alle SQL."""
+# De databaseverbinding: één helper voor alle SQL.
 
 import os
 
@@ -10,15 +10,11 @@ DATABASE_URL = os.environ["DATABASE_URL"]
 TIMEZONE = "Europe/Amsterdam"
 
 
+# Eén SQL-opdracht in een eigen verbinding die commit; met one=True de eerste rij of None.
 def query(sql, params=(), one=False):
-    """Voert één SQL-opdracht uit in een eigen verbinding, commit, en geeft de rijen terug.
-
-    De waarden in params gaan los van de SQL-tekst naar de database, dus invoer
-    wordt nooit als SQL uitgevoerd (MIT-02). Rijen zijn namedtuples, zodat code en
-    templates `note.title` schrijven in plaats van `note[1]`. Tijden komen terug in
-    TIMEZONE; de database zelf staat op UTC. Met one=True: de eerste rij of None.
-    """
+    # Tijden in TIMEZONE (de database staat op UTC); rijen als namedtuple, dus note.title.
     with psycopg.connect(DATABASE_URL, row_factory=namedtuple_row, options=f"-c TimeZone={TIMEZONE}") as conn:
+        # SQL en waarden gaan los naar de database, dus invoer wordt nooit SQL (MIT-02).
         cur = conn.execute(sql, params)
         rows = cur.fetchall() if cur.description else []
     return (rows[0] if rows else None) if one else rows

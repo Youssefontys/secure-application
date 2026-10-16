@@ -1,13 +1,4 @@
-"""Poginglimieten bij inloggen, bijgehouden in de database (MIT-06, MIT-10).
-
-Per sleutel worden foute pogingen geteld binnen een venster. Bij te veel gaat de
-sleutel op slot, en elke volgende blokkade duurt twee keer zo lang, tot een
-maximum. De tellers staan in de database en niet in de sessie: een sessie kan
-een aanvaller gewoon opnieuw beginnen.
-
-Een sleutel is een HMAC van wat er geteld wordt (een IP-adres, een account), zodat
-de tabel geen leesbare IP-adressen of gebruikersnamen bevat.
-"""
+# Poginglimieten (MIT-06, MIT-10) in de database: een sessie begint een aanvaller zelf opnieuw.
 
 import hashlib
 import hmac
@@ -22,11 +13,9 @@ Policy = namedtuple("Policy", "max_failures window_minutes lock_minutes max_lock
 POLICIES = {
     # Wachtwoord, per IP-adres: tegen één adres dat veel accounts probeert.
     "password_ip": Policy(20, 15, 15, 60),
-    # Wachtwoord, per account vanaf één IP-adres. Bewust niet per account over alle
-    # adressen: dan kan iedereen die een gebruikersnaam kent dat account buitensluiten.
+    # Wachtwoord, per account per adres; bewust niet over alle adressen (MC-18: buitensluiten).
     "password_account_ip": Policy(5, 15, 15, 60),
-    # Tweede factor, per account. Die stap bereik je alleen met het juiste
-    # wachtwoord, dus hier mag het hele account op slot.
+    # Tweede factor, per account: die stap bereik je pas na het juiste wachtwoord.
     "totp_account": Policy(5, 15, 15, 24 * 60),
     # Herstelcode, per account: zelfde afweging als de tweede factor (MIT-11).
     "recovery_account": Policy(5, 15, 15, 24 * 60),
@@ -35,13 +24,13 @@ POLICIES = {
 _SECRET = os.environ["FLASK_SECRET_KEY"].encode()
 
 
+# Een HMAC van soort en waarden: de tabel bevat geen leesbare IP-adressen of namen.
 def key(kind, *parts):
-    """Een HMAC van de soort en de waarden: niet terug te rekenen naar een IP-adres of naam."""
     return hmac.new(_SECRET, "\x00".join((kind, *map(str, parts))).encode(), hashlib.sha256).hexdigest()
 
 
+# Het IP-adres van de client; bij IPv6 het /64-netwerk, want één aansluiting krijgt er 2^64.
 def client_ip(remote_addr):
-    """Het IP-adres van de client; bij IPv6 het /64-netwerk, want één aansluiting krijgt er 2^64."""
     ip = ipaddress.ip_address(remote_addr)
     return str(ipaddress.ip_network(f"{ip}/64", strict=False)) if ip.version == 6 else str(ip)
 
@@ -50,19 +39,13 @@ def message(minutes):
     return f"Te veel foute pogingen. Probeer het over {minutes} minuten opnieuw."
 
 
+# Blokkade: 429 met Retry-After (RFC 6585); anders 400, want 401 eist WWW-Authenticate.
 def refusal(minutes):
-    """Status en headers van een geweigerde poging: 429 tijdens een blokkade, anders 400.
-
-    429 Too Many Requests is de code voor rate limiting (RFC 6585, 4), met
-    Retry-After in seconden. Geen 401: die vraagt volgens RFC 9110 (15.5.2) een
-    WWW-Authenticate-header, en die hoort bij HTTP-authenticatie, niet bij een
-    inlogformulier.
-    """
     return (429, {"Retry-After": str(minutes * 60)}) if minutes else (400, {})
 
 
+# Hoeveel minuten de langste blokkade onder deze sleutels nog duurt, of 0.
 def locked_minutes(*keys):
-    """Hoeveel minuten de langste blokkade onder deze sleutels nog duurt, of 0."""
     row = query(
         "SELECT ceil(extract(epoch FROM max(locked_until) - now()) / 60) AS minutes"
         " FROM auth_throttle WHERE key = ANY(%s) AND locked_until > now()",
@@ -71,11 +54,10 @@ def locked_minutes(*keys):
     return int(row.minutes or 0)
 
 
+# Telt een foute poging; geeft de duur van een blokkade die nu ingaat, in minuten, anders 0.
 def fail(kind, k):
-    """Telt een foute poging. Geeft de duur van de blokkade in minuten als die nu ingaat, anders 0."""
     policy = POLICIES[kind]
-    # Een nieuw venster begint als het oude verlopen is. Ligt de laatste blokkade
-    # meer dan een dag terug, dan begint ook het verdubbelen opnieuw.
+    # Na het venster opnieuw tellen; na een dag zonder blokkade opnieuw verdubbelen.
     row = query(
         "INSERT INTO auth_throttle AS t (key, failures, window_start) VALUES (%(key)s, 1, now())"
         " ON CONFLICT (key) DO UPDATE SET"
@@ -87,6 +69,7 @@ def fail(kind, k):
     )
     if row.failures < policy.max_failures:
         return 0
+    # Elke volgende blokkade duurt twee keer zo lang, tot het maximum.
     minutes = min(policy.lock_minutes * 2 ** row.lock_count, policy.max_lock_minutes)
     query(
         "UPDATE auth_throttle SET locked_until = now() + make_interval(mins => %s), lock_count = lock_count + 1,"
@@ -96,6 +79,6 @@ def fail(kind, k):
     return minutes
 
 
+# Na een geslaagde poging: teller en verdubbeling van deze sleutel weg.
 def reset(k):
-    """Na een geslaagde poging: teller en verdubbeling van deze sleutel weg."""
     query("DELETE FROM auth_throttle WHERE key = %s", (k,))

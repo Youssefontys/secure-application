@@ -1,4 +1,4 @@
-"""Notities: aanmaken, tonen, aanpassen en verwijderen."""
+# Notities: aanmaken, tonen, aanpassen en verwijderen.
 
 from flask import Blueprint, abort, g, redirect, render_template, request, url_for
 
@@ -7,8 +7,7 @@ from db import query
 
 bp = Blueprint("notes", __name__)
 
-# Maximale lengte van een notitie, in tekens (MIT-04). Ook beschikbaar in de
-# templates, voor maxlength.
+# Maximale lengte in tekens (MIT-04); de templates gebruiken ze ook voor maxlength.
 TITLE_MAX = 15
 BODY_MAX = 250
 
@@ -26,8 +25,8 @@ def index():
     return render_template("notes.html", notes=fetch_notes())
 
 
+# Titel en inhoud uit het formulier, plus een foutmelding als er een leeg of te lang is.
 def read_note_form():
-    """Titel en inhoud uit het formulier, plus een foutmelding als er een leeg of te lang is."""
     title = request.form.get("title", "").strip()
     body = request.form.get("body", "").strip()
     error = None
@@ -50,8 +49,7 @@ def fetch_notes():
 @bp.route("/notes/<int:note_id>/edit", methods=["GET", "POST"])
 @login_required
 def edit_note(note_id):
-    # Alleen "ingelogd?" wordt gecontroleerd, niet of de notitie van jou is:
-    # met het id van een ander lees en wijzig je zijn notitie (MC-02).
+    # Geen eigenaarscontrole: met het id van een ander lees en wijzig je diens notitie (MC-02).
     note = query("SELECT title, body FROM notes WHERE id = %s", (note_id,), one=True)
     if note is None:
         abort(404)
