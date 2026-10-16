@@ -81,3 +81,7 @@ regressietest, behalve waar iets anders staat.
 | T-55 | MC-21 | 5 foute herstelcodes voor één naam vanaf één adres, voor een bestaande en voor een onbekende naam | Allebei: de 5e geeft 429 met `Retry-After: 900` | Idem |
 | T-56 | MC-21 | Een juiste herstelcode met 5 foute codes; daarna inloggen met wachtwoord en juiste code | De 5e geeft 429 met `Retry-After: 900`; de codestap bij inloggen is dan ook op slot (MIT-06) | Idem |
 | T-57 | MC-21 | Een gebruikte herstelcode nog eens; twee gelijktijdige verzoeken met dezelfde herstelcode en code | 400; van de twee komt er één binnen (200 en 400) | Idem; bewijs voor MIT-14 |
+| T-58 | MC-03 | 40 foute wachtwoorden tegelijk voor één naam vanaf één adres | Hoogstens 5 echt gecontroleerd (gemeten: 4); de verdubbelteller gaat één keer omhoog. Voor 49baae5: minstens 14 gecontroleerd en de teller op 17 | Idem; bewijs voor MIT-06 en MIT-10 |
+| T-59 | MIT-05 | Een code met andere cijfers dan 0-9 (Arabisch-Indisch) bij inloggen en bij het instellen | 400 en geen traceback in de log. Voor ce12d31: 500 | Idem |
+| T-60 | MC-18 | `client_ip()` met een IPv4-adres achter een IPv6-socket (`::ffff:203.0.113.7`), een IPv6-adres en een gewoon IPv4-adres | `203.0.113.7`, `2001:db8::/64`, `192.0.2.1`. Voor 87a5006: elk IPv4-adres achter IPv6 werd `::/64` | Idem; bewijs voor MIT-10 |
+| T-61 | MC-10 | Een teller waarvan venster en blokkade twee dagen oud zijn, en een verse; daarna een nieuwe blokkade | De oude teller is weg, de verse blijft | Idem |
