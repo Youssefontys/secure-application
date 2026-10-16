@@ -35,6 +35,9 @@
 
   <form method="post" action="{{ url_for('account.change_password') }}" class="card">
     <h2>Wachtwoord wijzigen</h2>
+    <label>Huidig wachtwoord
+      <input name="current_password" type="password" autocomplete="current-password" required>
+    </label>
     <label>Nieuw wachtwoord <small>({{ PASSWORD_MIN }} tot {{ PASSWORD_MAX }} tekens)</small>
       <input name="password" type="password" autocomplete="new-password" minlength="{{ PASSWORD_MIN }}" maxlength="{{ PASSWORD_MAX }}" required>
     </label>
@@ -48,6 +51,9 @@
         data-confirm="Je account en al je notities worden definitief verwijderd. Doorgaan?">
     <h2>Account verwijderen</h2>
     <p class="hint">Je account en al je notities worden definitief verwijderd. Dit kan niet ongedaan worden gemaakt.</p>
+    <label>Huidig wachtwoord
+      <input name="current_password" type="password" autocomplete="current-password" required>
+    </label>
     <button type="submit" class="danger">Account verwijderen</button>
   </form>
 {% endblock %}

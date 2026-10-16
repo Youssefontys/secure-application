@@ -105,6 +105,18 @@ def reset_2fa():
     return redirect(url_for("account.setup_2fa"))
 
 
+# Het huidige wachtwoord opnieuw vragen, met een limiet per account (MIT-16): None als het klopt.
+def refuse_without_password():
+    reauth_limit = throttle.limit("reauth_account", g.user.id)
+    minutes = throttle.attempt(reauth_limit)
+    if minutes:
+        return render_account(throttle.message(minutes), *throttle.refusal(minutes))
+    if not passwords.is_current(g.user.id, request.form.get("current_password", "")):
+        return render_account("Je huidige wachtwoord klopt niet.", 400)
+    throttle.succeeded(reauth_limit)
+    return None
+
+
 @bp.route("/password", methods=["POST"])
 @login_required
 def change_password():
@@ -112,8 +124,11 @@ def change_password():
     error = passwords.password_problem(password, request.form.get("password_repeat", ""))
     if error:
         return render_account(error, 400)
+    refused = refuse_without_password()
+    if refused:
+        return refused
 
-    # Vraagt het huidige wachtwoord niet (MC-12); andere sessies vervallen wel (MIT-09).
+    # Alle andere sessies vervallen (MIT-09).
     query("UPDATE users SET password = %s WHERE id = %s", (password, g.user.id))
     end_other_sessions(g.user.id)
     flash("Je wachtwoord is gewijzigd.")
@@ -123,7 +138,9 @@ def change_password():
 @bp.route("/delete", methods=["POST"])
 @login_required
 def delete_account():
-    # Vraagt het wachtwoord niet opnieuw (MC-13).
+    refused = refuse_without_password()
+    if refused:
+        return refused
     # De notities gaan mee via ON DELETE CASCADE; andere sessies vervallen via load_user.
     query("DELETE FROM users WHERE id = %s", (g.user.id,))
     session.clear()

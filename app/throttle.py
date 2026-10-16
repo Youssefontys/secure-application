@@ -21,6 +21,8 @@ POLICIES = {
     "totp_account": Policy(5, 15, 15, 24 * 60),
     # Herstelcode, per account: zelfde afweging als de tweede factor (MIT-11).
     "recovery_account": Policy(5, 15, 15, 24 * 60),
+    # Herauthenticatie, per account: alleen met een sessie te bereiken, dus het account mag op slot (MIT-16).
+    "reauth_account": Policy(5, 15, 15, 24 * 60),
 }
 # Een geslaagde poging wist deze teller niet: anders zet een eigen account hem steeds terug.
 KEEP_ON_SUCCESS = {"password_ip"}

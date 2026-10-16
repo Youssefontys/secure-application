@@ -1,4 +1,6 @@
-# Regels voor een nieuw wachtwoord: één plek voor registreren, wijzigen en herstellen.
+# Regels voor een nieuw wachtwoord en de controle van het huidige: één plek voor alle routes.
+
+from db import query
 
 # 12 tot 64 tekens en verder geen eisen aan cijfers of leestekens (MIT-13, NIST SP 800-63B-4).
 PASSWORD_MIN = 12
@@ -12,3 +14,8 @@ def password_problem(password, repeat=None):
     if repeat is not None and password != repeat:
         return "De twee wachtwoorden zijn niet gelijk."
     return None
+
+
+# Klopt het huidige wachtwoord van dit account (AU-04)? Eén plek, zodat bij Argon2 alleen dit verandert.
+def is_current(user_id, password):
+    return query("SELECT 1 FROM users WHERE id = %s AND password = %s", (user_id, password), one=True) is not None
