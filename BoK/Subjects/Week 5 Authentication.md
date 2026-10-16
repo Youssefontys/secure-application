@@ -1,10 +1,25 @@
-# Week 5: Authentication
+# Week 5: Authentication en authorization
 
-Inloggen vraagt nu twee factoren: het wachtwoord en een code van 6 cijfers uit een authenticator-app (TOTP, RFC 6238). Dat is verplicht voor elk account. Daaromheen staan vier maatregelen die de tweede factor pas echt sterk maken: oude sessies vervallen (sessieversie), raden wordt begrensd (poginglimieten), een kwijtgeraakte telefoon sluit niemand buiten (herstelcode), en wie nog geen tweede factor heeft, kan alleen het instellen afmaken. Daarbij komen twee basisonderdelen die er vanaf het begin in hadden moeten zitten: wie het wachtwoord vergeet, stelt een nieuw in met de herstelcode en een code uit de app, en een nieuw wachtwoord moet 12 tot 64 tekens zijn.
+Inloggen vraagt nu twee factoren: het wachtwoord en een code van 6 cijfers uit een authenticator-app (TOTP, RFC 6238). Dat is verplicht voor elk account. Daaromheen staan vier maatregelen die de tweede factor pas echt sterk maken: oude sessies vervallen (sessieversie), raden wordt begrensd (poginglimieten), een kwijtgeraakte telefoon sluit niemand buiten (herstelcode), en wie nog geen tweede factor heeft, kan alleen het instellen afmaken. Daarbij komen twee basisonderdelen die er vanaf het begin in hadden moeten zitten: wie het wachtwoord vergeet, stelt een nieuw in met de herstelcode en een code uit de app, en een nieuw wachtwoord moet 12 tot 64 tekens zijn. Ook wat je mag, is nu afgebakend: alleen je eigen notities, en wachtwoord wijzigen of het account verwijderen pas na je huidige wachtwoord.
 
-De details staan in de entries (UC-02, UC-07 tot UC-09; MC-03, MC-04, MC-12, MC-15 tot MC-21; MIT-05 tot MIT-14) en de tests (T-12 tot T-15, T-28 tot T-61). Dit bestand vat ze samen.
+De details staan in de entries (UC-02 tot UC-05, UC-07 tot UC-09; MC-02 tot MC-05, MC-12, MC-13, MC-15 tot MC-21; MIT-05 tot MIT-16) en de tests (T-08, T-09, T-11 tot T-15, T-23, T-24, T-28 tot T-62). Dit bestand vat ze samen.
 
 Systeemauthenticatie is in deze stap niet veranderd: de app logt bij de database in met een wachtwoord uit de omgeving en zonder TLS (AU-03). Certificaten of mTLS tussen app en database zijn een mogelijke volgende stap.
+
+## Authenticatie en autorisatie
+
+Dit BoK-onderwerp heeft twee helften, en deze tekst houdt ze uit elkaar:
+
+- **Authenticatie** stelt vast wie je bent: het wachtwoord, de code uit de app, de herstelcode, en daarna bij elk verzoek de sessie (AU-01 tot AU-08). In de code: `login()`, `login_code()`, `check_code()`, `load_user()` en `login_required`.
+- **Autorisatie** stelt vast wat je mag, als vaststaat wie je bent: alleen je eigen notities en je eigen account (AZ-01 tot AZ-09). In de code: de `user_id` uit de sessie in de WHERE, zoals in `own_note()`.
+- **Herauthenticatie** zit ertussen. Voor een gevoelige actie, zoals wachtwoord wijzigen of het account verwijderen, bewijs je opnieuw wie je bent (AU-04), en pas daarna staat de autorisatie de actie toe (AZ-06, AZ-07).
+
+De ene helft vangt geen fouten van de andere op. MC-02, andermans notitie openen, was een autorisatiegat terwijl de authenticatie al sterk was.
+
+**Wat hier nog niet onder valt.** Deze stap gaat over autorisatie in de app. Twee lagen eronder breiden dit onderdeel later uit:
+
+- **In de database, bij Database security.** De app verbindt nu met de eigenaarrol en mag alles, ook tabellen weggooien (MC-08, AZ-05). Een app-rol die alleen mag lezen en schrijven in de eigen tabellen kan al lokaal.
+- **In de cloud, bij de Azure-aanvulling.** Wie bij Key Vault en de database mag (rollen in Azure), en hoe de app zich bij de database aanmeldt: met managed identity in plaats van een wachtwoord (systeemauthenticatie, AU-03).
 
 ## Wat er beter wordt
 
@@ -16,6 +31,8 @@ Systeemauthenticatie is in deze stap niet veranderd: de app logt bij de database
 | Wachtwoord vergeten (MIT-14) | Wachtwoord vergeten betekende: account kwijt | Met de herstelcode en een code uit de app een nieuw wachtwoord, en meteen een nieuwe herstelcode; het oude wachtwoord is daarvoor niet nodig |
 | Sterkte-eis (MIT-13) | Elk wachtwoord werd geaccepteerd, ook `a` | Een nieuw wachtwoord moet 12 tot 64 tekens zijn |
 | Herstelcode (MIT-11) | Telefoon kwijt betekende: account kwijt | Een eenmalige herstelcode van 128 bits vervangt één keer de code; daarna stel je de tweede factor opnieuw in |
+| Eigenaarscontrole (MIT-15) | Met het id van een ander open, wijzig en verwijder je diens notitie | Andermans notitie geeft 404, net als een notitie die niet bestaat |
+| Herauthenticatie (MIT-16) | Met alleen de sessie wijzig je het wachtwoord of verwijder je het account | Eerst het huidige wachtwoord; na 5 fouten per account een blokkade |
 
 ## Waarom het veilig is
 
@@ -32,6 +49,8 @@ Systeemauthenticatie is in deze stap niet veranderd: de app logt bij de database
 | Verplicht | `login_required` laat een gebruiker zonder tweede factor alleen het instellen afmaken | T-50 |
 | Geheim beschermd | QR-code en sleutel alleen tijdens het instellen, daarna 404; `Cache-Control: no-store` op alle pagina's met het geheim of de herstelcode | T-36, T-49 |
 | Niet buitensluiten, niet weghalen | Aanzetten pas na een eerste geldige code. Opnieuw instellen en een nieuwe herstelcode vragen een code (AU-06), dus wie alleen de sessie heeft, kan de tweede factor niet vervangen | T-28, T-45 |
+| Alleen je eigen notities | Elke query op één notitie heeft `user_id` uit de sessie in de WHERE: `own_note()` bij openen en aanpassen, en de DELETE zelf. "Bestaat niet" en "niet van jou" geven allebei 404 | T-11 |
+| Gevoelige acties pas na het wachtwoord | Wachtwoord wijzigen en account verwijderen vragen het huidige wachtwoord (`passwords.is_current()`); foute pogingen tellen per account | T-08, T-09, T-23, T-24, T-62 |
 
 ## Wat het niet oplost
 
@@ -44,6 +63,9 @@ Systeemauthenticatie is in deze stap niet veranderd: de app logt bij de database
 - **Verspreid raden (MC-03).** Wie vanaf heel veel adressen raadt, wordt per account niet begrensd; dat is bewust, anders kan iedereen met een gebruikersnaam een account blokkeren. De tweede factor vangt dit op.
 - **De bewaarde herstelcode (MC-19, MC-21)** is zo veilig als de plek waar hij ligt; met het wachtwoord of met de telefoon erbij is het account over. De gebruiker merkt het pas bij het volgende inloggen, want er is geen e-mail.
 - **De eerste instelling (MC-20).** Wie het wachtwoord heeft van een account dat de tweede factor nog niet heeft ingesteld, kan zijn eigen app koppelen ("trust on first use"). Daartegen helpt een tweede kanaal, zoals een bevestigde e-mail.
+- **Wie het wachtwoord kent, komt ook door de herauthenticatie.** Die beschermt tegen iemand met alleen de sessie. Tegen iemand met het wachtwoord helpt de tweede factor bij het inloggen.
+- **CSRF (MC-05) voor notities en uitloggen.** Wachtwoord wijzigen en account verwijderen vragen nu het wachtwoord, en dat kent een andere site niet. Notities aanmaken, aanpassen en verwijderen en uitloggen kunnen nog wel via een andere site.
+- **Autorisatie in de database en in de cloud** komt later; zie "Authenticatie en autorisatie" hierboven.
 - **Wachtwoorden staan nog leesbaar opgeslagen (MC-01).** Dat hoort bij secure password storage (Argon2id).
 - **Geen blocklist (MC-03).** Een veelgebruikt wachtwoord van 12 tekens of meer wordt nog geaccepteerd. NIST eist een vergelijking met veelgebruikte en gelekte wachtwoorden; die is gepland, met een lijst in de repo in plaats van een externe dienst.
 
@@ -61,6 +83,10 @@ Systeemauthenticatie is in deze stap niet veranderd: de app logt bij de database
 - **Na de reset niet ingelogd, wel meteen een nieuwe herstelcode.** Het OWASP Forgot Password Cheat Sheet raadt automatisch inloggen af. Zonder nieuwe herstelcode zou de volgende kwijtgeraakte telefoon het account kosten.
 - **12 tot 64 tekens, geen samenstellingsregels.** NIST SP 800-63B-4 eist minstens 8 tekens voor een wachtwoord dat één van meer factoren is, en 15 als het de enige factor is; 12 ligt ertussen, net als in BOK-SECENGINEER. 64 is de lengte die NIST minstens wil toestaan. Verplichte cijfers of leestekens verbiedt NIST.
 - **400 bij een fout, 429 bij een blokkade, geen 401.** Een 401 moet volgens RFC 9110 een `WWW-Authenticate`-header hebben, en die hoort bij HTTP-authenticatie, niet bij een inlogformulier. 429 is de code voor rate limiting (RFC 6585); `Retry-After` geeft in seconden hoe lang de blokkade nog duurt. Dat verraadt niets nieuws: de melding op de pagina noemt dezelfde tijd.
+- **404, geen 403, bij andermans notitie.** Een 403 verraadt dat de notitie bestaat, en de ids zijn opeenvolgende getallen. Het OWASP IDOR Prevention Cheat Sheet raadt aan om "bestaat niet" en "niet van jou" hetzelfde antwoord te geven.
+- **Herauthenticatie met het wachtwoord, niet met een code.** Het OWASP Authentication Cheat Sheet vraagt de huidige gegevens opnieuw voor het wijzigen van gevoelige accountgegevens, zoals het wachtwoord. Een code uit de app blijft voor het vervangen van de tweede factor zelf (AU-06).
+- **Een limiet per account voor de herauthenticatie.** Die stap is alleen met een sessie te bereiken, dus een buitenstaander kan het account er niet mee blokkeren. Zonder limiet kan iemand met een gestolen sessie het wachtwoord raden.
+- **Eén plek voor de controle van het huidige wachtwoord.** `passwords.is_current()`; bij Argon2 verandert alleen die functie, plus het inloggen.
 
 ## Vergelijking met BOK-SECENGINEER
 
@@ -81,6 +107,8 @@ De oplossingen lijken nu veel meer op elkaar. Het grootste verschil dat overblij
 | Oude sessies ongeldig | Sessieversie (`auth_version`) | Sessieversie (`session_version`) |
 | Herstel | Wachtwoord herstellen met herstelcode én 2FA-code; voor een kwijtgeraakte telefoon geen route | Allebei: telefoon kwijt (wachtwoord en herstelcode) en wachtwoord vergeten (herstelcode en 2FA-code) |
 | Wachtwoordeisen | 12 tot 1024 tekens | 12 tot 64 tekens |
+| Eigenaarscontrole op notities | `id` én `user_id` bij lezen, wijzigen en verwijderen | Idem, via `own_note()` en de DELETE |
+| Herauthenticatie | Geen routes voor wachtwoord wijzigen of account verwijderen; herstelcode beheren vroeg wachtwoord en 2FA-code | Het huidige wachtwoord bij wachtwoord wijzigen en account verwijderen, met een limiet per account |
 | Hash van de herstelcode | Argon2id | SHA-256 (128 willekeurige bits) |
 | CSRF-tokens | In elk geval op de authenticatieformulieren | Nee (MC-05) |
 | Logging van pogingen | Ja | Nee |
@@ -99,6 +127,8 @@ Voor het verslag, lokaal in `screenshots/Week 5 Authentication/` (niet in de rep
 | Herstelcode | `week5_voor_herstel_1` | `week5_na_2_herstelcode_getoond`, `week5_na_herstel_1` tot `_4` | `week5_code_5_herstelcode` |
 | Verplicht | `week5_voor_verplicht_1`, `_2` | `week5_na_verplicht_1`, `_2` | `week5_code_6_verplicht` |
 | Wachtwoord vergeten en sterkte-eis | geen (basisonderdeel) | `week5_na_sterkte_1`, `week5_na_vergeten_1` tot `_4` | `week5_code_7_wachtwoord_vergeten` |
+| Eigenaarscontrole | `week5_voor_eigenaar_1`, `_2` | `week5_na_eigenaar_1` | `week5_code_8_autorisatie` |
+| Herauthenticatie | `week5_voor_herauth_1` | `week5_na_herauth_1`, `_2` | `week5_code_8_autorisatie` |
 
 ## Bronnen
 
@@ -110,4 +140,6 @@ Opgehaald en gecontroleerd op 15-10-2026; NIST en OWASP op 16-10-2026.
 - RFC 6585, Additional HTTP Status Codes: https://www.rfc-editor.org/rfc/rfc6585 (paragraaf 4)
 - NIST SP 800-63B-4, Password Verifiers: https://pages.nist.gov/800-63-4/sp800-63b.html#passwordver
 - OWASP Forgot Password Cheat Sheet: https://cheatsheetseries.owasp.org/cheatsheets/Forgot_Password_Cheat_Sheet.html
+- OWASP Authentication Cheat Sheet (herauthenticatie): https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html
+- OWASP Insecure Direct Object Reference Prevention Cheat Sheet: https://cheatsheetseries.owasp.org/cheatsheets/Insecure_Direct_Object_Reference_Prevention_Cheat_Sheet.html
 - Key Uri Format (`otpauth://`): https://github.com/google/google-authenticator/wiki/Key-Uri-Format
