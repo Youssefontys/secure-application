@@ -46,26 +46,35 @@ def fetch_notes():
     )
 
 
+# De notitie van de ingelogde gebruiker, anders 404: ook andermans notitie lijkt niet te bestaan (MIT-15).
+def own_note(note_id):
+    note = query("SELECT title, body FROM notes WHERE id = %s AND user_id = %s", (note_id, g.user.id), one=True)
+    if note is None:
+        abort(404)
+    return note
+
+
 @bp.route("/notes/<int:note_id>/edit", methods=["GET", "POST"])
 @login_required
 def edit_note(note_id):
-    # Geen eigenaarscontrole: met het id van een ander lees en wijzig je diens notitie (MC-02).
-    note = query("SELECT title, body FROM notes WHERE id = %s", (note_id,), one=True)
-    if note is None:
-        abort(404)
+    note = own_note(note_id)
     if request.method == "GET":
         return render_template("edit_note.html", title=note.title, body=note.body)
 
     title, body, error = read_note_form()
     if error:
         return render_template("edit_note.html", title=title, body=body, error=error), 400
-    query("UPDATE notes SET title = %s, body = %s, updated_at = now() WHERE id = %s", (title, body, note_id))
+    query(
+        "UPDATE notes SET title = %s, body = %s, updated_at = now() WHERE id = %s AND user_id = %s",
+        (title, body, note_id, g.user.id),
+    )
     return redirect(url_for("notes.index"))
 
 
 @bp.route("/notes/<int:note_id>/delete", methods=["POST"])
 @login_required
 def delete_note(note_id):
-    # Ook hier geen controle op de eigenaar (MC-02).
-    query("DELETE FROM notes WHERE id = %s", (note_id,))
+    # Alleen de eigen notitie; andermans notitie geeft 404, net als bij aanpassen (MIT-15).
+    if query("DELETE FROM notes WHERE id = %s AND user_id = %s RETURNING id", (note_id, g.user.id), one=True) is None:
+        abort(404)
     return redirect(url_for("notes.index"))
