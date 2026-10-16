@@ -120,4 +120,9 @@ def _lock(kind, k):
         {"key": k, "lock": policy.lock_minutes, "max": policy.max_lock_minutes, "limit": policy.max_failures},
         one=True,
     )
-    return int(row.minutes) if row else 0
+    if row is None:
+        return 0
+    # Bij een blokkade (zeldzaam) ook oude tellers opruimen: venster en blokkade een dag voorbij.
+    query("DELETE FROM auth_throttle WHERE window_start < now() - interval '1 day'"
+          " AND (locked_until IS NULL OR locked_until < now() - interval '1 day')")
+    return int(row.minutes)
