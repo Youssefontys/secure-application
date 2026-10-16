@@ -2,7 +2,7 @@
 
 Inloggen vraagt nu twee factoren: het wachtwoord en een code van 6 cijfers uit een authenticator-app (TOTP, RFC 6238). Dat is verplicht voor elk account. Daaromheen staan vier maatregelen die de tweede factor pas echt sterk maken: oude sessies vervallen (sessieversie), raden wordt begrensd (poginglimieten), een kwijtgeraakte telefoon sluit niemand buiten (herstelcode), en wie nog geen tweede factor heeft, kan alleen het instellen afmaken. Daarbij komen twee basisonderdelen die er vanaf het begin in hadden moeten zitten: wie het wachtwoord vergeet, stelt een nieuw in met de herstelcode en een code uit de app, en een nieuw wachtwoord moet 12 tot 64 tekens zijn.
 
-De details staan in de entries (UC-02, UC-07 tot UC-09; MC-03, MC-04, MC-12, MC-15 tot MC-21; MIT-05 tot MIT-14) en de tests (T-12 tot T-15, T-28 tot T-57). Dit bestand vat ze samen.
+De details staan in de entries (UC-02, UC-07 tot UC-09; MC-03, MC-04, MC-12, MC-15 tot MC-21; MIT-05 tot MIT-14) en de tests (T-12 tot T-15, T-28 tot T-61). Dit bestand vat ze samen.
 
 Systeemauthenticatie is in deze stap niet veranderd: de app logt bij de database in met een wachtwoord uit de omgeving en zonder TLS (AU-03). Certificaten of mTLS tussen app en database zijn een mogelijke volgende stap.
 
@@ -24,7 +24,7 @@ Systeemauthenticatie is in deze stap niet veranderd: de app logt bij de database
 | Correct algoritme | TOTP volgens RFC 6238 zonder dependency: geheim van 160 bits (RFC 4226 R6), 6 cijfers, 30 seconden, hoogstens één stap klokverschil (RFC 6238 5.2), vergelijken in constante tijd | Alle 16 testvectoren van RFC 6238 en RFC 4226 (T-35) |
 | Halve login opent niets | De sessie krijgt na het wachtwoord alleen `pending_user_id`; die vervalt na 5 minuten, en ook als de sessieversie intussen verandert | T-32, T-33, T-38 |
 | Elke code één keer | De laatst geaccepteerde tijdstap staat in de database. RFC 6238 5.2: de verifier MUST NOT accept the second attempt. De controle zit in dezelfde UPDATE die de stap opslaat | Twee gelijktijdige verzoeken met dezelfde code: één binnen (T-31) |
-| Raden begrensd | Tellers per sleutel in de database (`throttle.py`), niet in de sessie. De sleutels zijn HMAC's, dus geen leesbare namen of IP-adressen. Een geslaagde login wist de accountteller, nooit die van het adres | T-12, T-30, T-39 tot T-43 |
+| Raden begrensd | Tellers per sleutel in de database (`throttle.py`), niet in de sessie. Elke poging telt vóór de controle, dus ook gelijktijdige verzoeken blijven binnen de limiet. De sleutels zijn HMAC's, dus geen leesbare namen of IP-adressen. Een geslaagde login wist de accountteller; van die van het adres gaat alleen die ene poging af | T-12, T-30, T-39 tot T-43, T-58, T-60, T-61 |
 | Oude sessies vervallen | Een `session_version` in de database en in de cookie; die moeten gelijk zijn | T-14, T-15, T-37 |
 | Herstelcode | 128 willekeurige bits; alleen de SHA-256 staat in de database. Werkt één keer, met de hash in de WHERE van de UPDATE; eigen blokkade; nieuwe code alleen met een code uit de app | T-44 tot T-49 |
 | Wachtwoord vergeten | Twee van de drie factoren: herstelcode en telefoon. Een foute herstelcode telt per adres en per naam per adres, en een onbekende naam krijgt hetzelfde antwoord. Pas na een juiste herstelcode geldt de blokkade van de codestap. Nieuw wachtwoord en verbruik van de code in één UPDATE; daarna niet automatisch ingelogd | T-52, T-54 tot T-57 |
@@ -51,6 +51,7 @@ Systeemauthenticatie is in deze stap niet veranderd: de app logt bij de database
 
 - **TOTP zelf geschreven in plaats van `pyotp`.** Het algoritme is een HMAC over een teller (ongeveer 20 regels). Zonder library is er een dependency minder om bij te houden (MC-11), en de berekening is met de testvectoren uit de RFC te bewijzen. De QR-code komt wel uit een library, `segno`: pure Python zonder eigen dependencies, vastgezet op 1.6.6.
 - **Tellers in de database, niet in de sessie.** Een sessie is een cookie van de aanvaller zelf; hij kan een nieuwe beginnen. Een teller in de database kan hij niet terugzetten.
+- **Tellen vóór de controle.** Wie eerst controleert en pas daarna telt, laat verzoeken die tegelijk binnenkomen allemaal door. Van 40 gelijktijdige foute wachtwoorden werden er eerst minstens 14 gecontroleerd, terwijl de limiet 5 is, en de verdubbelteller sprong naar 17. Nu telt één SQL-statement de poging en weigert boven de limiet. BOK-SECENGINEER telde alleen bij herstel vooraf; bij inloggen en de code telde het pas na de controle, met hetzelfde gat.
 - **Geen blokkade per account over alle adressen in de wachtwoordstap.** Anders kan iedereen die een gebruikersnaam kent dat account buitensluiten. In de codestap mag het wel: die bereik je alleen met het juiste wachtwoord.
 - **SHA-256 voor de herstelcode, geen Argon2.** Bij 128 willekeurige bits valt er niets te raden of op te zoeken. Trage hashes zijn er voor wachtwoorden die mensen zelf verzinnen.
 - **De herstelcode zet de tweede factor uit.** De telefoon is kwijt, dus het oude geheim is niet meer te vertrouwen. Omdat de tweede factor verplicht is, stuurt de app meteen naar het opnieuw instellen.
@@ -74,7 +75,7 @@ De oplossingen lijken nu veel meer op elkaar. Het grootste verschil dat overblij
 | Bevestigen met een eerste code | Nee | Ja |
 | Opnieuw instellen (nieuwe telefoon) | Niet mogelijk | Kan, met een code |
 | Geheim in de database | Versleuteld (pgcrypto) | Leesbaar (MC-17) |
-| Poginglimieten | Per account en per IP, oplopend | Per account en per IP, oplopend |
+| Poginglimieten | Per account en per IP, oplopend; bij herstel telt een poging vóór de controle, bij inloggen en de code pas erna | Per account en per IP, oplopend; elke poging telt vóór de controle |
 | Gelijktijdige verzoeken | Rijslot (`FOR UPDATE`) en een tweede controle | Voorwaarden in één UPDATE |
 | Halve login vervalt na | 10 minuten | 5 minuten, en bij een nieuwe sessieversie |
 | Oude sessies ongeldig | Sessieversie (`auth_version`) | Sessieversie (`session_version`) |
