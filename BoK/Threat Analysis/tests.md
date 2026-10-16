@@ -26,8 +26,8 @@ regressietest, behalve waar iets anders staat.
 | T-05 | UC-03 | Lege titel of inhoud bij aanmaken en bij aanpassen | Beide 400 met dezelfde foutmelding |
 | T-06 | UC-03 | Tijd van een nieuwe notitie | Nederlandse tijd, niet UTC |
 | T-07 | UC-02 | Begroeting om 05:59, 06:00, 11:59, 12:00, 17:59 en 18:00 | Goedenacht, Goedemorgen, Goedemorgen, Goedemiddag, Goedemiddag, Goedenavond, gevolgd door de gebruikersnaam |
-| T-08 | UC-04 | Wachtwoord wijzigen: leeg, twee verschillende, geldig | 400; 400; daarna werkt het oude niet (400) en het nieuwe wel |
-| T-09 | UC-05 | Account verwijderen | Inloggen geeft 400, de notities zijn weg, een tweede sessie van hetzelfde account geldt als uitgelogd |
+| T-08 | UC-04 | Wachtwoord wijzigen met het huidige wachtwoord: leeg, twee verschillende, geldig | 400; 400; daarna werkt het oude niet (400) en het nieuwe wel |
+| T-09 | UC-05 | Account verwijderen met het huidige wachtwoord | Inloggen geeft 400, de notities zijn weg, een tweede sessie van hetzelfde account geldt als uitgelogd |
 | T-26 | UC-06 | `/account` openen als ingelogde gebruiker, en zonder in te loggen | Eigen gebruikersnaam, aanmaakdatum en aantal notities; zonder login 302 naar `/login` |
 | T-28 | UC-07 | Tweestapsverificatie instellen: foute code, juiste code, daarna de QR-code opvragen; opnieuw instellen met foute en juiste code | 400; aan, met herstelcode; QR-code 404; 400; naar het instellen |
 | T-29 | UC-02 | Inloggen met een account met tweestapsverificatie, en met een account zonder | Met: na het wachtwoord naar `/login/2fa`, na de code naar `/`. Zonder: na het wachtwoord naar `/account/2fa` (MIT-12) |
@@ -40,7 +40,7 @@ regressietest, behalve waar iets anders staat.
 | ID | Dekt | Test | Nu | Na de mitigatie |
 |----|------|------|----|-----------------|
 | T-10 | MC-01 | Na registreren `users.password` uitlezen | Het wachtwoord staat er leesbaar | Een hash, niet terug te rekenen |
-| T-11 | MC-02 | Gebruiker B opent, wijzigt en verwijdert een notitie van A via `/notes/<id>/edit` en `/notes/<id>/delete` | Lukt | 404, notitie van A ongewijzigd |
+| T-11 | MC-02 | Gebruiker B opent, wijzigt en verwijdert een notitie van A via `/notes/<id>/edit` en `/notes/<id>/delete` | 404 bij openen, wijzigen en verwijderen; de notitie van A ongewijzigd (sinds MIT-15, gemeten op 2026-10-16) | Idem; bewijs voor MIT-15 |
 | T-12 | MC-03 | Foute wachtwoorden achter elkaar op één account | Na 5 fouten geeft de volgende poging 429 met `Retry-After: 900`: een blokkade van 15 minuten; ook het juiste wachtwoord wordt dan geweigerd (sinds MIT-10) | Idem; dit is het bewijs voor MIT-10 |
 | T-13 | MC-03 | Registreren of wijzigen naar wachtwoord `a` | Geweigerd: 400, "Kies een wachtwoord van 12 tot 64 tekens." (sinds MIT-13, gemeten op 2026-10-16) | Idem; dit is het bewijs voor MIT-13 |
 | T-14 | MC-04 | Cookie kopiëren, uitloggen, gekopieerde cookie gebruiken | 302 naar `/login` met de melding "Je sessie is niet meer geldig" (sinds MIT-09) | Idem; dit is het bewijs voor MIT-09 |
@@ -52,8 +52,8 @@ regressietest, behalve waar iets anders staat.
 | T-20 | MC-09 | Een bestaande en een nieuwe naam registreren, antwoorden vergelijken | Verschillend antwoord (409 en 302) | Vertraagd of beperkt na een aantal pogingen |
 | T-21 | MC-10 | Een notitie van 5 MB sturen | 400, maar pas nadat de 5 MB is ingelezen (lokaal ongeveer 2,4 s) | 413, voordat het verzoek wordt ingelezen |
 | T-22 | MC-11 | `pip freeze` in de image vergelijken met `requirements.txt`; image scannen | `pip freeze` gelijk; een scan is nog niet gedaan | Gelijk; de scan draait in CI en meldt bekende kwetsbaarheden |
-| T-23 | MC-12 | Wachtwoord wijzigen zonder het huidige te kennen | Lukt | Geweigerd zonder het juiste huidige wachtwoord |
-| T-24 | MC-13 | Account verwijderen met een `POST` zonder bevestiging en zonder wachtwoord | Lukt | Geweigerd zonder het juiste wachtwoord |
+| T-23 | MC-12 | Wachtwoord wijzigen zonder het huidige te kennen | Zonder huidig wachtwoord 400; met een fout 400 en "Je huidige wachtwoord klopt niet." (sinds MIT-16, gemeten op 2026-10-16) | Idem; bewijs voor MIT-16 |
+| T-24 | MC-13 | Account verwijderen met een `POST` zonder bevestiging en zonder wachtwoord | Zonder wachtwoord 400, en het account bestaat nog (sinds MIT-16, gemeten op 2026-10-16) | Idem; bewijs voor MIT-16 |
 | T-25 | MC-14 | `whoami` in de app-container; de logs bij het starten | `root`; "WARNING: This is a development server" | Een gewone gebruiker; een productieserver zonder die waarschuwing |
 | T-27 | MC-10 | Titel van 15 en 16 tekens, notitie van 250 en 251 tekens, bij aanmaken en aanpassen | 302, 400, 302, 400 | Idem; dit is het bewijs voor MIT-04 |
 | T-30 | MC-15 | Na het wachtwoord 5 foute codes, daarna de juiste code, ook vanuit een nieuwe sessie; daarna nog twee keer 5 fouten na het verlopen van de blokkade | Na 5 fouten de volgende poging 429 met `Retry-After: 900`, 15 minuten op slot, de juiste code geweigerd, ook in de nieuwe sessie; daarna 30 en 60 minuten | Idem; dit is het bewijs voor MIT-06 |
@@ -85,3 +85,4 @@ regressietest, behalve waar iets anders staat.
 | T-59 | MIT-05 | Een code met andere cijfers dan 0-9 (Arabisch-Indisch) bij inloggen en bij het instellen | 400 en geen traceback in de log. Voor ce12d31: 500 | Idem |
 | T-60 | MC-18 | `client_ip()` met een IPv4-adres achter een IPv6-socket (`::ffff:203.0.113.7`), een IPv6-adres en een gewoon IPv4-adres | `203.0.113.7`, `2001:db8::/64`, `192.0.2.1`. Voor 87a5006: elk IPv4-adres achter IPv6 werd `::/64` | Idem; bewijs voor MIT-10 |
 | T-61 | MC-10 | Een teller waarvan venster en blokkade twee dagen oud zijn, en een verse; daarna een nieuwe blokkade | De oude teller is weg, de verse blijft | Idem |
+| T-62 | MC-12 | 5 foute huidige wachtwoorden bij account verwijderen, daarna het juiste | Daarna geeft de 6e poging 429 met `Retry-After: 900`, ook met het juiste wachtwoord; het account bestaat nog | Idem; bewijs voor MIT-16 |

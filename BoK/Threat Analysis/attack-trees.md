@@ -8,7 +8,7 @@ Per aanvallersdoel een boom, afgeleid uit de misuse cases in `entries.md`.
 
 ```
 Notities van een ander lezen of wijzigen
-  OR  Via een eigen account andermans notitie-id invullen (MC-02)        [open]
+  OR  Via een eigen account andermans notitie-id invullen (MC-02)        [MIT-15]
         AND eigen account aanmaken en inloggen
         AND notitie-id raden (opeenvolgende getallen)
   OR  De database direct lezen (MC-01, MC-08)                             [open]
@@ -19,9 +19,9 @@ Notities van een ander lezen of wijzigen
               OR  kwaadaardige nieuwe pakketversie                         [MIT-03]
               OR  kwetsbaarheid of andere image achter de tag              [open]
   OR  Script in een notitie laten uitvoeren (MC-07)                       [MIT-01]
-  OR  Het hele account van het slachtoffer verwijderen (MC-13)            [open]
+  OR  Het hele account van het slachtoffer verwijderen (MC-13)            [MIT-16, deels]
         AND handelen als het slachtoffer (cookie van MC-04, of via MC-05)
-        AND POST /account/delete zonder het wachtwoord te kennen
+        AND het wachtwoord kennen (MC-01, MC-03)
   OR  Als de gebruiker handelen (zie doel 2)
 ```
 
@@ -52,9 +52,9 @@ Account overnemen
         OR  kopieren van een gedeelde browser                              [open, MIT-09 na uitloggen]
         OR  zelf ondertekenen met de sessiesleutel                         [open]
   OR  Via een andere site handelen met de cookie van het slachtoffer (MC-05) [open]
-  OR  Het wachtwoord zelf wijzigen (MC-12)                                 [open]
+  OR  Het wachtwoord zelf wijzigen (MC-12)                                 [MIT-16, deels]
         AND handelen als het slachtoffer (cookie van MC-04, of via MC-05)
-        AND nieuw wachtwoord instellen zonder het huidige te kennen
+        AND het huidige wachtwoord kennen (MC-01, MC-03)
   OR  Via SQL-injectie het wachtwoord laten zien (MC-06)                   [MIT-02]
 ```
 
