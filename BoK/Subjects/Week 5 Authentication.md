@@ -78,7 +78,7 @@ Wat de oude meer heeft, hoort bij andere BoK-onderwerpen: versleuteling bij data
 
 ## Screenshots
 
-Voor het verslag, lokaal in `screenshots/` (niet in de repo). Elke "voor" en "na" heeft een balk met de echte URL.
+Voor het verslag, lokaal in `screenshots/Week 5 Authentication/` (niet in de repo). Elke "voor" en "na" heeft een balk met de echte URL.
 
 | Onderdeel | Voor | Na | Code |
 |---|---|---|---|
