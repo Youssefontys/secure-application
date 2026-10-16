@@ -32,7 +32,7 @@ Account overnemen
   OR  Inloggen als het slachtoffer
         AND het wachtwoord kennen
               OR  uit de database lezen (MC-01)                            [open]
-              OR  raden of stuffing (MC-03)                                [MIT-10, deels]
+              OR  raden of stuffing (MC-03)                                [MIT-10, MIT-13, deels]
                     AND gebruikersnaam kennen (MC-09)                      [open]
         AND de code kennen (tweestapsverificatie is verplicht)             [MIT-05, MIT-12]
               OR  de code raden (MC-15)                                    [MIT-06]
@@ -40,6 +40,10 @@ Account overnemen
               OR  een onderschepte code later gebruiken (MC-16)            [MIT-07]
               OR  het TOTP-geheim buitmaken (MC-17)                        [open]
               OR  de herstelcode gebruiken (MC-19)                         [MIT-11, deels]
+  OR  Een nieuw wachtwoord instellen via wachtwoord vergeten (MC-21)       [MIT-14, deels]
+        AND gebruikersnaam kennen (MC-09)                                  [open]
+        AND de herstelcode hebben (zoals MC-19)                            [MIT-11, deels]
+        AND een geldige code uit de app (zoals MC-15 tot MC-17)            [MIT-06, MIT-07, deels]
   OR  De tweede factor zelf instellen (MC-20)                              [open]
         AND het wachtwoord kennen
         AND het account heeft op dat moment geen tweestapsverificatie

@@ -11,8 +11,9 @@ Twee soorten:
   dan draait de verwachting om. Slaagt de test met de nieuwe verwachting, dan
   mag de mitigatie op `bewezen`.
 
-ID's: `T-`, nooit hergebruiken. Kolom "Nu" is met de hand gemeten op
-2026-10-15 met curl tegen de lokale stack, behalve waar iets anders staat.
+ID's: `T-`, nooit hergebruiken. Kolom "Nu" is gemeten tegen de lokale stack: tot
+en met T-51 op 2026-10-15 met curl, vanaf T-52 op 2026-10-16 met de
+regressietest, behalve waar iets anders staat.
 
 ## Functioneel
 
@@ -32,6 +33,7 @@ ID's: `T-`, nooit hergebruiken. Kolom "Nu" is met de hand gemeten op
 | T-29 | UC-02 | Inloggen met een account met tweestapsverificatie, en met een account zonder | Met: na het wachtwoord naar `/login/2fa`, na de code naar `/`. Zonder: na het wachtwoord naar `/account/2fa` (MIT-12) |
 | T-44 | UC-08 | Met wachtwoord en herstelcode inloggen (ook met hoofdletters, spaties en streepjes) | Naar `/account/2fa` met de melding dat de herstelcode is gebruikt; tweestapsverificatie moet opnieuw worden ingesteld |
 | T-45 | UC-07 | Een nieuwe herstelcode maken met een foute en met een juiste code uit de app | 400; daarna een nieuwe code, en de vorige werkt niet meer |
+| T-52 | UC-09 | Wachtwoord vergeten met gebruikersnaam, herstelcode (ook met hoofdletters en spaties), code en twee keer het nieuwe wachtwoord; daarna inloggen | Een nieuwe herstelcode, niet ingelogd; andere sessies zijn uitgelogd; het oude wachtwoord werkt niet meer, het nieuwe wel |
 
 ## Aanval
 
@@ -40,7 +42,7 @@ ID's: `T-`, nooit hergebruiken. Kolom "Nu" is met de hand gemeten op
 | T-10 | MC-01 | Na registreren `users.password` uitlezen | Het wachtwoord staat er leesbaar | Een hash, niet terug te rekenen |
 | T-11 | MC-02 | Gebruiker B opent, wijzigt en verwijdert een notitie van A via `/notes/<id>/edit` en `/notes/<id>/delete` | Lukt | 404, notitie van A ongewijzigd |
 | T-12 | MC-03 | Foute wachtwoorden achter elkaar op één account | De 5e geeft 429 met `Retry-After: 900`: een blokkade van 15 minuten; ook het juiste wachtwoord wordt dan geweigerd (sinds MIT-10) | Idem; dit is het bewijs voor MIT-10 |
-| T-13 | MC-03 | Registreren of wijzigen naar wachtwoord `a` | Geaccepteerd | Geweigerd met uitleg |
+| T-13 | MC-03 | Registreren of wijzigen naar wachtwoord `a` | Geweigerd: 400, "Kies een wachtwoord van 12 tot 64 tekens." (sinds MIT-13, gemeten op 2026-10-16) | Idem; dit is het bewijs voor MIT-13 |
 | T-14 | MC-04 | Cookie kopiëren, uitloggen, gekopieerde cookie gebruiken | 302 naar `/login` met de melding "Je sessie is niet meer geldig" (sinds MIT-09) | Idem; dit is het bewijs voor MIT-09 |
 | T-15 | MC-04, MC-12 | Twee sessies; in de ene het wachtwoord wijzigen; de andere gebruiken | De andere sessie is uitgelogd, de eigen blijft ingelogd (sinds MIT-09) | Idem |
 | T-16 | MC-05 | POST naar `/`, `/account/password` en `/account/delete` zonder token en met `Origin` van een andere site | Geaccepteerd (gemeten voor `/`) | Geweigerd (400 of 403) |
@@ -71,6 +73,11 @@ ID's: `T-`, nooit hergebruiken. Kolom "Nu" is met de hand gemeten op
 | T-46 | MC-19 | Een al gebruikte herstelcode nog eens; twee gelijktijdige verzoeken met dezelfde code | 400; van de twee komt er één binnen, de ander krijgt 400 | Idem; bewijs voor MIT-11 |
 | T-47 | MC-19 | `users.recovery_hash` bekijken na het aanzetten | 64 tekens (SHA-256), niet gelijk aan de code | Idem |
 | T-48 | MC-19 | 5 foute herstelcodes | De 5e geeft 429 met `Retry-After: 900`: een blokkade van 15 minuten | Idem |
-| T-49 | MC-19 | Headers van de pagina's die de herstelcode tonen | `Cache-Control: no-store` | Idem |
+| T-49 | MC-19 | Headers van de pagina's die de herstelcode tonen, ook na wachtwoord vergeten | `Cache-Control: no-store` | Idem |
 | T-50 | MC-03 | Een account zonder tweestapsverificatie: na het wachtwoord naar `/`, `/account` en een notitie aanmaken | Alle drie 302 naar `/account/2fa` | Idem; bewijs voor MIT-12 |
 | T-51 | MC-20 | Met alleen het wachtwoord van een account zonder tweestapsverificatie het instellen afmaken met een eigen app | Lukt | Geweigerd zonder een tweede kanaal (bijvoorbeeld een bevestigde e-mail) |
+| T-53 | MC-03 | Een nieuw wachtwoord van 11, 12, 64 en 65 tekens bij registreren; 11 en 65 bij wijzigen; een te kort wachtwoord bij wachtwoord vergeten | 400, 302, 302, 400; 400 en 400; 400 | Idem; bewijs voor MIT-13 |
+| T-54 | MC-21 | Wachtwoord vergeten met een foute herstelcode, voor een bestaande en voor een onbekende naam | Allebei 400 met "Gebruikersnaam, herstelcode of code klopt niet." | Idem; bewijs voor MIT-14 |
+| T-55 | MC-21 | 5 foute herstelcodes voor één naam vanaf één adres, voor een bestaande en voor een onbekende naam | Allebei: de 5e geeft 429 met `Retry-After: 900` | Idem |
+| T-56 | MC-21 | Een juiste herstelcode met 5 foute codes; daarna inloggen met wachtwoord en juiste code | De 5e geeft 429 met `Retry-After: 900`; de codestap bij inloggen is dan ook op slot (MIT-06) | Idem |
+| T-57 | MC-21 | Een gebruikte herstelcode nog eens; twee gelijktijdige verzoeken met dezelfde herstelcode en code | 400; van de twee komt er één binnen (200 en 400) | Idem; bewijs voor MIT-14 |

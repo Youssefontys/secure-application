@@ -65,6 +65,13 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 - Assets: A-01, A-08
 - Sinds: dc7d258
 
+### UC-09 Wachtwoord vergeten
+- Actor: gebruiker die het wachtwoord niet meer weet
+- Doel: met de herstelcode en een code uit de authenticator-app een nieuw wachtwoord instellen, en meteen een nieuwe herstelcode krijgen
+- Onderdelen: C-01, C-02, C-03 (route `/login/forgot`, AU-08)
+- Assets: A-01, A-07, A-08
+- Sinds: 428858e
+
 ## Misuse cases
 
 ### MC-01 Wachtwoorden uit de database lezen
@@ -103,8 +110,8 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
   - OR  1. Veelgebruikte wachtwoorden proberen tegen een account (brute force)
   - OR  2. Een lijst gelekte wachtwoorden proberen tegen veel accounts (credential stuffing)
   - AND 3. Zwakke wachtwoorden worden bij registratie en bij wijzigen niet geweigerd
-- Mitigaties: MIT-10 (stap 1 en 2: 20 fouten per IP-adres en 5 per account vanaf één adres, daarna een oplopende blokkade). MIT-05 en MIT-12 (stap 1 en 2: tweestapsverificatie is verplicht, dus een geraden wachtwoord geeft alleen een halve login). Nog geen sterkte-eis (stap 3)
-- Restrisico: wie vanaf veel IP-adressen tegelijk raadt (een botnet), wordt per account niet begrensd; dat is bewust, zie MC-18. Een account dat het instellen nog niet heeft afgemaakt, zit nog op één factor (MC-20). En wie raadt, ziet aan de doorverwijzing naar `/login/2fa` dat het wachtwoord klopt
+- Mitigaties: MIT-10 (stap 1 en 2: 20 fouten per IP-adres en 5 per account vanaf één adres, daarna een oplopende blokkade). MIT-05 en MIT-12 (stap 1 en 2: tweestapsverificatie is verplicht, dus een geraden wachtwoord geeft alleen een halve login). MIT-13 (stap 3: 12 tot 64 tekens, nog zonder blocklist)
+- Restrisico: wie vanaf veel IP-adressen tegelijk raadt (een botnet), wordt per account niet begrensd; dat is bewust, zie MC-18. Een account dat het instellen nog niet heeft afgemaakt, zit nog op één factor (MC-20). En wie raadt, ziet aan de doorverwijzing naar `/login/2fa` dat het wachtwoord klopt. Een veelgebruikt wachtwoord van 12 tekens of meer wordt nog geaccepteerd, want er is geen blocklist
 - Status: open
 - Sinds: baseline
 
@@ -327,7 +334,7 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
     - OR  2c. Uit de database of een backup halen
     - OR  2d. Uit een browser- of proxycache halen
 - Mitigaties: MIT-11 (2a: 128 bits en een blokkade; 2c: alleen de SHA-256 staat in de database; 2d: `no-store`), nog geen (2b)
-- Restrisico: wie wachtwoord en bewaarde herstelcode heeft, komt binnen en zet daarmee de tweede factor uit; zo is het bedoeld, en de code is zo veilig als de plek waar hij ligt. De gebruiker krijgt van het gebruik geen bericht buiten de app (er is geen e-mail)
+- Restrisico: wie wachtwoord en bewaarde herstelcode heeft, komt binnen en zet daarmee de tweede factor uit; zo is het bedoeld, en de code is zo veilig als de plek waar hij ligt. De gebruiker krijgt van het gebruik geen bericht buiten de app (er is geen e-mail). Met herstelcode en telefoon kan ook zonder wachtwoord een nieuw wachtwoord worden ingesteld (MC-21)
 - Status: open
 - Sinds: dc7d258
 
@@ -344,6 +351,28 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 - Restrisico: dit is het bekende "trust on first use"-probleem: wie als eerste instelt, wordt vertrouwd. Daartegen helpt een tweede kanaal bij het aanmaken (zoals een bevestigde e-mail), en dat heeft deze app niet
 - Status: open
 - Sinds: 42ab429
+
+### MC-21 Een nieuw wachtwoord instellen via wachtwoord vergeten
+- Aanvallersdoel: het wachtwoord van een ander account vervangen en daarmee binnenkomen
+- Aanvaller: iedere bezoeker; de route is bereikbaar zonder wachtwoord
+- Assets / onderdelen: A-01, A-04, A-07, A-08, C-02, AU-08
+- Gerelateerde use case: UC-09
+- Stappen:
+  - AND 1. Een bestaande gebruikersnaam kennen
+    - OR  1a. Raden of opsporen bij het registreren (MC-09)
+    - OR  1b. Uit het antwoord van `/login/forgot` afleiden welke namen bestaan
+  - AND 2. De herstelcode hebben
+    - OR  2a. Raden: 128 willekeurige bits
+    - OR  2b. De code vinden waar de gebruiker hem bewaart (zoals MC-19 stap 2b)
+    - OR  2c. Uit de database, een backup of een cache halen (zoals MC-19 stap 2c en 2d)
+  - AND 3. Een geldige code uit de app hebben
+    - OR  3a. Raden, met de herstelcode al in handen
+    - OR  3b. Een onderschepte code gebruiken, meteen of later (zoals MC-16)
+    - OR  3c. Het TOTP-geheim buitmaken (MC-17)
+- Mitigaties: MIT-14 (1b: één melding en dezelfde tellers voor bestaande en onbekende namen; 2a: 128 bits en een limiet per adres en per naam per adres; 3a: pas na een juiste herstelcode de blokkade van de codestap, MIT-06; 3b: elke code één keer, MIT-07). MIT-11 (2c: alleen de SHA-256, `no-store`). Nog geen (1a, 2b, 3c)
+- Restrisico: wie herstelcode en telefoon (of het TOTP-geheim, MC-17) heeft, zet een nieuw wachtwoord; zo is het bedoeld, twee van de drie factoren. De gebruiker merkt het pas bij het volgende inloggen, want er is geen e-mail. Wie met een gestolen herstelcode de code raadt, zet de codestap van het account op slot, ook voor het gewone inloggen (zoals bij MC-15). Vanaf veel adressen tegelijk is het proberen van herstelcodes per account niet begrensd (bewust, zie MC-18), maar 128 bits zijn niet te raden
+- Status: open
+- Sinds: 428858e
 
 ## Mitigaties
 
@@ -419,8 +448,8 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 
 ### MIT-11 Herstelcode
 - Houdt tegen: MC-19 stap 2a, 2c en 2d; maakt tweestapsverificatie mogelijk zonder dat een kwijtgeraakte telefoon het account onbereikbaar maakt
-- Wat: bij het aanzetten van tweestapsverificatie krijgt de gebruiker één keer een herstelcode van 128 willekeurige bits te zien. Alleen de SHA-256 wordt bewaard; een snelle hash is genoeg bij 128 willekeurige bits, anders dan bij een zelfverzonnen wachtwoord. Inloggen met de code kan alleen na het juiste wachtwoord. De code werkt één keer: hij zet tweestapsverificatie uit en verhoogt de sessieversie, en de app stuurt meteen naar het opnieuw instellen met een nieuwe telefoon (MIT-12). Het verbruik zit in een UPDATE met de hash in de WHERE, dus twee gelijktijdige verzoeken kunnen hem niet allebei gebruiken. 5 fouten in 15 minuten geven een blokkade (via `throttle.py`, met 429 en `Retry-After`). Een nieuwe code maken vraagt een code uit de app (AU-06) en maakt de vorige ongeldig. De pagina's met de code worden met `Cache-Control: no-store` verstuurd
-- Waar: `new_recovery_code()` en `login_recover()` in `app/auth.py`; `setup_2fa()` en `new_recovery()` in `app/account.py`
+- Wat: bij het aanzetten van tweestapsverificatie krijgt de gebruiker één keer een herstelcode van 128 willekeurige bits te zien. Alleen de SHA-256 wordt bewaard; een snelle hash is genoeg bij 128 willekeurige bits, anders dan bij een zelfverzonnen wachtwoord. Inloggen met de code kan alleen na het juiste wachtwoord; zonder wachtwoord werkt hij alleen samen met een code uit de app, om een nieuw wachtwoord in te stellen (MIT-14). De code werkt één keer. Bij inloggen zet hij tweestapsverificatie uit en verhoogt de sessieversie, en de app stuurt meteen naar het opnieuw instellen met een nieuwe telefoon (MIT-12). Het verbruik zit in een UPDATE met de hash in de WHERE, dus twee gelijktijdige verzoeken kunnen hem niet allebei gebruiken. 5 fouten in 15 minuten geven een blokkade (via `throttle.py`, met 429 en `Retry-After`). Een nieuwe code maken vraagt een code uit de app (AU-06) en maakt de vorige ongeldig; na wachtwoord vergeten krijgt de gebruiker meteen een nieuwe. De pagina's met de code worden met `Cache-Control: no-store` verstuurd
+- Waar: `new_recovery_code()`, `hash_recovery_code()` en `login_recover()` in `app/auth.py`; `setup_2fa()` en `new_recovery()` in `app/account.py`
 - Status: gebouwd
 - Sinds: dc7d258; `Retry-After` sinds 5a82eb5
 
@@ -430,3 +459,17 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 - Waar: `login_required()` en `login()` in `app/auth.py`; `setup_2fa()` en `reset_2fa()` in `app/account.py`
 - Status: gebouwd
 - Sinds: 42ab429
+
+### MIT-13 Sterkte-eis voor een nieuw wachtwoord
+- Houdt tegen: MC-03 stap 3
+- Wat: een nieuw wachtwoord moet 12 tot 64 tekens zijn, bij registreren, wijzigen en wachtwoord vergeten; inloggen controleert alleen. Geen eisen aan cijfers of leestekens: NIST SP 800-63B-4 verbiedt zulke samenstellingsregels. 12 ligt bewust tussen de 8 die NIST minstens eist voor een wachtwoord dat deel is van inloggen met meer factoren, en de 15 voor een wachtwoord als enige factor. 64 is de lengte die NIST minstens wil toestaan. Afwijking van NIST: nog geen vergelijking met een lijst van veelgebruikte en gelekte wachtwoorden (een blocklist, daar een SHALL); die is gepland, met een lijst in de repo in plaats van een externe dienst. De formulieren tonen de grenzen en controleren ze ook in de browser, maar de server beslist
+- Waar: `password_problem()` in `app/passwords.py`; `register()` en `forgot_password()` in `app/auth.py`; `change_password()` in `app/account.py`
+- Status: gebouwd
+- Sinds: 9f690ce
+
+### MIT-14 Wachtwoord vergeten met twee van de drie factoren
+- Houdt tegen: MC-21 stap 1b, 2a, 3a en 3b; maakt een vergeten wachtwoord op te lossen zonder het account te verliezen
+- Wat: `/login/forgot` vraagt gebruikersnaam, herstelcode, een code uit de app en twee keer het nieuwe wachtwoord. Wachtwoord en telefoon is gewoon inloggen, wachtwoord en herstelcode is telefoon kwijt (MIT-11), herstelcode en telefoon is wachtwoord vergeten; één factor is nooit genoeg. De route is bereikbaar zonder wachtwoord, dus een foute herstelcode telt alleen per IP-adres en per naam per adres, met dezelfde tellers als inloggen (MIT-10): een blokkade per account zou iedereen die een naam kent de herstelroutes laten blokkeren (MC-18). Een onbekende naam krijgt dezelfde melding en dezelfde blokkade; het enige verschil in werk is één vergelijking van 64 tekens. Pas als de herstelcode klopt, wordt de code uit de app gecontroleerd met `check_code()`, dus met de blokkade per account en het eenmalige gebruik van de codestap (MIT-06, MIT-07). Nieuw wachtwoord, verbruik van de herstelcode en een hogere sessieversie zitten in één UPDATE met de hash in de WHERE, dus van twee gelijktijdige verzoeken wint er één. Daarna is de gebruiker niet ingelogd, zoals het OWASP Forgot Password Cheat Sheet aanraadt, maar krijgt meteen een nieuwe herstelcode, met `Cache-Control: no-store`. Het nieuwe wachtwoord valt onder de sterkte-eis (MIT-13)
+- Waar: `forgot_password()` en `hash_recovery_code()` in `app/auth.py`; `no_store()` in `app/account.py`
+- Status: gebouwd
+- Sinds: 428858e
