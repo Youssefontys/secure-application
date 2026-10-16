@@ -35,11 +35,11 @@
 
   <form method="post" action="{{ url_for('account.change_password') }}" class="card">
     <h2>Wachtwoord wijzigen</h2>
-    <label>Nieuw wachtwoord
-      <input name="password" type="password" autocomplete="new-password" required>
+    <label>Nieuw wachtwoord <small>({{ PASSWORD_MIN }} tot {{ PASSWORD_MAX }} tekens)</small>
+      <input name="password" type="password" autocomplete="new-password" minlength="{{ PASSWORD_MIN }}" maxlength="{{ PASSWORD_MAX }}" required>
     </label>
     <label>Herhaal het nieuwe wachtwoord
-      <input name="password_repeat" type="password" autocomplete="new-password" required>
+      <input name="password_repeat" type="password" autocomplete="new-password" minlength="{{ PASSWORD_MIN }}" maxlength="{{ PASSWORD_MAX }}" required>
     </label>
     <button type="submit">Wachtwoord opslaan</button>
   </form>

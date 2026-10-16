@@ -13,9 +13,15 @@
       <label>Gebruikersnaam
         <input name="username" autocomplete="username" required>
       </label>
-      <label>Wachtwoord
-        <input name="password" type="password" autocomplete="{{ 'current-password' if login else 'new-password' }}" required>
-      </label>
+      {% if login %}
+        <label>Wachtwoord
+          <input name="password" type="password" autocomplete="current-password" required>
+        </label>
+      {% else %}
+        <label>Wachtwoord <small>({{ PASSWORD_MIN }} tot {{ PASSWORD_MAX }} tekens)</small>
+          <input name="password" type="password" autocomplete="new-password" minlength="{{ PASSWORD_MIN }}" maxlength="{{ PASSWORD_MAX }}" required>
+        </label>
+      {% endif %}
       <button type="submit">{{ "Inloggen" if login else "Account aanmaken" }}</button>
     </form>
   </div>

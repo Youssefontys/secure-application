@@ -5,6 +5,7 @@ import io
 import segno
 from flask import Blueprint, Response, abort, flash, g, redirect, render_template, request, session, url_for
 
+import passwords
 import throttle
 import totp
 from auth import check_code, end_other_sessions, login_required, new_recovery_code
@@ -108,11 +109,9 @@ def reset_2fa():
 @login_required
 def change_password():
     password = request.form.get("password", "")
-    repeat = request.form.get("password_repeat", "")
-    if not password:
-        return render_account("Vul een nieuw wachtwoord in.", 400)
-    if password != repeat:
-        return render_account("De twee wachtwoorden zijn niet gelijk.", 400)
+    error = passwords.password_problem(password, request.form.get("password_repeat", ""))
+    if error:
+        return render_account(error, 400)
 
     # Vraagt het huidige wachtwoord niet (MC-12); andere sessies vervallen wel (MIT-09).
     query("UPDATE users SET password = %s WHERE id = %s", (password, g.user.id))

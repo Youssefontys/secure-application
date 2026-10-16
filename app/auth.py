@@ -11,6 +11,7 @@ from functools import wraps
 import psycopg
 from flask import Blueprint, flash, g, redirect, render_template, request, session, url_for
 
+import passwords
 import throttle
 import totp
 from db import query
@@ -89,6 +90,9 @@ def register():
     password = request.form.get("password", "")
     if not username or not password:
         return render_template("auth.html", error="Vul een gebruikersnaam en wachtwoord in."), 400
+    error = passwords.password_problem(password)
+    if error:
+        return render_template("auth.html", error=error), 400
 
     try:
         query("INSERT INTO users (username, password) VALUES (%s, %s)", (username, password))
