@@ -84,7 +84,7 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
   - OR  2. Het databasevolume of een backup lezen (C-04)
   - OR  3. De webapplicatie overnemen en de wachtwoorden via F-03 opvragen
 - Mitigaties: geen (het wachtwoord staat leesbaar)
-- Restrisico: elk gelezen wachtwoord is direct bruikbaar. Bij een account met tweestapsverificatie is het wachtwoord alleen niet genoeg (MIT-05), maar wie de database leest, leest ook het TOTP-geheim (MC-17)
+- Restrisico: elk gelezen wachtwoord is direct bruikbaar. Bij een account met tweestapsverificatie is het wachtwoord alleen niet genoeg (MIT-05), en het TOTP-geheim staat sinds MIT-17 versleuteld, dus de database alleen levert geen volledige overname meer op (MC-17); wie ook de sleutel heeft (MC-22), wel
 - Status: open
 - Sinds: baseline
 
@@ -300,13 +300,15 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 - Assets / onderdelen: A-07, C-01, C-03, C-04, F-02
 - Gerelateerde use case: UC-07
 - Stappen:
-  - OR  1. `users.totp_secret` lezen uit de database of het volume; het geheim staat leesbaar, net als het wachtwoord (MC-01)
+  - OR  1. `users.totp_secret` lezen uit de database of het volume
+    - AND 1a. De database, het volume of een backup lezen
+    - AND 1b. De gegevenssleutel hebben, want sinds MIT-17 staat het geheim versleuteld (MC-22)
   - OR  2. Meekijken of een screenshot maken van de QR-code of de sleutel tijdens het instellen
   - OR  3. De instelpagina of de QR-code uit een cache halen
-- Mitigaties: MIT-08 (stap 3, en stap 2 voor zover het om later terugkijken gaat), nog geen (stap 1)
-- Restrisico: een databaselek levert wachtwoord en geheim samen, en dan helpt tweestapsverificatie niet meer
-- Status: open
-- Sinds: 18e1424
+- Mitigaties: MIT-17 (stap 1: zonder de sleutel is het geheim niet te lezen). MIT-08 (stap 3, en stap 2 voor zover het om later terugkijken gaat)
+- Restrisico: wie naast de database ook de sleutel heeft (MC-22), leest het geheim wel. Meekijken tijdens het instellen (stap 2) blijft mogelijk. Het wachtwoord staat nog leesbaar (MC-01), maar zonder het geheim levert een databaselek geen volledige overname meer op
+- Status: gebouwd
+- Sinds: 18e1424; versleuteld sinds 776931a
 
 ### MC-18 Iemand anders buitensluiten met de blokkade
 - Aanvallersdoel: een gebruiker niet meer laten inloggen
@@ -373,6 +375,20 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 - Restrisico: wie herstelcode en telefoon (of het TOTP-geheim, MC-17) heeft, zet een nieuw wachtwoord; zo is het bedoeld, twee van de drie factoren. De gebruiker merkt het pas bij het volgende inloggen, want er is geen e-mail. Wie met een gestolen herstelcode de code raadt, zet de codestap van het account op slot, ook voor het gewone inloggen (zoals bij MC-15). Vanaf veel adressen tegelijk is het proberen van herstelcodes per account niet begrensd (bewust, zie MC-18), maar 128 bits zijn niet te raden
 - Status: open
 - Sinds: 428858e
+
+### MC-22 De gegevenssleutel buitmaken
+- Aanvallersdoel: met de sleutel (A-09) elk versleuteld TOTP-geheim ontsleutelen, en daarmee samen met de database de tweede factor van elk account
+- Aanvaller: iemand met toegang tot de app-container, de ontwikkelmachine of een backup van `.env`
+- Assets / onderdelen: A-07, A-09, C-02
+- Gerelateerde use case: UC-07
+- Stappen:
+  - OR  1. De omgeving van de app-container lezen (`docker compose exec app printenv`); de app draait als root (MC-14)
+  - OR  2. `.env` op de ontwikkelmachine of in een backup daarvan lezen
+  - OR  3. De app overnemen (MC-11), die de sleutel in het geheugen heeft
+- Mitigaties: nog geen. Gepland bij de Azure-aanvulling: de sleutel in Key Vault, met alleen de managed identity van de app als lezer, en eventueel een tweede sleutel (KEK) in Key Vault die deze sleutel versleutelt
+- Restrisico: de sleutel staat lokaal leesbaar in `.env` en in de omgeving van de container. Ook met Key Vault heeft de draaiende app hem, dus wie de app overneemt, heeft hem ook
+- Status: open
+- Sinds: 776931a
 
 ## Mitigaties
 
@@ -487,3 +503,10 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 - Waar: `refuse_without_password()`, `change_password()` en `delete_account()` in `app/account.py`; `is_current()` in `app/passwords.py`
 - Status: gebouwd
 - Sinds: f40781b
+
+### MIT-17 Versleuteling van het TOTP-geheim
+- Houdt tegen: MC-17 stap 1
+- Wat: de app versleutelt het TOTP-geheim voordat het de database in gaat, met AES-256-GCM uit de library `cryptography`, zoals het OWASP Cryptographic Storage Cheat Sheet aanraadt: AES met een sleutel van 256 bits in een geauthenticeerde modus. Elke waarde krijgt een nieuwe willekeurige nonce van 96 bits, de lengte die NIST aanraadt. De soort en de `user_id` gaan mee als associated data: een waarde die naar de rij van een ander account wordt gekopieerd, ontsleutelt daar niet (T-63). Vooraan staat de sleutelversie (`v1:`), zodat een nieuwe sleutel later naast de oude kan. De sleutel (A-09) staat in de omgeving van de app en nooit in de database. Wat niet ontsleutelt, telt als geen geheim: dan wordt elke code geweigerd. Bewust in de app en niet met pgcrypto in de database: dan zou de sleutel bij elke query mee naar de database gaan, en met `log_statement = all` in de databaselog staan
+- Waar: `app/encryption.py`; `setup_2fa()` en `qr_2fa()` in `app/account.py`; `check_code()` in `app/auth.py`
+- Status: gebouwd
+- Sinds: 776931a

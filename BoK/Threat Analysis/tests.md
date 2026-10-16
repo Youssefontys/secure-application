@@ -60,7 +60,7 @@ regressietest, behalve waar iets anders staat.
 | T-31 | MC-16 | Een geaccepteerde code nog eens gebruiken, en twee gelijktijdige verzoeken met dezelfde nieuwe code | Geweigerd; van de twee komt er precies één binnen | Idem; dit is het bewijs voor MIT-07 |
 | T-32 | MC-03 | Met alleen het juiste wachtwoord van een account met tweestapsverificatie naar `/`, `/account` en een notitie aanmaken | Alle drie 302 naar `/login` | Idem; dit is het bewijs voor MIT-05 |
 | T-33 | MC-15 | Een halve login die ouder is dan 5 minuten | Weggegooid, naar `/login` met de melding "Dat duurde te lang" (gemeten met de testclient van Flask) | Idem |
-| T-34 | MC-17 | `users.totp_secret` uitlezen | Het geheim staat leesbaar | Versleuteld |
+| T-34 | MC-17 | `users.totp_secret` uitlezen | `v1:` gevolgd door nonce, versleuteld geheim en tag; het geheim zelf staat er niet in (gemeten op 2026-10-17). Voor 776931a: leesbaar | Idem; bewijs voor MIT-17 |
 | T-35 | MIT-05 | `totp.code_at` tegen de testvectoren van RFC 6238 bijlage B (SHA1, 8 cijfers) en RFC 4226 bijlage D | Alle 16 goed | Idem |
 | T-36 | MC-17 | Headers van `/account/2fa` en `/account/2fa/qr.svg`; de QR-code opvragen nadat het instellen klaar is | `Cache-Control: no-store`; 404 | Idem; dit is het bewijs voor MIT-08 |
 | T-37 | MC-04 | Een sessie van vóór het aanzetten van tweestapsverificatie gebruiken, nadat het in een andere sessie is aangezet | 302 naar `/login` | Idem; bewijs voor MIT-09 |
@@ -86,3 +86,5 @@ regressietest, behalve waar iets anders staat.
 | T-60 | MC-18 | `client_ip()` met een IPv4-adres achter een IPv6-socket (`::ffff:203.0.113.7`), een IPv6-adres en een gewoon IPv4-adres | `203.0.113.7`, `2001:db8::/64`, `192.0.2.1`. Voor 87a5006: elk IPv4-adres achter IPv6 werd `::/64` | Idem; bewijs voor MIT-10 |
 | T-61 | MC-10 | Een teller waarvan venster en blokkade twee dagen oud zijn, en een verse; daarna een nieuwe blokkade | De oude teller is weg, de verse blijft | Idem |
 | T-62 | MC-12 | 5 foute huidige wachtwoorden bij account verwijderen, daarna het juiste | Daarna geeft de 6e poging 429 met `Retry-After: 900`, ook met het juiste wachtwoord; het account bestaat nog | Idem; bewijs voor MIT-16 |
+| T-63 | MC-17 | Het versleutelde geheim van account A in de rij van account B zetten, en dan met een code van A inloggen als B | 400: de waarde ontsleutelt op een andere plek niet | Idem; bewijs voor MIT-17 |
+| T-64 | MC-22 | De gegevenssleutel lezen uit de omgeving van de app-container | Lukt: `printenv DATA_ENCRYPTION_KEY` geeft 64 tekens, als root; de sleutel staat niet in de database (gemeten op 2026-10-17) | Op Azure: alleen te lezen door de app zelf via Key Vault, niet op een ontwikkelmachine of in de repo |
