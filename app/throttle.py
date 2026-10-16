@@ -32,6 +32,9 @@ def key(kind, *parts):
 # Het IP-adres van de client; bij IPv6 het /64-netwerk, want één aansluiting krijgt er 2^64.
 def client_ip(remote_addr):
     ip = ipaddress.ip_address(remote_addr)
+    # Een IPv4-adres achter een IPv6-socket (::ffff:a.b.c.d) telt als dat adres, niet als ::/64.
+    if ip.version == 6 and ip.ipv4_mapped:
+        ip = ip.ipv4_mapped
     return str(ipaddress.ip_network(f"{ip}/64", strict=False)) if ip.version == 6 else str(ip)
 
 
