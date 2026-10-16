@@ -11,9 +11,9 @@ from db import query
 Policy = namedtuple("Policy", "max_failures window_minutes lock_minutes max_lock_minutes")
 
 POLICIES = {
-    # Wachtwoord, per IP-adres: tegen één adres dat veel accounts probeert.
+    # Inloggen en wachtwoord vergeten, per IP-adres: tegen één adres dat veel accounts probeert.
     "password_ip": Policy(20, 15, 15, 60),
-    # Wachtwoord, per account per adres; bewust niet over alle adressen (MC-18: buitensluiten).
+    # Dezelfde twee, per naam per adres; bewust niet over alle adressen (MC-18: buitensluiten).
     "password_account_ip": Policy(5, 15, 15, 60),
     # Tweede factor, per account: die stap bereik je pas na het juiste wachtwoord.
     "totp_account": Policy(5, 15, 15, 24 * 60),

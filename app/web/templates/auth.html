@@ -29,6 +29,7 @@
   <nav class="auth-links hint" aria-label="Accountopties">
     {% if login %}
       <a href="{{ url_for('auth.register') }}">Nog geen account? Registreren</a>
+      <a href="{{ url_for('auth.forgot_password') }}">Wachtwoord vergeten?</a>
     {% else %}
       <a href="{{ url_for('auth.login') }}">Al een account? Inloggen</a>
     {% endif %}

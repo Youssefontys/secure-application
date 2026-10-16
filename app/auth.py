@@ -24,6 +24,8 @@ PENDING_MAX_SECONDS = 300
 CodeError = namedtuple("CodeError", "message minutes")
 # Zonder tweestapsverificatie kom je alleen hier (MIT-12).
 SETUP_ENDPOINTS = {"account.setup_2fa", "account.qr_2fa"}
+# Eén melding voor elke fout bij wachtwoord vergeten, ook voor een onbekende naam (MC-21).
+FORGOT_WRONG = "Gebruikersnaam, herstelcode of code klopt niet."
 
 
 # Zet de ingelogde gebruiker in g.user, maar alleen als de sessieversie klopt (MIT-09).
@@ -175,11 +177,15 @@ def login_code():
     return redirect(url_for("notes.index"))
 
 
+# Alleen de SHA-256 van een herstelcode: bij 128 willekeurige bits is een trage hash niet nodig.
+def hash_recovery_code(text):
+    return hashlib.sha256(re.sub(r"[\s-]", "", text).lower().encode()).hexdigest()
+
+
 # Een nieuwe herstelcode van 128 bits, om één keer te tonen; een eerdere code vervalt.
 def new_recovery_code(user_id):
     code = secrets.token_hex(16)
-    # Alleen de SHA-256: bij 128 willekeurige bits is een trage hash niet nodig.
-    query("UPDATE users SET recovery_hash = %s WHERE id = %s", (hashlib.sha256(code.encode()).hexdigest(), user_id))
+    query("UPDATE users SET recovery_hash = %s WHERE id = %s", (hash_recovery_code(code), user_id))
     return "-".join(code[i:i + 4] for i in range(0, len(code), 4))
 
 
@@ -197,7 +203,7 @@ def login_recover():
     minutes = throttle.locked_minutes(k)
     if minutes:
         return render_template("login_recover.html", error=throttle.message(minutes)), *throttle.refusal(minutes)
-    given = hashlib.sha256(re.sub(r"[\s-]", "", request.form.get("code", "")).lower().encode()).hexdigest()
+    given = hash_recovery_code(request.form.get("code", ""))
     stored = query("SELECT recovery_hash FROM users WHERE id = %s", (user_id,), one=True)
     if not (stored and stored.recovery_hash and hmac.compare_digest(given, stored.recovery_hash)):
         minutes = throttle.fail("recovery_account", k)
@@ -215,6 +221,50 @@ def login_recover():
     start_session(user_id, row.session_version)
     flash("Je herstelcode is gebruikt. Stel tweestapsverificatie opnieuw in met je nieuwe telefoon.")
     return redirect(url_for("account.setup_2fa"))
+
+
+# Wachtwoord vergeten: herstelcode en code uit de app, twee van de drie factoren (MIT-14).
+@bp.route("/login/forgot", methods=["GET", "POST"])
+@logged_out_only
+def forgot_password():
+    if request.method == "GET":
+        return render_template("login_forgot.html")
+
+    username = request.form.get("username", "").strip()
+    password = request.form.get("password", "")
+    problem = passwords.password_problem(password, request.form.get("password_repeat", ""))
+    if problem:
+        return render_template("login_forgot.html", error=problem), 400
+    # Bereikbaar zonder wachtwoord, dus dezelfde tellers als bij inloggen: per adres en per naam per adres.
+    ip = throttle.client_ip(request.remote_addr)
+    ip_key = throttle.key("password_ip", ip)
+    pair_key = throttle.key("password_account_ip", username, ip)
+    minutes = throttle.locked_minutes(ip_key, pair_key)
+    if minutes:
+        return render_template("login_forgot.html", error=throttle.message(minutes)), *throttle.refusal(minutes)
+    user = query("SELECT id, recovery_hash FROM users WHERE username = %s AND totp_enabled", (username,), one=True)
+    given = hash_recovery_code(request.form.get("recovery_code", ""))
+    if not (user and user.recovery_hash and hmac.compare_digest(given, user.recovery_hash)):
+        minutes = max(throttle.fail("password_ip", ip_key), throttle.fail("password_account_ip", pair_key))
+        error = throttle.message(minutes) if minutes else FORGOT_WRONG
+        return render_template("login_forgot.html", error=error), *throttle.refusal(minutes)
+    # De herstelcode klopt; pas nu telt een foute code per account, met de blokkade van de codestap (MIT-06).
+    code_error = check_code(user.id)
+    if code_error:
+        error = code_error.message if code_error.minutes else FORGOT_WRONG
+        return render_template("login_forgot.html", error=error), *throttle.refusal(code_error.minutes)
+    # Herstelcode op, andere sessies ongeldig; door de hash in de WHERE wint maar één verzoek.
+    row = query(
+        "UPDATE users SET password = %s, recovery_hash = NULL, session_version = session_version + 1"
+        " WHERE id = %s AND recovery_hash = %s RETURNING id",
+        (password, user.id, given), one=True,
+    )
+    if row is None:
+        return render_template("login_forgot.html", error=FORGOT_WRONG), 400
+    throttle.reset(pair_key)
+    session.clear()
+    # Niet automatisch ingelogd; wel meteen een nieuwe herstelcode, anders is er geen meer.
+    return render_template("recovery_code.html", code=new_recovery_code(user.id), first=False, reset=True)
 
 
 @bp.route("/logout", methods=["POST"])

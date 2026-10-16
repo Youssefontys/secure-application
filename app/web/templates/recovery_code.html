@@ -8,16 +8,18 @@
 
   {% if first %}
     <p class="notice">Tweestapsverificatie staat aan. Inloggen vraagt vanaf nu ook een code uit je app.</p>
+  {% elif reset %}
+    <p class="notice">Je wachtwoord is gewijzigd en je andere sessies zijn uitgelogd. Log hierna in met je nieuwe wachtwoord.</p>
   {% endif %}
 
   <div class="card">
-    <p>Telefoon kwijt? Dan log je in met je wachtwoord en deze herstelcode in plaats van de code uit je app:</p>
+    <p>Telefoon kwijt? Log in met je wachtwoord en deze herstelcode. Wachtwoord vergeten? Stel een nieuw in met deze herstelcode en de code uit je app.</p>
     <span class="secret">{{ code }}</span>
     <ul class="steps">
       <li>Je ziet hem maar één keer. Bewaar hem apart van je telefoon, bijvoorbeeld in een wachtwoordmanager of op papier.</li>
-      <li>Hij werkt één keer. Daarna staat tweestapsverificatie uit en stel je hem opnieuw in met je nieuwe telefoon.</li>
+      <li>Hij werkt één keer. Gebruik je hem omdat je telefoon kwijt is, dan stel je daarna tweestapsverificatie opnieuw in.</li>
       {% if not first %}<li>Je vorige herstelcode werkt niet meer.</li>{% endif %}
     </ul>
-    <a class="button" href="{{ url_for('account.index') }}">Ik heb hem bewaard</a>
+    <a class="button" href="{{ url_for('auth.login') if reset else url_for('account.index') }}">Ik heb hem bewaard</a>
   </div>
 {% endblock %}

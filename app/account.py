@@ -32,9 +32,9 @@ def render_account(error=None, status=200, headers=None):
 
 
 # Geheim en herstelcode niet in een browser- of proxycache laten staan (MIT-08, MIT-11).
-@bp.after_request
+@bp.after_app_request
 def no_store(response):
-    if request.endpoint in ("account.setup_2fa", "account.qr_2fa", "account.new_recovery"):
+    if request.endpoint in ("account.setup_2fa", "account.qr_2fa", "account.new_recovery", "auth.forgot_password"):
         response.headers["Cache-Control"] = "no-store"
     return response
 
