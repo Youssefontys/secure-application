@@ -11,7 +11,7 @@ import account
 import auth
 import notes
 import passwords
-from db import TIMEZONE
+from db import TIMEZONE, close_connection
 
 # De website (HTML-templates en statische bestanden) staat in web/, los van de code.
 app = Flask(__name__, template_folder="web/templates", static_folder="web/static")
@@ -20,6 +20,7 @@ app.secret_key = os.environ["FLASK_SECRET_KEY"]
 
 for blueprint in (auth.bp, account.bp, notes.bp):
     app.register_blueprint(blueprint)
+app.teardown_appcontext(close_connection)
 app.jinja_env.globals.update(
     TITLE_MAX=notes.TITLE_MAX, BODY_MAX=notes.BODY_MAX,
     PASSWORD_MIN=passwords.PASSWORD_MIN, PASSWORD_MAX=passwords.PASSWORD_MAX,
