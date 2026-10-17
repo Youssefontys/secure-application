@@ -67,6 +67,10 @@ Account overnemen
         AND handelen als het slachtoffer (cookie van MC-04, of via MC-05)
         AND het huidige wachtwoord kennen (MC-01, MC-03)
         AND een code uit zijn app (MC-15 tot MC-17)                        [MIT-16]
+  OR  De tweede factor vervangen met de sessie en één code (MC-29)        [MIT-16]
+        AND handelen als het slachtoffer (MC-04)
+        AND één code uit zijn app (MC-16)
+        AND eigen telefoon, herstelcode, wachtwoord vergeten              [MIT-16: vraagt ook het wachtwoord]
   OR  Via SQL-injectie het wachtwoord laten zien (MC-06)                   [MIT-02]
 ```
 

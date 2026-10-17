@@ -474,9 +474,25 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
   - OR  4. Massaal accounts of notities aanmaken (MC-10)
   - OR  5. Met andermans gegevens het wachtwoord, de tweede factor of het account wijzigen (MC-12, MC-13, MC-20, MC-21)
 - Mitigaties: MIT-31 (stap 1 tot 5: elke gebeurtenis een JSON-regel met tijd, soort, adres en account; T-93)
-- Restrisico: niemand kijkt live mee en er zijn geen meldingen (alerts). Lokaal bewaart Docker de log zolang de container bestaat; op Azure is hij voorlopig alleen live te zien, en bewaren (Log Analytics) hoort bij de uitrol. Wie de host of de container beheert, kan de log wissen. Gewone verzoeken worden niet gelogd. De log bevat persoonsgegevens (A-11): doel en bewaartermijn horen bij de AVG-stap
+- Restrisico: niemand kijkt live mee en er zijn geen meldingen (alerts). Lokaal bewaart Docker de log zolang de container bestaat; op Azure is hij voorlopig alleen live te zien, en bewaren (Log Analytics) hoort bij de uitrol. Wie de host of de container beheert, kan de log wissen. Gewone verzoeken worden niet gelogd, en een geweigerde poging tijdens een blokkade ook niet apart: je ziet dat er een blokkade was, niet hoe vaak het daarna nog geprobeerd werd. De log bevat persoonsgegevens (A-11): doel en bewaartermijn horen bij de AVG-stap
 - Status: gebouwd
 - Sinds: baseline; gelogd sinds 6992001
+
+### MC-29 De tweede factor vervangen met de sessie en één code
+- Aanvallersdoel: het account blijvend overnemen zonder het wachtwoord te kennen
+- Aanvaller: wie de sessie van het slachtoffer heeft (MC-04) en één code uit zijn app (MC-16)
+- Assets / onderdelen: A-01, A-03, A-07, A-08, C-02, AU-06, AU-08
+- Gerelateerde use case: UC-07, UC-09
+- Stappen:
+  - AND 1. Handelen als het slachtoffer, met zijn sessie (MC-04)
+  - AND 2. Eén geldige code uit de app van het slachtoffer, bijvoorbeeld meteen doorgestuurd (MC-16)
+  - AND 3. Een eigen wachtwoord zetten
+    - OR  3a. De tweede factor opnieuw instellen, de eigen telefoon koppelen, de nieuwe herstelcode krijgen, en daarmee via wachtwoord vergeten (MIT-14) een nieuw wachtwoord zetten
+    - OR  3b. Een nieuwe herstelcode vragen, en later met een tweede code via wachtwoord vergeten
+- Mitigaties: MIT-16 (stap 3: opnieuw instellen en een nieuwe herstelcode vragen sinds 997e641 ook het huidige wachtwoord; T-99)
+- Restrisico: wie het wachtwoord én de telefoon heeft, kan dit wel; dan is het account sowieso over. Gevonden in de audit van 18-10-2026: met alleen de code was dit de zwakste weg, terwijl wachtwoord wijzigen al beide vroeg
+- Status: gebouwd
+- Sinds: baseline; dicht sinds 997e641
 
 ## Mitigaties
 
@@ -552,7 +568,7 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 
 ### MIT-11 Herstelcode
 - Houdt tegen: MC-19 stap 2a, 2c en 2d; maakt tweestapsverificatie mogelijk zonder dat een kwijtgeraakte telefoon het account onbereikbaar maakt
-- Wat: bij het aanzetten van tweestapsverificatie krijgt de gebruiker één keer een herstelcode van 128 willekeurige bits te zien. Alleen de SHA-256 wordt bewaard; een snelle hash is genoeg bij 128 willekeurige bits, anders dan bij een zelfverzonnen wachtwoord. Inloggen met de code kan alleen na het juiste wachtwoord; zonder wachtwoord werkt hij alleen samen met een code uit de app, om een nieuw wachtwoord in te stellen (MIT-14). De code werkt één keer. Bij inloggen zet hij tweestapsverificatie uit en verhoogt de sessieversie, en de app stuurt meteen naar het opnieuw instellen met een nieuwe telefoon (MIT-12). Het verbruik zit in een UPDATE met de hash in de WHERE, dus twee gelijktijdige verzoeken kunnen hem niet allebei gebruiken. 5 fouten in 15 minuten geven een blokkade (via `throttle.py`, met 429 en `Retry-After`). Een nieuwe code maken vraagt een code uit de app (AU-06) en maakt de vorige ongeldig; na wachtwoord vergeten krijgt de gebruiker meteen een nieuwe. De pagina's met de code worden met `Cache-Control: no-store` verstuurd
+- Wat: bij het aanzetten van tweestapsverificatie krijgt de gebruiker één keer een herstelcode van 128 willekeurige bits te zien. Alleen de SHA-256 wordt bewaard; een snelle hash is genoeg bij 128 willekeurige bits, anders dan bij een zelfverzonnen wachtwoord. Inloggen met de code kan alleen na het juiste wachtwoord; zonder wachtwoord werkt hij alleen samen met een code uit de app, om een nieuw wachtwoord in te stellen (MIT-14). De code werkt één keer. Bij inloggen zet hij tweestapsverificatie uit en verhoogt de sessieversie, en de app stuurt meteen naar het opnieuw instellen met een nieuwe telefoon (MIT-12). Het verbruik zit in een UPDATE met de hash in de WHERE, dus twee gelijktijdige verzoeken kunnen hem niet allebei gebruiken. 5 fouten in 15 minuten geven een blokkade (via `throttle.py`, met 429 en `Retry-After`). Een nieuwe code maken vraagt het huidige wachtwoord en een code uit de app (AU-06, sinds 997e641; MC-29) en maakt de vorige ongeldig; na wachtwoord vergeten krijgt de gebruiker meteen een nieuwe. De pagina's met de code worden met `Cache-Control: no-store` verstuurd
 - Waar: `new_recovery_code()`, `hash_recovery_code()` en `login_recover()` in `app/auth.py`; `setup_2fa()` en `new_recovery()` in `app/account.py`. Sinds 54d4d62 kan de gebruiker de code kopiëren of downloaden, en gaat Verder pas na het vinkje dat hij hem bewaard heeft (`recovery_code.html`, `forms.js`; T-96); zonder JavaScript werkt de pagina als voorheen. Overgenomen uit BOK-SECENGINEER
 - Status: gebouwd
 - Sinds: dc7d258; `Retry-After` sinds 5a82eb5
@@ -585,12 +601,12 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 - Status: gebouwd
 - Sinds: 668166a
 
-### MIT-16 Herauthenticatie bij wachtwoord wijzigen en account verwijderen
-- Houdt tegen: MC-12 stap 2 en MC-13 stap 2; ook via een andere site (MC-05) lukken deze twee acties niet meer, want die site kent het wachtwoord niet
-- Wat: beide formulieren vragen het huidige wachtwoord én een code uit de app, zodat wie alleen het wachtwoord heeft, hier niets kan (sinds 72ddaed, T-98). De code loopt via `check_code()`, met dezelfde blokkade en hetzelfde eenmalige gebruik als bij het inloggen (MIT-06, MIT-07). Het wachtwoord controleert `passwords.is_current()`. Dat is de enige plek; sinds MIT-19 met Argon2id. Elke poging telt vóór de controle, per account (`reauth_account`): na 5 fouten in 15 minuten wordt de volgende geweigerd, 15 minuten, verdubbelend tot 24 uur. Per account mag hier, want deze stap is alleen met een sessie te bereiken; zonder limiet kan iemand met een gestolen sessie het wachtwoord raden. Bij wachtwoord wijzigen gaat de sterkte-eis (MIT-13) eerst, zodat een fout in het nieuwe wachtwoord geen poging kost. Het OWASP Authentication Cheat Sheet vraagt de huidige gegevens opnieuw voor het wijzigen van gevoelige accountgegevens, zoals het wachtwoord
-- Waar: `refuse_without_both_factors()`, `change_password()` en `delete_account()` in `app/account.py`; `is_current()` in `app/passwords.py`; `check_code()` in `app/auth.py`
+### MIT-16 Herauthenticatie bij wachtwoord wijzigen, account verwijderen en het vervangen van de tweede factor
+- Houdt tegen: MC-12 stap 2, MC-13 stap 2 en MC-29 stap 3; ook via een andere site (MC-05) lukken deze twee acties niet meer, want die site kent het wachtwoord niet
+- Wat: beide formulieren vragen het huidige wachtwoord én een code uit de app, zodat wie alleen het wachtwoord heeft, hier niets kan (sinds 72ddaed, T-98). Sinds 997e641 geldt hetzelfde voor de tweede factor opnieuw instellen en een nieuwe herstelcode: met alleen de code kon wie de sessie en één code had, zijn eigen telefoon koppelen en via wachtwoord vergeten een eigen wachtwoord zetten (MC-29, T-99). De code loopt via `check_code()`, met dezelfde blokkade en hetzelfde eenmalige gebruik als bij het inloggen (MIT-06, MIT-07). Het wachtwoord controleert `passwords.is_current()`. Dat is de enige plek; sinds MIT-19 met Argon2id. Elke poging telt vóór de controle, per account (`reauth_account`): na 5 fouten in 15 minuten wordt de volgende geweigerd, 15 minuten, verdubbelend tot 24 uur. Per account mag hier, want deze stap is alleen met een sessie te bereiken; zonder limiet kan iemand met een gestolen sessie het wachtwoord raden. Bij wachtwoord wijzigen gaat de sterkte-eis (MIT-13) eerst, zodat een fout in het nieuwe wachtwoord geen poging kost. Het OWASP Authentication Cheat Sheet vraagt de huidige gegevens opnieuw voor het wijzigen van gevoelige accountgegevens, zoals het wachtwoord
+- Waar: `refuse_without_both_factors()`, `change_password()`, `delete_account()`, `reset_2fa()` en `new_recovery()` in `app/account.py`; `is_current()` in `app/passwords.py`; `check_code()` in `app/auth.py`
 - Status: gebouwd
-- Sinds: f40781b; met code sinds 72ddaed
+- Sinds: f40781b; met code sinds 72ddaed; ook bij de tweede factor sinds 997e641
 
 ### MIT-17 Versleuteling van het TOTP-geheim
 - Houdt tegen: MC-17 stap 1
@@ -692,10 +708,10 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 
 ### MIT-31 Security-events loggen
 - Houdt tegen: MC-28 stap 1 tot 5
-- Wat: één functie, `events.event()`, schrijft per gebeurtenis een JSON-regel naar stderr: tijd (UTC), soort, IP-adres, en als dat bekend is het account. Dat is het "when, where, who and what" van de OWASP Logging Cheat Sheet. Lokaal in `docker compose logs`, op Azure in de log van Container Apps, zonder verschil in de code. 26 soorten, op de plekken waar de app al beslist: registreren, inloggen en de blokkades, codes en herstelcodes, wachtwoord vergeten, uitloggen, een verlopen sessie, tweestapsverificatie aan en opnieuw, een nieuw wachtwoord, herauthenticatie, account verwijderen, een geweigerd CSRF-token, de limiet op notities en een notitie die niet ontsleutelt. JSON escapet regeleindes en stuurtekens, dus invoer maakt geen valse regel (log injection). Een getypte gebruikersnaam komt er alleen in als hij aan de naamregel van MIT-22 voldoet; wachtwoorden, codes, geheimen en de sessiecookie nooit (T-93, T-94). Overgenomen uit BOK-SECENGINEER
+- Wat: één functie, `events.event()`, schrijft per gebeurtenis een JSON-regel naar stderr: tijd (UTC), soort, IP-adres, en als dat bekend is het account. Dat is het "when, where, who and what" van de OWASP Logging Cheat Sheet. Lokaal in `docker compose logs`, op Azure in de log van Container Apps, zonder verschil in de code. 21 soorten, op de plekken waar de app al beslist: registreren, inloggen en de blokkades, codes en herstelcodes, wachtwoord vergeten, uitloggen, een verlopen sessie, tweestapsverificatie aan en opnieuw, een nieuw wachtwoord, herauthenticatie, account verwijderen, een geweigerd CSRF-token, de limiet op notities en een notitie die niet ontsleutelt. JSON escapet regeleindes en stuurtekens, dus invoer maakt geen valse regel (log injection). Een gebruikersnaam komt er alleen in als het account bestaat; anders staat er `"known": false` (sinds f977f6d, T-100). Eerst gold de naamregel van MIT-22, maar een wachtwoord als `Zomervakantie2026` voldoet daar ook aan. Een blokkade staat er één keer in, op het moment dat hij begint (`lockout_started`, met de soort teller), en niet bij elke geweigerde poging; anders kon een script de log vullen (sinds f977f6d, T-101). Wachtwoorden, codes, geheimen en de sessiecookie nooit (T-93, T-94). Overgenomen uit BOK-SECENGINEER
 - Waar: `app/events.py`; aanroepen in `app/auth.py`, `app/account.py`, `app/csrf.py` en `app/notes.py`
 - Status: gebouwd
-- Sinds: 6992001
+- Sinds: 6992001; naam en blokkade sinds f977f6d
 
 ### MIT-32 .env alleen voor de eigenaar
 - Houdt tegen: MC-22 stap 2, deels
