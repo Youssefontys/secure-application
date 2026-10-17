@@ -17,6 +17,17 @@
 #   ignore_error=True-mechanisme van run_az_cmd(). De oude except-blokken
 #   vingen in de praktijk niks: run_az_cmd() roept zelf al sys.exit(1) aan
 #   bij een fout, dus de exception kwam nooit bij de caller aan.
+#
+# Aangepast na de import in secure-application (2026-10-17):
+# - Geen shell meer: elk commando gaat als lijst van argumenten naar
+#   subprocess (shlex.split is de omkering van shlex.quote). shlex.quote
+#   alleen beschermde op Windows niet, want cmd.exe kent geen enkele
+#   aanhalingstekens.
+# - Invoer moet aan een allowlist voldoen (letters, cijfers, - _ .). Dat is
+#   de echte bescherming: op Windows is az een .cmd-bestand, en dan leest
+#   cmd.exe de argumenten toch opnieuw, ook zonder shell=True.
+# - gh secret set krijgt de waarde via stdin in plaats van --body, zodat een
+#   geheim niet in de proceslijst staat.
 
 import os
 import subprocess
@@ -32,6 +43,8 @@ import getpass
 DEFAULT_LOCATION = "westeurope"
 DEFAULT_RG_NAME = "rg-tfstate-mgmt"
 PROPAGATION_WAIT = 120
+# Allowlist voor een subscription ID: een GUID, verder niets.
+GUID = r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"
 
 # ---------- Hulpfuncties ----------
 def get_concise_cmd_name(command):
@@ -39,10 +52,16 @@ def get_concise_cmd_name(command):
     tokens = command.split()
     return " ".join(tokens[:3]) + "..." if tokens else "Leeg"
 
+def as_args(command):
+    """Het commando als lijst van argumenten, zonder shell; het programma via PATH (op Windows az.cmd)."""
+    args = shlex.split(command)
+    args[0] = shutil.which(args[0]) or args[0]
+    return args
+
 def run_az_cmd(command, ignore_error=False):
     """Voert een Azure CLI commando uit en returnt de output."""
     try:
-        result = subprocess.run(command, shell=True, check=True,
+        result = subprocess.run(as_args(command), check=True,
                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         return result.stdout.strip()
     except subprocess.CalledProcessError as e:
@@ -65,7 +84,7 @@ def run_az_cmd_with_retry(command, max_retries=10, delay=10):
     for attempt in range(max_retries):
         try:
             print(f"   ⏳ {name} (poging {attempt+1})...")
-            result = subprocess.run(command, shell=True, check=True,
+            result = subprocess.run(as_args(command), check=True,
                                     stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
             return result.stdout.strip(), True
         except subprocess.CalledProcessError as e:
@@ -80,13 +99,14 @@ def run_az_cmd_with_retry(command, max_retries=10, delay=10):
             sys.exit(1)
     return "", False
 
-def ask_user(question, default=None):
-    """Vraagt input aan de gebruiker."""
+def ask_user(question, default=None, pattern=None):
+    """Vraagt input aan de gebruiker; met pattern alleen een antwoord dat er helemaal aan voldoet."""
     prompt = f"{question} [{default}]: " if default else f"{question}: "
     while True:
-        ans = input(prompt).strip()
-        if ans: return ans
-        if default is not None: return default
+        ans = input(prompt).strip() or default
+        if ans is None: continue
+        if pattern is None or re.fullmatch(pattern, ans): return ans
+        print("❌ Ongeldige invoer: alleen letters, cijfers en - _ . zijn toegestaan.")
 
 def ask_secret(question):
     """Zoals ask_user, maar voor geheimen: gebruikt getpass zodat er niks op het scherm verschijnt."""
@@ -145,7 +165,7 @@ else:
     tenant_id = run_az_cmd("az account show --query tenantId -o tsv")
 
 if ask_user("Andere subscription? (j/n)", "n").lower() == 'j':
-    sub_id = ask_user("Subscription ID")
+    sub_id = ask_user("Subscription ID", pattern=GUID)
     run_az_cmd(f"az account set --subscription {shlex.quote(sub_id)}")
     active_sub_id = run_az_cmd("az account show --query id -o tsv")
 
@@ -157,12 +177,12 @@ for p in ["Microsoft.Storage", "Microsoft.KeyVault", "Microsoft.ManagedIdentity"
     run_az_cmd_with_retry(f"az provider register --namespace {p} --wait -o none", max_retries=2)
 
 # 3. Input
-rg_name   = ask_user("Resource Group naam", DEFAULT_RG_NAME)
-location  = ask_user("Regio", DEFAULT_LOCATION)
-container = ask_user("Blob container naam", "tfstate")
+rg_name   = ask_user("Resource Group naam", DEFAULT_RG_NAME, pattern=r"[A-Za-z0-9_.-]{0,89}[A-Za-z0-9_-]")
+location  = ask_user("Regio", DEFAULT_LOCATION, pattern=r"[a-z0-9]+")
+container = ask_user("Blob container naam", "tfstate", pattern=r"[a-z0-9](?!.*--)[a-z0-9-]{1,61}[a-z0-9]")
 
 while True:
-    prefix = ask_user("Storage prefix (3-10 chars)", "tfstate")
+    prefix = ask_user("Storage prefix (3-10 chars)", "tfstate", pattern=r"[a-z0-9]{3,10}")
     sa_name = f"{prefix}{random.randint(1000,9999)}"
     if 3 <= len(sa_name) <= 24 and re.match("^[a-z0-9]+$", sa_name): break
     print("❌ Ongeldige naam.")
@@ -292,12 +312,12 @@ if use_snyk:
 
 # Dit blok wordt alleen uitgevoerd als GH CLI is geconfigureerd EN de gebruiker koos voor auto-instellen
 if gh_configured and set_secrets_auto:
-    repo = ask_user("Volledige GitHub repo (bijv. user/repo)")
+    repo = ask_user("Volledige GitHub repo (bijv. user/repo)", pattern=r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+")
     print(f"Secrets aan het zetten in {repo}...")
 
     for name, value in secrets.items():
-        cmd = f'gh secret set {shlex.quote(name)} --body {shlex.quote(str(value))} --repo {shlex.quote(repo)}'
-        result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+        result = subprocess.run([shutil.which("gh"), "secret", "set", name, "--repo", repo],
+                                input=str(value), capture_output=True, text=True)
         if result.returncode == 0:
             print(f"   ✅ {name}")
         else:
