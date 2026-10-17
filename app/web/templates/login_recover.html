@@ -9,6 +9,7 @@
   <div class="card">
     <p class="hint">Vul je herstelcode in. Daarna staat tweestapsverificatie uit en stel je hem opnieuw in.</p>
     <form method="post">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <label>Herstelcode
         <input name="code" autocomplete="off" spellcheck="false" maxlength="64" required autofocus>
       </label>

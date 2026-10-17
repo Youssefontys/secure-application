@@ -20,12 +20,14 @@
     <h2>Tweestapsverificatie</h2>
     <p class="hint">Staat aan, en is verplicht. Inloggen vraagt naast je wachtwoord een code uit je authenticator-app.</p>
     <form method="post" action="{{ url_for('account.new_recovery') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <label>Code uit je app, voor een nieuwe herstelcode
         <input name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required>
       </label>
       <button type="submit" class="secondary">Nieuwe herstelcode</button>
     </form>
     <form method="post" action="{{ url_for('account.reset_2fa') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <label>Code uit je app, om opnieuw in te stellen (nieuwe telefoon)
         <input name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required>
       </label>
@@ -34,6 +36,7 @@
   </section>
 
   <form method="post" action="{{ url_for('account.change_password') }}" class="card">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <h2>Wachtwoord wijzigen</h2>
     <label>Huidig wachtwoord
       <input name="current_password" type="password" autocomplete="current-password" required>
@@ -49,6 +52,7 @@
 
   <form method="post" action="{{ url_for('account.delete_account') }}" class="card"
         data-confirm="Je account en al je notities worden definitief verwijderd. Doorgaan?">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <h2>Account verwijderen</h2>
     <p class="hint">Je account en al je notities worden definitief verwijderd. Dit kan niet ongedaan worden gemaakt.</p>
     <label>Huidig wachtwoord

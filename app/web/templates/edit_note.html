@@ -8,6 +8,7 @@
   </header>
 
   <form method="post" class="card" data-validate>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     {% include "_note_fields.html" %}
     <button type="submit">Wijzigingen opslaan</button>
   </form>

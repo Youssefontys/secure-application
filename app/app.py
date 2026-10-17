@@ -10,6 +10,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 
 import account
 import auth
+import csrf
 import notes
 import passwords
 from db import TIMEZONE, close_connection
@@ -40,12 +41,14 @@ app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 # Het grootste formulier is een notitie van 250 tekens; meer wordt geweigerd voordat het is ingelezen (MC-10).
 app.config["MAX_CONTENT_LENGTH"] = 16 * 1024
 
+# Vóór het laden van de gebruiker, zodat een verlopen sessie gewoon naar de inlogpagina gaat (MIT-20).
+app.before_request(csrf.check)
 for blueprint in (auth.bp, account.bp, notes.bp):
     app.register_blueprint(blueprint)
 app.teardown_appcontext(close_connection)
 app.jinja_env.globals.update(
     TITLE_MAX=notes.TITLE_MAX, BODY_MAX=notes.BODY_MAX,
-    PASSWORD_MIN=passwords.PASSWORD_MIN, PASSWORD_MAX=passwords.PASSWORD_MAX,
+    PASSWORD_MIN=passwords.PASSWORD_MIN, PASSWORD_MAX=passwords.PASSWORD_MAX, csrf_token=csrf.token,
 )
 
 
