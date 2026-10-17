@@ -10,7 +10,7 @@ Every feature that is added has an entry in `BoK/`: the use case, the misuse cas
 
 ## Structure
 
-- `app/` - the notes application, one file per part: `app.py` creates the app, `db.py` talks to the database, `auth.py` handles logging in (including the second step), `account.py` the profile, `notes.py` the notes, `totp.py` the TOTP calculation, `throttle.py` the login limits, `passwords.py` the rule for a new password, `encryption.py` the encryption of the TOTP secret. The website (HTML, CSS, JS) is in `app/web/`
+- `app/` - the notes application, one file per part: `app.py` creates the app, `db.py` talks to the database, `auth.py` handles logging in (including the second step), `account.py` the profile, `notes.py` the notes, `totp.py` the TOTP calculation, `throttle.py` the login limits, `passwords.py` the rule for a new password and the Argon2id hashing, `encryption.py` the encryption of the TOTP secret and the notes. The website (HTML, CSS, JS) is in `app/web/`
 - `db/` - the database schema, run by the database container on first start
 - `BoK/Architecture/` - components, data flows, trust boundaries and the authentication and authorization points
 - `BoK/Threat Analysis/` - use cases, misuse cases, mitigations, attack trees and the tests that go with them
@@ -28,6 +28,8 @@ Or by hand: copy `.env.example` to `.env`, fill in the three values, and run `do
 
 Then open http://127.0.0.1:5000.
 
+For the hacking week, with a class behind one school address: set `THROTTLE_IP_MODE=hackweek` and `THROTTLE_PAIR_EXEMPT_USERS=hackingweek` in `.env` (see `.env.example`). Leave both out the rest of the time.
+
 ## Status
 
 The baseline plus the first security features, each with an entry in `BoK/Threat Analysis/entries.md`:
@@ -36,6 +38,7 @@ The baseline plus the first security features, each with an entry in `BoK/Threat
 - mandatory two-step verification with TOTP, a recovery code for a lost phone, login limits per IP address and per account, and a session version that ends old sessions (MIT-05 to MIT-12); see `BoK/Subjects/Week 5 Authentication.md`
 - a rule of 12 to 64 characters for a new password (MIT-13), and a forgotten-password route that uses the recovery code and the app code (MIT-14)
 - an ownership check on every note (MIT-15), and the current password before changing it or deleting the account (MIT-16)
-- the TOTP secret encrypted with AES-256-GCM, with the key outside the database (MIT-17); see `BoK/Subjects/Week 6 Encryption.md`
+- the TOTP secret and the notes encrypted with AES-256-GCM, with the key outside the database (MIT-17, MIT-18), and passwords hashed with Argon2id (MIT-19); see `BoK/Subjects/Week 6 Encryption.md`
+- a hackstand for the hacking week, off by default (MIT-10)
 
-Still open: passwords are stored in plain text and there is no CSRF protection. Not safe to expose to the internet.
+Still open: no CSRF protection (MC-05), the Flask development server runs as root (MC-14), and the data key is read from `.env` until Key Vault on Azure (MC-22). Not safe to expose to the internet.
