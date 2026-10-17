@@ -137,7 +137,7 @@ def change_password():
         return refused
 
     # Alle andere sessies vervallen (MIT-09).
-    query("UPDATE users SET password = %s WHERE id = %s", (password, g.user.id))
+    query("UPDATE users SET password_hash = %s WHERE id = %s", (passwords.hash_password(password), g.user.id))
     end_other_sessions(g.user.id)
     flash("Je wachtwoord is gewijzigd.")
     return redirect(url_for("account.index"))

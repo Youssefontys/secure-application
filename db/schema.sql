@@ -4,8 +4,8 @@
 CREATE TABLE users (
     id         SERIAL PRIMARY KEY,
     username   TEXT UNIQUE NOT NULL,
-    -- Het wachtwoord staat leesbaar opgeslagen (MC-01).
-    password   TEXT NOT NULL,
+    -- Argon2id-hash met eigen salt en de instellingen erin (MIT-19); het wachtwoord zelf staat nergens.
+    password_hash TEXT NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     -- Staat ook in de sessiecookie. Bij uitloggen, een nieuw wachtwoord of een
     -- wijziging aan de tweestapsverificatie gaat hij omhoog; een cookie met een
@@ -14,7 +14,7 @@ CREATE TABLE users (
 
     -- Tweestapsverificatie met TOTP (RFC 6238). Het geheim wordt bij het
     -- instellen gezet, maar telt pas mee als totp_enabled true is: dat gebeurt
-    -- na een eerste geldige code. Het geheim staat leesbaar opgeslagen (MC-17).
+    -- na een eerste geldige code. Het geheim staat versleuteld opgeslagen (MIT-17).
     totp_secret       TEXT,
     totp_enabled      BOOLEAN NOT NULL DEFAULT false,
     -- De tijdstap van de laatst geaccepteerde code. Een code van dezelfde of
@@ -39,6 +39,7 @@ CREATE TABLE auth_throttle (
 CREATE TABLE notes (
     id         SERIAL PRIMARY KEY,
     user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    -- Titel en inhoud versleuteld met AES-256-GCM, gebonden aan de eigenaar (MIT-18).
     title      TEXT NOT NULL,
     body       TEXT NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),

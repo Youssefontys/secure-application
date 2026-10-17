@@ -98,7 +98,7 @@ def register():
         return render_template("auth.html", error=error), 400
 
     try:
-        query("INSERT INTO users (username, password) VALUES (%s, %s)", (username, password))
+        query("INSERT INTO users (username, password_hash) VALUES (%s, %s)", (username, passwords.hash_password(password)))
     except psycopg.errors.UniqueViolation:
         return render_template("auth.html", error="Die gebruikersnaam is al in gebruik."), 409
     flash("Je account is aangemaakt. Je kunt nu inloggen.")
@@ -118,13 +118,11 @@ def login():
     minutes = throttle.attempt(*limits)
     if minutes:
         return render_template("auth.html", error=throttle.message(minutes)), *throttle.refusal(minutes)
-    row = query(
-        "SELECT id, totp_enabled, session_version FROM users WHERE username = %s AND password = %s",
-        (username, password), one=True,
-    )
-    if row is None:
+    row = query("SELECT id, password_hash, totp_enabled, session_version FROM users WHERE username = %s", (username,), one=True)
+    if not passwords.matches(row and row.password_hash, password):
         return render_template("auth.html", error="Onjuiste gebruikersnaam of wachtwoord."), 400
     throttle.succeeded(*limits)
+    passwords.rehash_if_needed(row.id, row.password_hash, password)
 
     session.clear()
     if row.totp_enabled:
@@ -253,9 +251,9 @@ def forgot_password():
     # Alles in één UPDATE: wachtwoord, nieuwe herstelcode, sessies; de oude hash in de WHERE.
     new_code, new_hash = make_recovery_code()
     row = query(
-        "UPDATE users SET password = %s, recovery_hash = %s, session_version = session_version + 1"
+        "UPDATE users SET password_hash = %s, recovery_hash = %s, session_version = session_version + 1"
         " WHERE id = %s AND recovery_hash = %s RETURNING id",
-        (password, new_hash, user.id, given), one=True,
+        (passwords.hash_password(password), new_hash, user.id, given), one=True,
     )
     if row is None:
         return render_template("login_forgot.html", error=FORGOT_WRONG), 400
