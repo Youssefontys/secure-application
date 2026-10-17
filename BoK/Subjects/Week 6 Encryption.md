@@ -60,11 +60,11 @@ Drie verschillende dingen, die in deze app allemaal voorkomen:
 
 ### Hashen: de wachtwoorden (MIT-19)
 
-- **Algoritme:** Argon2id uit `argon2-cffi`, met de minimale instelling uit het OWASP Password Storage Cheat Sheet: 19 MiB geheugen, 2 iteraties, 1 thread.
-- **Salt:** de library maakt per hash een eigen, willekeurige salt. Hetzelfde wachtwoord geeft bij twee accounts dus twee verschillende hashes (T-68).
+- **Algoritme:** Argon2id uit `cryptography`, dat de app al had voor AES; het rekenwerk doet OpenSSL. De minimale instelling uit het OWASP Password Storage Cheat Sheet: 19 MiB geheugen, 2 iteraties, 1 thread. Tot 29d201d kwam Argon2id uit `argon2-cffi`; het formaat is hetzelfde, dus oude hashes werken nog (T-88).
+- **Salt:** per hash 16 willekeurige bytes. Hetzelfde wachtwoord geeft bij twee accounts dus twee verschillende hashes (T-68).
 - **Wat er staat:** `$argon2id$v=19$m=19456,t=2,p=1$` met daarachter de salt en de hash. De instelling staat in de hash zelf, zodat de app weet waarmee hij moet controleren.
 - **Onbekende naam:** dan rekent de app tegen een vaste hash. Een fout wachtwoord en een naam die niet bestaat, duren daardoor even lang (T-70: 101 en 100 ms).
-- **Nieuwe instelling:** is een hash met een oudere instelling gemaakt, dan maakt de app bij de volgende geslaagde login een nieuwe (T-69). Zo raden OWASP en de documentatie van `argon2-cffi` het aan.
+- **Nieuwe instelling:** is een hash met een oudere instelling gemaakt, dan maakt de app bij de volgende geslaagde login een nieuwe (T-69). Zo raadt OWASP het aan. De app ziet het aan het begin van de hash, waar de instelling in staat.
 - **In de code:** alles in `app/passwords.py`: `hash_password()`, `matches()`, `rehash_if_needed()` en `is_current()`. Registreren, inloggen, wachtwoord vergeten en wachtwoord wijzigen gebruiken alleen die functies.
 
 ## Waarom het veilig is
@@ -80,7 +80,7 @@ Drie verschillende dingen, die in deze app allemaal voorkomen:
 | Een waarde werkt alleen op haar eigen plek | De soort en de `user_id` gaan mee als associated data | T-63, T-67 |
 | Een onleesbaar half ingesteld geheim zet niemand vast | Het wordt vervangen; het werkte nog nergens | T-65 |
 | De sleutel staat niet bij de data | Alleen in de omgeving van de app; niet in de database | T-64 |
-| Geen zelfgeschreven cryptografie | AES-GCM uit `cryptography`, Argon2id uit `argon2-cffi`, met hun afhankelijkheden vastgezet (MIT-03) | `pip freeze` gelijk aan `requirements.txt` |
+| Geen zelfgeschreven cryptografie | AES-GCM en Argon2id uit `cryptography`, met de afhankelijkheden vastgezet (MIT-03) | `pip freeze` gelijk aan `requirements.txt` |
 
 ## Wat nog leesbaar is
 
@@ -122,9 +122,10 @@ Per gegeven waar het staat en waar het hoort:
   - Met pgcrypto gaat de sleutel bij elke query als parameter mee naar de database, dus juist naar de plek van de data.
   - Staat het loggen van statements aan (`log_statement = all`), dan staat hij ook in de databaselog. `17_sqli_databaselog`, gemaakt met die instelling tijdelijk aan, laat zien dat parameters daar leesbaar staan.
   - OWASP raadt aan om sleutels waar mogelijk op een andere plek te bewaren dan de versleutelde data.
-- **`cryptography` en `argon2-cffi`, geen eigen AES of Argon2.** De TOTP-berekening is wel zelf geschreven: dat is een HMAC van een paar regels, met testvectoren te bewijzen. AES en Argon2 zelf schrijven is daarmee niet te vergelijken.
+- **`cryptography`, geen eigen AES of Argon2.** De TOTP-berekening is wel zelf geschreven: dat is een HMAC van een paar regels, met testvectoren te bewijzen. AES en Argon2 zelf schrijven is daarmee niet te vergelijken.
+- **Argon2id uit `cryptography`, niet uit `argon2-cffi`.** `cryptography` kan het sinds versie 44.0.0, en het PHC-formaat sinds 45.0.0. Hetzelfde algoritme en formaat, en twee pakketten minder in de image (MC-11).
 - **Wachtwoorden hashen, niet versleutelen.** De app hoeft een wachtwoord nooit terug te lezen. Een versleuteld wachtwoord is met de sleutel in één keer leesbaar; een hash niet.
-- **Argon2id met het minimum van OWASP, niet met de standaard van `argon2-cffi`.**
+- **Argon2id met het minimum van OWASP, niet met de standaard van `argon2-cffi`, die BOK-SECENGINEER gebruikte.**
   - De standaard is het tweede aanbevolen profiel uit RFC 9106: 64 MiB, 3 iteraties, 4 threads. Dat is zwaarder; BOK-SECENGINEER gebruikte het.
   - Hier het minimum, omdat elke login op een kleine Azure-machine anders 64 MiB vraagt.
   - Verhogen kan later: de rehash bij de login zet bestaande hashes dan vanzelf om.
@@ -147,11 +148,10 @@ Waar de geheimen nu staan, wie ze kan lezen en hoe ze gemaakt worden:
 
 - **Nooit in git.** `.env` en `backend.*.conf` staan in `.gitignore`; in de repo zit alleen `.env.example`, zonder waarden. Op 17-10-2026 is de hele geschiedenis doorzocht: geen sleutelwaarde, en nooit een `.env` of `backend.*.conf` gecommit.
 - **Zelf gemaakt, nooit getoond.** `python scripts/setup.py lokaal` vult een ontbrekende of lege sleutel aan met 256 bits uit de module `secrets` van Python, en noemt alleen de naam. Een bestaande sleutel blijft staan.
-- **Niet leeg starten.** Compose start niet als een van de drie leeg is (`${...:?}`). De app start niet met een `DATA_ENCRYPTION_KEY` die geen 256 bits is.
+- **Niet leeg starten.** Compose start niet als een van de vier leeg is (`${...:?}`). De app start niet met een `DATA_ENCRYPTION_KEY` die geen 256 bits is.
 - **Eén doel per sleutel, op één na.** De gegevenssleutel staat los van de rest. `FLASK_SECRET_KEY` heeft twee taken. Een nieuwe sessiesleutel maakt daardoor ook alle tellers van de poginglimieten ongeldig (A-05).
 - **De geheimen in de Azure-scripts.** `scripts/azuresetup_v2.py`:
-  - vraagt het Snyk-token met `getpass` en toont het niet terug;
-  - geeft het token via stdin aan `gh`, dus het staat niet in de proceslijst;
+  - geeft de waarden via stdin aan `gh` en niet als argument, dus ze staan niet in de proceslijst;
   - zet in GitHub alleen id's (client, tenant, subscription) en geen wachtwoord, want de pipeline hoort in te loggen met OIDC. De koppeling daarvoor (een federated credential op de managed identity) maakt het script nog niet aan; die komt bij de Terraform-stap.
 - **De sleutel van de Terraform-state.** Een eigen RSA-4096-sleutel in Key Vault, met purge protection en 90 dagen bewaartijd na verwijderen. De rollen zijn gescheiden: wie het script draait, beheert de sleutel (Key Vault Crypto Officer); de managed identity mag hem alleen gebruiken (Key Vault Crypto Service Encryption User).
 
@@ -206,4 +206,4 @@ Opgehaald en gecontroleerd op 16-10-2026 en 17-10-2026.
 - OWASP Cryptographic Storage Cheat Sheet: https://cheatsheetseries.owasp.org/cheatsheets/Cryptographic_Storage_Cheat_Sheet.html
 - OWASP Password Storage Cheat Sheet: https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html
 - `cryptography`, AEAD (AESGCM): https://cryptography.io/en/latest/hazmat/primitives/aead/
-- `argon2-cffi`, API: https://argon2-cffi.readthedocs.io/en/stable/api.html
+- `cryptography`, Argon2id (sinds 44.0.0, PHC-formaat sinds 45.0.0): https://cryptography.io/en/latest/hazmat/primitives/key-derivation-functions/

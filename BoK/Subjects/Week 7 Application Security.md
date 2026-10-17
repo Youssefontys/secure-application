@@ -124,7 +124,7 @@ Bewust niet: rechten per rij (row-level security), een audit-log in de database 
 | C3 Validate all Input & Handle Exceptions | Parameterized queries (MIT-02), lengtegrenzen (MIT-04), invoer en configuratie (MIT-22, MIT-23), veilig falen (MIT-25) |
 | C4 Address Security from the Start | Elke feature begint bij de misuse cases in de BoK; de uitgewerkte dreigingsanalyse en het ontwerp (Week 3 en 5) volgen aan het eind |
 | C5 Secure By Default Configurations | `HTTPS_ONLY` standaard aan, de hackstand standaard uit, `TRUSTED_PROXIES` standaard 0, geen root (MIT-23, MIT-26) |
-| C6 Keep your Components Secure | Alles vastgezet, ook wat er meekomt (MIT-03); scannen komt in de pipeline (Week 8) |
+| C6 Keep your Components Secure | Alles vastgezet, ook wat er meekomt en de base-images op digest (MIT-03); scannen komt in de pipeline (Week 8) |
 | C7 Secure Digital Identities | Verplichte 2FA, poginglimieten, sessieversie, Argon2id (Week 5 en 6) |
 | C8 Leverage Browser Security Features | CSP, `frame-ancestors`, `nosniff`, `Referrer-Policy`, `HttpOnly`, `SameSite`, `Secure` (MIT-21, MIT-23) |
 | C9 Implement Security Logging and Monitoring | Alleen fouten in de log (MIT-25); security-events komen bij Logging en monitoring |
