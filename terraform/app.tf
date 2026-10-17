@@ -35,13 +35,15 @@ locals {
 }
 
 # Alleen het Consumption-profiel: betalen per gebruik, ook in een eigen netwerk.
-# Logs zijn alleen live te volgen; bewaren komt bij Logging en monitoring.
 resource "azurerm_container_app_environment" "main" {
   name                     = "cae-${local.name}"
   location                 = azurerm_resource_group.main.location
   resource_group_name      = azurerm_resource_group.main.name
   infrastructure_subnet_id = azurerm_subnet.apps.id
-  tags                     = local.tags
+  # De log bewaren in logs.tf; zonder deze twee regels is hij alleen live te volgen.
+  logs_destination           = "log-analytics"
+  log_analytics_workspace_id = azurerm_log_analytics_workspace.main.id
+  tags                       = local.tags
 
   workload_profile {
     name                  = "Consumption"
