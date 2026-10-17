@@ -16,9 +16,9 @@ Dit BoK-onderwerp heeft twee helften, en deze tekst houdt ze uit elkaar:
 
 De ene helft vangt geen fouten van de andere op. MC-02, andermans notitie openen, was een autorisatiegat terwijl de authenticatie al sterk was.
 
-**Wat hier nog niet onder valt.** Deze stap gaat over autorisatie in de app. Twee lagen eronder breiden dit onderdeel later uit:
+**Wat hier nog niet onder valt.** Deze stap gaat over autorisatie in de app. Twee lagen eronder breiden dit onderdeel uit:
 
-- **In de database, bij Database security.** De app verbindt nu met de eigenaarrol en mag alles, ook tabellen weggooien (MC-08, AZ-05). Een app-rol die alleen mag lezen en schrijven in de eigen tabellen kan al lokaal.
+- **In de database, sinds Week 7.** De app logt in met een eigen rol die alleen mag lezen en schrijven in de eigen tabellen (MIT-27, AZ-05), niet meer als eigenaar.
 - **In de cloud, bij de Azure-aanvulling.** Wie bij Key Vault en de database mag (rollen in Azure), en hoe de app zich bij de database aanmeldt: met managed identity in plaats van een wachtwoord (systeemauthenticatie, AU-03).
 
 ## Wat er beter wordt

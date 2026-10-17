@@ -23,7 +23,7 @@ Drie verschillende dingen, die in deze app allemaal voorkomen:
 - **Wie:** iemand die de database leest zonder via de app te gaan. Dat kan via:
   - een gelekte backup of het volume (C-04);
   - het databasewachtwoord (A-06);
-  - de eigenaarrol (MC-08).
+  - de verbinding van de app (MC-08); sinds MIT-27 een eigen rol, die nog wel alle rijen mag lezen.
 - **Wat die eerst kreeg:** van elk account het wachtwoord (MC-01), het TOTP-geheim (MC-17) en alle notities (MC-23), allemaal leesbaar. Daarmee was elk account over, ondanks de verplichte tweede factor.
 - **Wat die nu krijgt:**
   - Van elk wachtwoord alleen een Argon2id-hash. Raden kan nog, maar elke gok kost 19 MiB en een berekening, per account opnieuw.
@@ -99,18 +99,18 @@ Per gegeven waar het staat en waar het hoort:
 | Verkeer tussen browser en app (F-01, F-02) | HTTP zonder TLS, lokaal | Op Azure zet Container Apps TLS 1.2 of 1.3 ervoor en stuurt HTTP door naar HTTPS; daarbij `HTTPS_ONLY` (`terraform/app.tf`) |
 | Verbinding tussen app en database (F-03) | Zonder TLS, lokaal | Op Azure TLS 1.3 met `sslmode=verify-full`, en de database alleen in een privé-netwerk (`terraform/database.tf`) |
 | Databasebestanden en volume (C-04, F-04) | Geen schijfversleuteling lokaal | Op Azure versleutelt de dienst alle data, logs en backups op schijf, met een sleutel van Azure. Een eigen sleutel (CMK) kan alleen bij het aanmaken van de server |
-| Geheimen in `.env` (A-05, A-06, A-09) | Leesbaar op de ontwikkelmachine en in de omgeving van de container | Key Vault (`terraform/keyvault.tf`) |
+| Geheimen in `.env` (A-05, A-06, A-09, A-10) | Leesbaar op de ontwikkelmachine en in de omgeving van de container | Key Vault (`terraform/keyvault.tf`) |
 
 ## Wat het niet oplost
 
-- **Wie de sleutel heeft, leest het geheim en de notities (MC-22).** Lokaal staat de sleutel in `.env` en in de omgeving van de container, en de container draait als root (MC-14). Ook met Key Vault heeft de draaiende app de sleutel. Wie de app overneemt, heeft hem dus ook, en ziet bovendien elk wachtwoord bij het inloggen voorbijkomen.
+- **Wie de sleutel heeft, leest het geheim en de notities (MC-22).** Lokaal staat de sleutel in `.env` en in de omgeving van de container. Ook met Key Vault heeft de draaiende app de sleutel. Wie de app overneemt, heeft hem dus ook, en ziet bovendien elk wachtwoord bij het inloggen voorbijkomen.
 - **Een zwak wachtwoord blijft te raden.** Argon2id maakt elke gok duur, niet onmogelijk. De lengte-eis (MIT-13) helpt; een blocklist van veelgebruikte wachtwoorden is geparkeerd.
 - **Versleuteling en hashen beschermen tegen lezen, niet tegen schrijven.** Wie de database kan wijzigen (MC-08), kan:
   - een eigen hash als wachtwoord zetten;
   - `totp_enabled` op false zetten en tweestapsverificatie met een eigen telefoon instellen;
   - notities verwijderen.
 
-  Een eigen geheim of een eigen notitie erin zetten lukt niet, want daarvoor is de sleutel nodig. Tegen schrijven helpt alleen databasebeveiliging: een eigen rol voor de app met minimale rechten.
+  Een eigen geheim of een eigen notitie erin zetten lukt niet, want daarvoor is de sleutel nodig. De eigen rol voor de app (MIT-27, Week 7) helpt hier maar half: die mag deze rijen nog steeds wijzigen, want de app doet dat zelf ook. Het schema aanpassen of weggooien kan hij niet meer.
 - **Een notitie is gebonden aan de eigenaar, niet aan de notitie.** Wie de database kan wijzigen, kan titels en inhoud tussen notities van dezelfde gebruiker verwisselen. Tussen gebruikers of tussen titel en inhoud lukt dat niet (T-67).
 - **Sleutel kwijt is geheimen en notities kwijt.** Tweestapsverificatie is opnieuw in te stellen via de herstelcode, want die is gehasht en niet versleuteld, en werkt dus nog. De notities zijn dan echt weg. Lokaal is dat geen probleem; op Azure bewaakt Key Vault de sleutel.
 - **Een nieuwe sleutel is voorbereid, niet gebouwd.** De versie `v1:` staat erin, maar ontsleutelen met een oude sleutel naast een nieuwe moet nog worden geschreven.
@@ -162,12 +162,12 @@ Wat nog mist:
 
 ## Later: key management op Azure
 
-De Terraform-code staat in `terraform/`, maar is nog niet uitgerold. Eerst moeten MC-05 (CSRF) en MC-14 (de ontwikkelserver als root) dicht. Voor key management:
+De Terraform-code staat in `terraform/`, maar is nog niet uitgerold. MC-05 (CSRF) en MC-14 (de ontwikkelserver als root) zijn sinds Week 7 dicht; de uitrol wacht nog op de image en de koppeling met GitHub. Voor key management:
 
-- **De geheimen komen nergens in Terraform terecht.** Terraform maakt ze als ephemeral waarde: de gegevenssleutel en de sessiesleutel elk 32 willekeurige bytes, het databasewachtwoord 40 tekens. Die stuurt Terraform write-only naar Key Vault, dus ze staan niet in het plan en niet in de state. Het databasewachtwoord leest Terraform terug uit Key Vault, zodat vault en database altijd hetzelfde hebben, ook als een eerste uitrol halverwege stopt.
-- **Alleen de app leest ze**, met een eigen managed identity die de rol Key Vault Secrets User heeft. Container Apps zet de waarden als omgevingsvariabele, dus de code blijft gelijk. Wie Terraform draait, mag geheimen schrijven (Key Vault Secrets Officer), niet de vault beheren.
+- **De geheimen komen nergens in Terraform terecht.** Terraform maakt ze als ephemeral waarde: de gegevenssleutel en de sessiesleutel elk 32 willekeurige bytes, de twee databasewachtwoorden elk 40 tekens. Die stuurt Terraform write-only naar Key Vault, dus ze staan niet in het plan en niet in de state. Het databasewachtwoord leest Terraform terug uit Key Vault, zodat vault en database altijd hetzelfde hebben, ook als een eerste uitrol halverwege stopt.
+- **Alleen de app leest ze**, met een eigen managed identity die de rol Key Vault Secrets User heeft. Het wachtwoord van de eigenaar staat sinds MIT-27 in een eigen vault, die alleen de schema-job leest. Container Apps zet de waarden als omgevingsvariabele, dus de code blijft gelijk. Wie Terraform draait, mag geheimen schrijven (Key Vault Secrets Officer), niet de vault beheren.
 - **Kwijtraken kan niet zomaar.** Purge protection en 90 dagen bewaartijd na verwijderen. Belangrijk, want sleutel kwijt is notities kwijt.
-- **Een nieuwe sleutel.** Het databasewachtwoord en de sessiesleutel veranderen als `secret_version` omhoog gaat. De gegevenssleutel staat vast op versie 1, tot `v2:` gebouwd is.
+- **Een nieuwe sleutel.** De databasewachtwoorden en de sessiesleutel veranderen als `secret_version` omhoog gaat; daarna de schema-job starten voor het wachtwoord van de app-rol. De gegevenssleutel staat vast op versie 1, tot `v2:` gebouwd is.
 - **Eventueel envelope-versleuteling:** een tweede sleutel (KEK) in Key Vault die `DATA_ENCRYPTION_KEY` (de DEK) versleutelt. Volgens OWASP werkt dat alleen als de KEK apart van de DEK staat; de versleutelde DEK mag dan bij de data.
 - **De opslag van de Terraform-state** wordt al versleuteld met een eigen sleutel (RSA 4096) in Key Vault, door `scripts/azuresetup_v2.py`. Dat is key management voor de infrastructuur.
 
@@ -175,8 +175,8 @@ Trivy 0.75.0 vond op 17-10-2026 zeven punten in `terraform/`, met per punt een b
 
 | Punt | Ernst | Besluit |
 |---|---|---|
-| AZU-0013: Key Vault blokkeert het netwerk niet standaard | CRITICAL | Bewust nog open. Lezen kan alleen met een Entra-token en een rol. Een firewall vraagt een vast adres voor wie Terraform draait, en eerst een test of Container Apps de geheimen dan nog ophaalt. Bij de eerste uitrol |
-| AZU-0017: geheimen zonder vervaldatum (3 keer) | LOW | Bewust. Zonder automatische rotatie zet een vervaldatum de app op een dag stil, en de gegevenssleutel mag niet vervallen |
+| AZU-0013: Key Vault blokkeert het netwerk niet standaard (2 keer, sinds MIT-27 twee vaults) | CRITICAL | Bewust nog open. Lezen kan alleen met een Entra-token en een rol. Een firewall vraagt een vast adres voor wie Terraform draait, en eerst een test of Container Apps de geheimen dan nog ophaalt. Bij de eerste uitrol |
+| AZU-0017: geheimen zonder vervaldatum (4 keer) | LOW | Bewust. Zonder automatische rotatie zet een vervaldatum de app op een dag stil, en de gegevenssleutel mag niet vervallen |
 | AZU-0019, AZU-0024: verbindingen en checkpoints niet gelogd | MEDIUM | Bij Logging en monitoring, samen met waar de logs naartoe gaan |
 | AZU-0021: verbindingen niet begrensd | MEDIUM | Bij Logging en monitoring; de app heeft zelf poginglimieten (MIT-10) |
 

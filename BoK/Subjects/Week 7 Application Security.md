@@ -8,17 +8,18 @@ De app controleert nu alles wat binnenkomt, en valt veilig om als er iets misgaa
 - **Routes:** elke route is standaard dicht (MIT-24).
 - **Fouten:** een fout geeft een korte melding, met de details alleen in de log (MIT-25).
 - **Draaien:** de app draait met Gunicorn als gewone gebruiker, niet meer als root (MIT-26).
+- **Database:** de app logt in met een eigen rol die alleen mag lezen en schrijven in de eigen tabellen (MIT-27).
 
-Daarmee zijn MC-05 (CSRF) en MC-14 (root en de ontwikkelserver) dicht, de laatste twee voorwaarden voor de uitrol naar Azure.
+Daarmee zijn MC-05 (CSRF) en MC-14 (root en de ontwikkelserver) dicht, de laatste twee voorwaarden voor de uitrol naar Azure. MC-08 (te veel rechten in de database) is dicht, op wat de app zelf mag na.
 
-De details staan in de entries (MC-05, MC-07, MC-10, MC-14, MC-18, MC-24 tot MC-26; MIT-20 tot MIT-26) en de tests (T-16, T-18, T-21, T-73 tot T-82). Dit bestand vat ze samen.
+De details staan in de entries (MC-05, MC-07, MC-08, MC-10, MC-14, MC-18, MC-24 tot MC-26; MIT-20 tot MIT-27) en de tests (T-16, T-18, T-19, T-21, T-73 tot T-86). Dit bestand vat ze samen.
 
 ## De dreiging
 
 - **Een andere site** laat de ingelogde gebruiker een formulier versturen (MC-05), of laadt de app onzichtbaar in een frame en laat hem klikken (MC-24).
 - **Iedere bezoeker** stuurt vreemde of te grote invoer (MC-10), lokt een fout uit om details te zien of de log te vervalsen (MC-26), of vindt een route die per ongeluk open staat (MC-25).
 - **Een verkeerde instelling** laat een aanvaller zelf zijn adres kiezen en zo de poginglimieten omzeilen (MC-18).
-- **Wie de app overneemt,** was root in de container (MC-14).
+- **Wie de app overneemt,** was root in de container (MC-14) en superuser in de database (MC-08).
 
 ## Wat er beter wordt
 
@@ -35,6 +36,7 @@ De details staan in de entries (MC-05, MC-07, MC-10, MC-14, MC-18, MC-24 tot MC-
 | Routes (MIT-24) | Elke route moest zelf `@login_required` hebben | Standaard dicht, met een vaste lijst publieke routes |
 | Fouten (MIT-25) | De standaardpagina van Flask, en geen controle over de log | Een korte melding; de fout in de log, zonder valse regels |
 | Draaien (MIT-26) | De ontwikkelserver van Flask, als root | Gunicorn, als de gebruiker `app`, zonder schrijfrecht op de code |
+| Databaserol (MIT-27) | De app logde in als superuser: tabellen weggooien en rollen maken lukte | `notities_app` mag alleen lezen en schrijven in de eigen tabellen; het wachtwoord van de eigenaar zit niet meer in de app |
 
 ## Hoe het werkt
 
@@ -67,6 +69,10 @@ De details staan in de entries (MC-05, MC-07, MC-10, MC-14, MC-18, MC-24 tot MC-
   - Een onverwachte fout geeft "Er ging iets mis". De fout zelf gaat met traceback naar stderr: lokaal `docker compose logs`, op Azure de log van Container Apps.
   - Het pad gaat als repr de log in, dus een regeleinde in de URL wordt `\n`.
 - **Gewone gebruiker (MIT-26).** De image maakt de systeemgebruiker `app` zonder shell en draait daaronder, met Gunicorn en twee workers. De code is van root, dus de app kan hem lezen maar niet aanpassen.
+- **Databaserol (MIT-27).**
+  - `db/schema.sql` maakt de rol `notities_app`, geen superuser en nergens eigenaar van. Hij krijgt `SELECT`, `INSERT`, `UPDATE` en `DELETE` op de drie tabellen en `USAGE` op de twee sequences: precies wat de app doet.
+  - Lokaal zet `db/app-password.sh` het wachtwoord bij de eerste start van een leeg volume. Het komt uit `APP_DB_PASSWORD` in `.env`, dat `scripts/setup.py` aanmaakt. De app krijgt alleen dat wachtwoord.
+  - Op Azure staat het wachtwoord van de eigenaar in een eigen Key Vault. Alleen de schema-job leest die, met een eigen identiteit. De job maakt het schema in een lege database en zet bij elke start het wachtwoord van de app-rol, dus na een nieuw wachtwoord (`secret_version`) start je hem opnieuw.
 
 ## Waarom het veilig is
 
@@ -82,6 +88,9 @@ De details staan in de entries (MC-05, MC-07, MC-10, MC-14, MC-18, MC-24 tot MC-
 | Geen route per ongeluk open | De test haalt alle routes uit de app en opent ze anoniem | T-80 |
 | Geen details naar buiten, geen valse logregels | Eigen foutpagina's; het pad als repr | T-81 |
 | Overname is geen root | `app`, Gunicorn, geen schrijfrecht op `/app` | T-82 |
+| Overname is geen databasebeheer | `notities_app`: geen tabellen maken of weggooien, geen rollen, geen `COPY` naar een programma | T-19, T-83 |
+| De app kent het wachtwoord van de eigenaar niet | Niet in de omgeving van de app; op Azure in een vault die alleen de schema-job leest | T-84; T-86 na de uitrol |
+| De schema-job mag opnieuw | Het schema alleen in een lege database; het wachtwoord als tekst, niet als SQL | T-85 |
 
 ## Secrets management
 
@@ -90,13 +99,27 @@ Staat in Week 6, onder "Key management en secrets":
 - de gegevenssleutel buiten de database;
 - op Azure in Key Vault, met de geheimen buiten de Terraform-state.
 
-Week 7 voegt de controle bij het starten toe. Een te korte sessiesleutel of een gegevenssleutel van de verkeerde lengte laat de app niet starten (MIT-23).
+Week 7 voegt de controle bij het starten toe. Een te korte sessiesleutel of een gegevenssleutel van de verkeerde lengte laat de app niet starten (MIT-23). En de app krijgt een eigen databasewachtwoord (A-10), zodat dat van de eigenaar (A-06) uit de app kan (MIT-27).
+
+## Database security
+
+Zonder overkill: wat de app nodig heeft, en verder niets.
+
+| Laag | Wat | Waar |
+|---|---|---|
+| Queries | Altijd met parameters, nooit tekst erin geplakt | MIT-02 |
+| Rechten | Een eigen rol met alleen lezen en schrijven in de eigen tabellen | MIT-27 |
+| Wachtwoorden | Het wachtwoord van de eigenaar niet in de app; op Azure in een eigen vault | MIT-27 |
+| Gevoelige kolommen | TOTP-geheim en notities versleuteld, wachtwoorden als Argon2id-hash | MIT-17 tot MIT-19 (Week 6) |
+| Netwerk | Lokaal alleen op het Docker-netwerk, zonder poort naar buiten; op Azure alleen privé, met TLS 1.3 en `verify-full` | B-02, `terraform/database.tf` |
+
+Bewust niet: rechten per rij (row-level security), een audit-log in de database en een eigen schijfsleutel. De app filtert al zelf op `user_id` (MIT-15); wat er gelogd wordt, beslist de logging-stap.
 
 ## Secure coding standard: OWASP Top 10 Proactive Controls (2024)
 
 | Control | In deze app |
 |---|---|
-| C1 Implement Access Control | Eigenaarscontrole op notities (MIT-15), herauthenticatie (MIT-16), standaard dicht (MIT-24) |
+| C1 Implement Access Control | Eigenaarscontrole op notities (MIT-15), herauthenticatie (MIT-16), standaard dicht (MIT-24), een databaserol met minimale rechten (MIT-27) |
 | C2 Use Cryptography to Protect Data | AES-256-GCM voor het TOTP-geheim en de notities, Argon2id voor wachtwoorden (Week 6) |
 | C3 Validate all Input & Handle Exceptions | Parameterized queries (MIT-02), lengtegrenzen (MIT-04), invoer en configuratie (MIT-22, MIT-23), veilig falen (MIT-25) |
 | C4 Address Security from the Start | Elke feature begint bij de misuse cases in de BoK; de uitgewerkte dreigingsanalyse en het ontwerp (Week 3 en 5) volgen aan het eind |
@@ -111,7 +134,9 @@ Week 7 voegt de controle bij het starten toe. Een te korte sessiesleutel of een 
 
 - **Security-events worden nog niet gelogd.** Mislukte logins en blokkades staan nergens. Dat komt bij Logging en monitoring, en werkt dan lokaal en op Azure hetzelfde, via stdout.
 - **Registreren is onbeperkt (MC-10),** en de melding "al in gebruik" verraadt namen (MC-09).
-- **De app logt nog in als eigenaar van de database (MC-08).** Een eigen rol volgt tussendoor, bij database security.
+- **De app-rol mag nog alles wat de app mag (MC-08).** Na een overname kan een aanvaller alle rijen lezen, wijzigen en wissen, bijvoorbeeld tweestapsverificatie uitzetten. Notities en geheimen blijven wel versleuteld.
+- **Lokaal staan beide databasewachtwoorden in `.env`.** Wie de ontwikkelmachine heeft, heeft ze allebei. De scheiding helpt tegen een overname van de app, niet tegen een overname van de machine.
+- **Een bestaand volume krijgt de rol niet.** `db/schema.sql` draait alleen in een leeg volume. Wie de stack al had: `docker compose down -v` (wist de lokale data) en daarna `python scripts/setup.py`.
 - **De CSP staat scripts uit eigen bestanden toe.** Wie daar iets in krijgt, heeft de server al.
 - **`TRUSTED_PROXIES` controleert alleen onzin.** Het juiste getal is kennis over de uitrol: Terraform zet 1 voor Container Apps.
 - **Het bestandssysteem van de container is niet alleen-lezen.** De code is wel beschermd, maar bijvoorbeeld `/tmp` niet.
@@ -127,6 +152,8 @@ Week 7 voegt de controle bij het starten toe. Een te korte sessiesleutel of een 
 - **De HEAD-fout is gevonden bij het maken van de voor-screenshots.** `curl -I` gaf 400 op de inlogpagina. De oorzaak: de routes keken of het verzoek GET was, en deden anders wat bij POST hoort. Nu is het andersom, zoals OWASP aanraadt: alleen een POST verandert iets.
 - **16 KiB.** Het grootste echte formulier is een notitie van 250 tekens. Ruim genoeg, en een verzoek van 5 MB kost niets meer.
 - **Gunicorn met twee workers, nog zonder access-log.** Twee workers passen bij 0,25 vCPU op Container Apps. Welke verzoeken worden gelogd, beslist de logging-stap.
+- **Een eigen vault voor het wachtwoord van de eigenaar, geen rechten per geheim.** Microsoft raadt een vault per applicatie aan en geen rollen op losse geheimen; een van de twee uitzonderingen die Microsoft noemt, is een geheim dat twee applicaties delen. Die gebruiken we één keer: de schema-job leest ook het wachtwoord van de app-rol.
+- **De rol in `schema.sql`, het wachtwoord erbuiten.** `schema.sql` staat in git; het wachtwoord komt uit `.env` of Key Vault. Lokaal zet psql het met `:'password'` als letterlijke tekst, op Azure de job met `sql.Literal`.
 - **Geen bonusonderwerpen.** Compileropties zijn voor Python niet van toepassing. Het ondertekenen van de container-image (bijvoorbeeld met cosign) past bij de pipeline in Week 8.
 
 ## Screenshots
@@ -144,6 +171,7 @@ Voor het verslag, lokaal in `screenshots/Week 7 Application Security/` (niet in 
 | Standaard dicht | geen (er stond geen route open) | bewezen met T-80 | `week7_code_5_standaard_dicht` |
 | Veilig falen | geen | `week7_na_fout_1_korte_melding`, `_2_in_de_log` | `week7_code_6_veilig_falen` |
 | Root en ontwikkelserver | `week7_voor_root_1_ontwikkelserver_als_root` | `week7_na_root_1_gunicorn_als_app` | `week7_code_6_veilig_falen` |
+| Databaserol | `week7_voor_rol_1_superuser` | `week7_na_rol_1_eigen_rol` | `week7_code_7_databaserol` |
 
 ## Bronnen
 
@@ -156,3 +184,6 @@ Opgehaald en gecontroleerd op 17-10-2026.
 - OWASP Logging Cheat Sheet: https://cheatsheetseries.owasp.org/cheatsheets/Logging_Cheat_Sheet.html
 - Docker, Building best practices (`USER`): https://docs.docker.com/build/building/best-practices/
 - Werkzeug 3.1.9, `ProxyFix` (broncode): https://github.com/pallets/werkzeug/blob/3.1.9/src/werkzeug/middleware/proxy_fix.py
+- PostgreSQL 18, `COPY` (alleen superuser of `pg_*_server_*` voor een bestand of programma): https://www.postgresql.org/docs/18/sql-copy.html
+- PostgreSQL 18, Schemas (geen `CREATE` voor `PUBLIC` op `public` sinds 15): https://www.postgresql.org/docs/18/ddl-schemas.html
+- Microsoft, Key Vault met Azure RBAC (een vault per applicatie, geen rollen per geheim): https://learn.microsoft.com/en-us/azure/key-vault/general/rbac-guide
