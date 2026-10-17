@@ -56,4 +56,4 @@ Still open: security events are not logged yet, the database role can still chan
 
 ## License
 
-MIT, see `LICENSE`. That covers the code, the BoK and the screenshots in this repo.
+MIT, see `LICENSE`. That covers the code and the BoK.
