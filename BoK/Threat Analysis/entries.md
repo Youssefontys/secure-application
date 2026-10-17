@@ -238,9 +238,9 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
   - AND 1. Handelen als het slachtoffer
     - OR  1a. Met een gestolen of gekopieerde sessiecookie (MC-04)
     - OR  1b. Via een formulier op een andere site (MC-05)
-  - AND 2. Een nieuw wachtwoord instellen op `/account/password`; sinds MIT-16 alleen met het huidige wachtwoord (AU-04)
-- Mitigaties: MIT-16 (stap 2: het huidige wachtwoord, met een limiet per account)
-- Restrisico: met alleen de sessie lukt het niet meer. Wie ook het wachtwoord kent (MC-01, MC-03), komt er wel door, en dan wordt een tijdelijke sessie een blijvende overname. Wijzigt het slachtoffer zelf het wachtwoord of logt het uit, dan vervalt de sessie van de aanvaller wel (MIT-09). Andersom ook: wijzigt de aanvaller het wachtwoord, dan vervallen alle sessies van het slachtoffer. Omdat tweestapsverificatie verplicht is, blijft de overname beperkt tot deze sessie: de aanvaller kan de tweede factor niet vervangen zonder code (AU-06), dus later opnieuw inloggen vraagt nog steeds de app van het slachtoffer
+  - AND 2. Een nieuw wachtwoord instellen op `/account/password`; sinds MIT-16 alleen met het huidige wachtwoord, en sinds 72ddaed ook met een code uit de app (AU-04)
+- Mitigaties: MIT-16 (stap 2: het huidige wachtwoord en een code uit de app, elk met een limiet per account)
+- Restrisico: met alleen de sessie, of de sessie en het wachtwoord, lukt het niet meer (T-98). Wie ook de telefoon of het TOTP-geheim heeft (MC-17), komt er wel door, en dan wordt een tijdelijke sessie een blijvende overname. Wijzigt het slachtoffer zelf het wachtwoord of logt het uit, dan vervalt de sessie van de aanvaller wel (MIT-09). Andersom ook: wijzigt de aanvaller het wachtwoord, dan vervallen alle sessies van het slachtoffer. Omdat tweestapsverificatie verplicht is, blijft de overname beperkt tot deze sessie: de aanvaller kan de tweede factor niet vervangen zonder code (AU-06), dus later opnieuw inloggen vraagt nog steeds de app van het slachtoffer
 - Status: gebouwd
 - Sinds: 782f0e2
 
@@ -253,9 +253,9 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
   - AND 1. Handelen als het slachtoffer
     - OR  1a. Met een gestolen of gekopieerde sessiecookie (MC-04)
     - OR  1b. Via een formulier op een andere site (MC-05); de bevestiging uit `forms.js` komt dan niet in beeld
-  - AND 2. `POST /account/delete`; sinds MIT-16 alleen met het huidige wachtwoord (AU-04)
-- Mitigaties: MIT-16 (stap 2)
-- Restrisico: wie ook het wachtwoord kent, verwijdert het account wel; dat is onomkeerbaar, er is geen backup en geen herstel
+  - AND 2. `POST /account/delete`; sinds MIT-16 alleen met het huidige wachtwoord, en sinds 72ddaed ook met een code uit de app (AU-04)
+- Mitigaties: MIT-16 (stap 2: wachtwoord en code)
+- Restrisico: wie het wachtwoord én de telefoon heeft, verwijdert het account wel; dat is onomkeerbaar, er is geen backup en geen herstel
 - Status: gebouwd
 - Sinds: b03197a
 
@@ -587,10 +587,10 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 
 ### MIT-16 Herauthenticatie bij wachtwoord wijzigen en account verwijderen
 - Houdt tegen: MC-12 stap 2 en MC-13 stap 2; ook via een andere site (MC-05) lukken deze twee acties niet meer, want die site kent het wachtwoord niet
-- Wat: beide formulieren vragen het huidige wachtwoord, en `passwords.is_current()` controleert het. Dat is de enige plek; sinds MIT-19 met Argon2id. Elke poging telt vóór de controle, per account (`reauth_account`): na 5 fouten in 15 minuten wordt de volgende geweigerd, 15 minuten, verdubbelend tot 24 uur. Per account mag hier, want deze stap is alleen met een sessie te bereiken; zonder limiet kan iemand met een gestolen sessie het wachtwoord raden. Bij wachtwoord wijzigen gaat de sterkte-eis (MIT-13) eerst, zodat een fout in het nieuwe wachtwoord geen poging kost. Het OWASP Authentication Cheat Sheet vraagt de huidige gegevens opnieuw voor het wijzigen van gevoelige accountgegevens, zoals het wachtwoord
-- Waar: `refuse_without_password()`, `change_password()` en `delete_account()` in `app/account.py`; `is_current()` in `app/passwords.py`
+- Wat: beide formulieren vragen het huidige wachtwoord én een code uit de app, zodat wie alleen het wachtwoord heeft, hier niets kan (sinds 72ddaed, T-98). De code loopt via `check_code()`, met dezelfde blokkade en hetzelfde eenmalige gebruik als bij het inloggen (MIT-06, MIT-07). Het wachtwoord controleert `passwords.is_current()`. Dat is de enige plek; sinds MIT-19 met Argon2id. Elke poging telt vóór de controle, per account (`reauth_account`): na 5 fouten in 15 minuten wordt de volgende geweigerd, 15 minuten, verdubbelend tot 24 uur. Per account mag hier, want deze stap is alleen met een sessie te bereiken; zonder limiet kan iemand met een gestolen sessie het wachtwoord raden. Bij wachtwoord wijzigen gaat de sterkte-eis (MIT-13) eerst, zodat een fout in het nieuwe wachtwoord geen poging kost. Het OWASP Authentication Cheat Sheet vraagt de huidige gegevens opnieuw voor het wijzigen van gevoelige accountgegevens, zoals het wachtwoord
+- Waar: `refuse_without_both_factors()`, `change_password()` en `delete_account()` in `app/account.py`; `is_current()` in `app/passwords.py`; `check_code()` in `app/auth.py`
 - Status: gebouwd
-- Sinds: f40781b
+- Sinds: f40781b; met code sinds 72ddaed
 
 ### MIT-17 Versleuteling van het TOTP-geheim
 - Houdt tegen: MC-17 stap 1

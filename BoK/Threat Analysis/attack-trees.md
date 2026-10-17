@@ -27,6 +27,7 @@ Notities van een ander lezen of wijzigen
   OR  Het hele account van het slachtoffer verwijderen (MC-13)            [MIT-16, deels]
         AND handelen als het slachtoffer (cookie van MC-04, of via MC-05)
         AND het wachtwoord kennen (MC-01, MC-03)
+        AND een code uit zijn app (MC-15 tot MC-17)                        [MIT-16]
   OR  Als de gebruiker handelen (zie doel 2)
 ```
 
@@ -65,6 +66,7 @@ Account overnemen
   OR  Het wachtwoord zelf wijzigen (MC-12)                                 [MIT-16, deels]
         AND handelen als het slachtoffer (cookie van MC-04, of via MC-05)
         AND het huidige wachtwoord kennen (MC-01, MC-03)
+        AND een code uit zijn app (MC-15 tot MC-17)                        [MIT-16]
   OR  Via SQL-injectie het wachtwoord laten zien (MC-06)                   [MIT-02]
 ```
 
