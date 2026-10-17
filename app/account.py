@@ -59,7 +59,7 @@ def setup_2fa():
         return redirect(url_for("account.setup_2fa"))
     # De sleutel in groepjes van vier, om over te typen als scannen niet lukt.
     grouped = " ".join(secret[i:i + 4] for i in range(0, len(secret), 4))
-    if request.method == "GET":
+    if request.method != "POST":
         return render_template("setup_2fa.html", secret=grouped)
 
     error = check_code(g.user.id)

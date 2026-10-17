@@ -86,7 +86,7 @@ def logged_out_only(view):
 @bp.route("/register", methods=["GET", "POST"])
 @logged_out_only
 def register():
-    if request.method == "GET":
+    if request.method != "POST":
         return render_template("auth.html")
 
     username = request.form.get("username", "").strip()
@@ -108,7 +108,8 @@ def register():
 @bp.route("/login", methods=["GET", "POST"])
 @logged_out_only
 def login():
-    if request.method == "GET":
+    # Alleen POST telt als poging; HEAD viel eerst onder "niet GET" en telde mee voor de limiet.
+    if request.method != "POST":
         return render_template("auth.html")
 
     username = request.form.get("username", "").strip()
@@ -160,7 +161,7 @@ def login_code():
     user_id = pending_login()
     if user_id is None:
         return redirect(url_for("auth.login"))
-    if request.method == "GET":
+    if request.method != "POST":
         return render_template("login_code.html")
 
     error = check_code(user_id)
@@ -196,7 +197,7 @@ def login_recover():
     user_id = pending_login()
     if user_id is None:
         return redirect(url_for("auth.login"))
-    if request.method == "GET":
+    if request.method != "POST":
         return render_template("login_recover.html")
 
     recovery_limit = throttle.limit("recovery_account", user_id)
@@ -225,7 +226,7 @@ def login_recover():
 @bp.route("/login/forgot", methods=["GET", "POST"])
 @logged_out_only
 def forgot_password():
-    if request.method == "GET":
+    if request.method != "POST":
         return render_template("login_forgot.html")
 
     username = request.form.get("username", "").strip()

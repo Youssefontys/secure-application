@@ -75,7 +75,7 @@ def own_note(note_id):
 @login_required
 def edit_note(note_id):
     note = own_note(note_id)
-    if request.method == "GET":
+    if request.method != "POST":
         return render_template("edit_note.html", title=note.title, body=note.body)
 
     title, body, error = read_note_form()
