@@ -54,7 +54,7 @@ The baseline plus the first security features, each with an entry in `BoK/Threat
 - a CSRF token on every form, strict security headers, input and configuration checks, every route closed by default, safe failure, gunicorn as an unprivileged user, and an own database role that can only read and write the app's tables (MIT-20 to MIT-27); see `BoK/Subjects/Week 7 Application Security.md`
 - taken from BOK-SECENGINEER and an audit: no page in the browser cache, sessions of at most 8 hours, a limit on registrations and notes, every security event as a JSON line in the log, an owner-only `.env`, and Dependabot (MIT-28 to MIT-33); see `BoK/Subjects/Week 6 Logging.md`
 
-Still open: nobody is alerted and the log is not kept on Azure yet (MC-28), the database role can still change every row the app can (MC-08), and the data key is read from `.env` until Key Vault on Azure (MC-22). Not deployed yet.
+On Azure the log is kept for 30 days in Log Analytics (MIT-31). Still open: nobody is alerted (MC-28), the database role can still change every row the app can (MC-08), and the data key is read from `.env` until Key Vault on Azure (MC-22). Not deployed yet.
 
 ## License
 
