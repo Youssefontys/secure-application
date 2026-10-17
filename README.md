@@ -10,7 +10,7 @@ Every feature that is added has an entry in `BoK/`: the use case, the misuse cas
 
 ## Structure
 
-- `app/` - the notes application, one file per part: `app.py` creates the app, `db.py` talks to the database, `auth.py` handles logging in (including the second step), `account.py` the profile, `notes.py` the notes, `totp.py` the TOTP calculation, `throttle.py` the login limits, `passwords.py` the rule for a new password and the Argon2id hashing, `encryption.py` the encryption of the TOTP secret and the notes. The website (HTML, CSS, JS) is in `app/web/`
+- `app/` - the notes application, one file per part: `app.py` creates the app, `db.py` talks to the database, `auth.py` handles logging in (including the second step), `account.py` the profile, `notes.py` the notes, `totp.py` the TOTP calculation, `throttle.py` the login limits, `passwords.py` the rule for a new password and the Argon2id hashing, `encryption.py` the encryption of the TOTP secret and the notes, `csrf.py` the CSRF token of every form. The website (HTML, CSS, JS) is in `app/web/`
 - `db/` - the database schema, run by the database container on first start
 - `BoK/Architecture/` - components, data flows, trust boundaries and the authentication and authorization points
 - `BoK/Threat Analysis/` - use cases, misuse cases, mitigations, attack trees and the tests that go with them
@@ -41,5 +41,6 @@ The baseline plus the first security features, each with an entry in `BoK/Threat
 - an ownership check on every note (MIT-15), and the current password before changing it or deleting the account (MIT-16)
 - the TOTP secret and the notes encrypted with AES-256-GCM, with the key outside the database (MIT-17, MIT-18), and passwords hashed with Argon2id (MIT-19); see `BoK/Subjects/Week 6 Encryption.md`
 - a hackstand for the hacking week, off by default (MIT-10)
+- a CSRF token on every form, strict security headers, input and configuration checks, every route closed by default, safe failure, and gunicorn as an unprivileged user (MIT-20 to MIT-26); see `BoK/Subjects/Week 7 Application Security.md`
 
-Still open: no CSRF protection (MC-05), the Flask development server runs as root (MC-14), and the data key is read from `.env` until Key Vault on Azure (MC-22). Not safe to expose to the internet.
+Still open: security events are not logged yet, the app uses the database owner role (MC-08), and the data key is read from `.env` until Key Vault on Azure (MC-22). Not deployed yet.
