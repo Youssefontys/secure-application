@@ -19,17 +19,24 @@ Every feature that is added has an entry in `BoK/`: the use case, the misuse cas
 - `scripts/` - `setup.py` to deploy (locally now, Azure follows), and the Terraform state bootstrap scripts imported from BOK-SECENGINEER
 - `terraform/` - Azure: Container Apps, PostgreSQL B1ms in a private network and Key Vault; secrets stay out of the Terraform state. Not deployed yet
 
+## Requirements
+
+- **Locally:** Docker with Compose v2, and Python 3 for `scripts/setup.py`.
+- **Azure:** an Azure subscription in which you may create resources and role assignments, the Azure CLI, Terraform 1.11 or newer, Python 3, and Docker to build the image. The GitHub CLI (`gh`) is optional, for the pipeline secrets.
+
+`setup.py` checks these first and names what is missing.
+
 ## Run it
 
 ```sh
-python scripts/setup.py lokaal   # creates missing secrets in .env and starts the stack
+python scripts/setup.py
 ```
 
-On Linux or macOS the command is often `python3`; the script works the same on Windows and Linux. Or by hand: copy `.env.example` to `.env`, fill in the three values, and run `docker compose up --build`.
+It asks where to deploy (local or Azure) and whether to turn on the hackstand for the hacking week, with a class behind one school address. Locally it creates missing secrets in `.env` and starts the stack; Azure does not deploy automatically yet, so it prints the exact steps. With `python scripts/setup.py lokaal` and no terminal (as in CI) it asks nothing and keeps what is in `.env`. On Linux or macOS the command is often `python3`; the script works the same on Windows and Linux.
+
+Or by hand: copy `.env.example` to `.env`, fill in the three values, and run `docker compose up --build`.
 
 Then open http://127.0.0.1:5000.
-
-For the hacking week, with a class behind one school address: set `THROTTLE_IP_MODE=hackweek` and `THROTTLE_PAIR_EXEMPT_USERS=hackingweek` in `.env` (see `.env.example`). Leave both out the rest of the time.
 
 ## Status
 
