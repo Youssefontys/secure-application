@@ -5,7 +5,7 @@ import os
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-from flask import Flask
+from flask import Flask, render_template
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 import account
@@ -37,6 +37,8 @@ if setting("TRUSTED_PROXIES", "0", ("0", "1")) == "1":
 app.config["SESSION_COOKIE_SECURE"] = setting("HTTPS_ONLY", "1", ("0", "1")) == "1"
 # Niet meesturen met een formulier van een andere site (MC-05); het CSRF-token is de tweede laag.
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+# Het grootste formulier is een notitie van 250 tekens; meer wordt geweigerd voordat het is ingelezen (MC-10).
+app.config["MAX_CONTENT_LENGTH"] = 16 * 1024
 
 for blueprint in (auth.bp, account.bp, notes.bp):
     app.register_blueprint(blueprint)
@@ -45,6 +47,12 @@ app.jinja_env.globals.update(
     TITLE_MAX=notes.TITLE_MAX, BODY_MAX=notes.BODY_MAX,
     PASSWORD_MIN=passwords.PASSWORD_MIN, PASSWORD_MAX=passwords.PASSWORD_MAX,
 )
+
+
+# Te groot: 413 met een korte melding, zonder dat de app het verzoek leest (MIT-22).
+@app.errorhandler(413)
+def too_large(error):
+    return render_template("error.html", message="Dit verzoek is te groot."), 413
 
 
 @app.template_filter("date")

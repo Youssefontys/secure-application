@@ -11,7 +11,7 @@
   <div class="card">
     <form method="post">
       <label>Gebruikersnaam
-        <input name="username" autocomplete="username" required>
+        <input name="username" autocomplete="username" required maxlength="20" pattern="[A-Za-z0-9_]{3,20}" title="3 tot 20 tekens: letters, cijfers en _">
       </label>
       {% if login %}
         <label>Wachtwoord

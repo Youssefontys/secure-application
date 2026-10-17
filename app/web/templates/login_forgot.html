@@ -10,7 +10,7 @@
     <p class="hint">Met je herstelcode en de code uit je authenticator-app stel je een nieuw wachtwoord in. Daarna krijg je een nieuwe herstelcode.</p>
     <form method="post">
       <label>Gebruikersnaam
-        <input name="username" autocomplete="username" value="{{ request.form.get('username', '') }}" required autofocus>
+        <input name="username" autocomplete="username" value="{{ request.form.get('username', '') }}" required autofocus maxlength="20" pattern="[A-Za-z0-9_]{3,20}" title="3 tot 20 tekens: letters, cijfers en _">
       </label>
       <label>Herstelcode
         <input name="recovery_code" autocomplete="off" spellcheck="false" maxlength="64" required>

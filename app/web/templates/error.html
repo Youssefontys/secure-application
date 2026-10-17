@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Dat lukte niet{% endblock %}
+
+{# Eén korte melding; de details staan alleen in de log (MIT-25). #}
+{% block content %}
+  <h1>Dat lukte niet</h1>
+
+  <div class="card">
+    <p>{{ message }}</p>
+    <p class="hint"><a href="{{ url_for('notes.index') }}">Terug naar het begin</a></p>
+  </div>
+{% endblock %}

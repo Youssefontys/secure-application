@@ -26,6 +26,8 @@ CodeError = namedtuple("CodeError", "message minutes")
 # Zonder tweestapsverificatie kom je alleen hier (MIT-12).
 SETUP_ENDPOINTS = {"account.setup_2fa", "account.qr_2fa"}
 # Eén melding voor elke fout bij wachtwoord vergeten, ook voor een onbekende naam (MC-21).
+# 3 tot 20 tekens: letters, cijfers en _ (MIT-22). Bij inloggen telt een andere naam als onbekend.
+USERNAME = re.compile(r"[A-Za-z0-9_]{3,20}")
 FORGOT_WRONG = "Gebruikersnaam, herstelcode of code klopt niet."
 
 
@@ -93,6 +95,8 @@ def register():
     password = request.form.get("password", "")
     if not username or not password:
         return render_template("auth.html", error="Vul een gebruikersnaam en wachtwoord in."), 400
+    if not USERNAME.fullmatch(username):
+        return render_template("auth.html", error="Kies een gebruikersnaam van 3 tot 20 tekens: letters, cijfers en _."), 400
     error = passwords.password_problem(password)
     if error:
         return render_template("auth.html", error=error), 400
@@ -119,7 +123,9 @@ def login():
     minutes = throttle.attempt(*limits)
     if minutes:
         return render_template("auth.html", error=throttle.message(minutes)), *throttle.refusal(minutes)
-    row = query("SELECT id, password_hash, totp_enabled, session_version FROM users WHERE username = %s", (username,), one=True)
+    row = USERNAME.fullmatch(username) and query(
+        "SELECT id, password_hash, totp_enabled, session_version FROM users WHERE username = %s", (username,), one=True,
+    )
     if not passwords.matches(row and row.password_hash, password):
         return render_template("auth.html", error="Onjuiste gebruikersnaam of wachtwoord."), 400
     throttle.succeeded(*limits)
@@ -239,7 +245,9 @@ def forgot_password():
     minutes = throttle.attempt(*limits)
     if minutes:
         return render_template("login_forgot.html", error=throttle.message(minutes)), *throttle.refusal(minutes)
-    user = query("SELECT id, recovery_hash FROM users WHERE username = %s AND totp_enabled", (username,), one=True)
+    user = USERNAME.fullmatch(username) and query(
+        "SELECT id, recovery_hash FROM users WHERE username = %s AND totp_enabled", (username,), one=True,
+    )
     given = hash_recovery_code(request.form.get("recovery_code", ""))
     if not (user and user.recovery_hash and hmac.compare_digest(given, user.recovery_hash)):
         return render_template("login_forgot.html", error=FORGOT_WRONG), 400
