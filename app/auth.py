@@ -34,9 +34,9 @@ USERNAME = re.compile(r"[A-Za-z0-9_]{3,20}")
 FORGOT_WRONG = "Gebruikersnaam, herstelcode of code klopt niet."
 
 
-# Een getypte naam alleen in de log als hij aan USERNAME voldoet; anders zet een aanvaller er van alles in (MIT-31).
-def logged_name(username):
-    return username if USERNAME.fullmatch(username) else None
+# Het doelwit in de log, alleen als het account bestaat: een getypte naam kan ook een wachtwoord zijn (MIT-31).
+def target(row, username):
+    return {"user_id": row.id, "username": username} if row else {"known": False}
 
 
 # Zet de ingelogde gebruiker in g.user, maar alleen als de sessieversie klopt (MIT-09).
@@ -108,7 +108,6 @@ def register():
         return render_template("auth.html", error=error), 400
     # Pas vlak voor het hashen tellen: alleen een registratie die echt rekent, telt mee (MIT-30, MC-10).
     if minutes := throttle.attempt(throttle.limit("register_ip", throttle.client_ip(request.remote_addr))):
-        events.event("register_blocked", minutes=minutes)
         error = f"Te veel nieuwe accounts vanaf dit adres. Probeer het over {minutes} minuten opnieuw."
         return render_template("auth.html", error=error), *throttle.refusal(minutes)
 
@@ -135,13 +134,12 @@ def login():
     # Tellen per adres en per naam per adres (MIT-10), ook voor onbekende namen: verraadt niets.
     limits = throttle.password_limits(username, request.remote_addr)
     if minutes := throttle.attempt(*limits):
-        events.event("login_blocked", username=logged_name(username), minutes=minutes)
         return render_template("auth.html", error=throttle.message(minutes)), *throttle.refusal(minutes)
     row = USERNAME.fullmatch(username) and query(
         "SELECT id, password_hash, totp_enabled, session_version FROM users WHERE username = %s", (username,), one=True,
     )
     if not passwords.matches(row and row.password_hash, password):
-        events.event("login_failed", username=logged_name(username), user_id=row.id if row else None)
+        events.event("login_failed", **target(row, username))
         return render_template("auth.html", error="Onjuiste gebruikersnaam of wachtwoord."), 400
     throttle.succeeded(*limits)
     passwords.rehash_if_needed(row.id, row.password_hash, password)
@@ -224,7 +222,6 @@ def login_recover():
 
     recovery_limit = throttle.limit("recovery_account", user_id)
     if minutes := throttle.attempt(recovery_limit):
-        events.event("recovery_blocked", user_id=user_id, minutes=minutes)
         return render_template("login_recover.html", error=throttle.message(minutes)), *throttle.refusal(minutes)
     given = hash_recovery_code(request.form.get("code", ""))
     stored = query("SELECT recovery_hash FROM users WHERE id = %s", (user_id,), one=True)
@@ -260,14 +257,13 @@ def forgot_password():
     # Bereikbaar zonder wachtwoord, dus dezelfde tellers als bij inloggen: per adres en per naam per adres.
     limits = throttle.password_limits(username, request.remote_addr)
     if minutes := throttle.attempt(*limits):
-        events.event("forgot_blocked", username=logged_name(username), minutes=minutes)
         return render_template("login_forgot.html", error=throttle.message(minutes)), *throttle.refusal(minutes)
     user = USERNAME.fullmatch(username) and query(
         "SELECT id, recovery_hash FROM users WHERE username = %s AND totp_enabled", (username,), one=True,
     )
     given = hash_recovery_code(request.form.get("recovery_code", ""))
     if not (user and user.recovery_hash and hmac.compare_digest(given, user.recovery_hash)):
-        events.event("forgot_failed", username=logged_name(username), user_id=user.id if user else None)
+        events.event("forgot_failed", **target(user, username))
         return render_template("login_forgot.html", error=FORGOT_WRONG), 400
     throttle.succeeded(*limits)
     # De herstelcode klopt; pas nu telt een foute code per account, met de blokkade van de codestap (MIT-06).
@@ -309,7 +305,6 @@ def check_code(user_id):
         return CodeError("Er is geen tweestapsverificatie ingesteld.", 0)
     # Op slot: dan wordt ook de juiste code geweigerd (MIT-06).
     if minutes := throttle.attempt(code_limit):
-        events.event("totp_blocked", user_id=user_id, minutes=minutes)
         return CodeError(throttle.message(minutes), minutes)
     step = totp.matching_step(secret, request.form.get("code", ""))
     # Eenmalig gebruik (MIT-07) en blokkade in één UPDATE: van twee verzoeken wint er één.

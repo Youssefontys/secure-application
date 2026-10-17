@@ -6,6 +6,7 @@ import ipaddress
 import os
 from collections import namedtuple
 
+import events
 from db import query
 
 Policy = namedtuple("Policy", "max_failures window_minutes lock_minutes max_lock_minutes")
@@ -106,6 +107,8 @@ def attempt(*limits):
              "lock": policy.lock_minutes, "max": policy.max_lock_minutes}, one=True,
         )
         if row.locked_now:
+            # Eén logregel per blokkade, niet per geweigerde poging: anders vult een script de log (MIT-31).
+            events.event("lockout_started", scope=kind, minutes=int(row.minutes))
             # Bij een blokkade (zeldzaam) ook oude tellers opruimen: venster en blokkade een dag voorbij.
             query("DELETE FROM auth_throttle WHERE window_start < now() - interval '1 day'"
                   " AND (locked_until IS NULL OR locked_until < now() - interval '1 day')")

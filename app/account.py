@@ -108,7 +108,6 @@ def reset_2fa():
 def refuse_without_both_factors():
     reauth_limit = throttle.limit("reauth_account", g.user.id)
     if minutes := throttle.attempt(reauth_limit):
-        events.event("reauth_blocked", minutes=minutes)
         return render_account(throttle.message(minutes), *throttle.refusal(minutes))
     if not passwords.is_current(g.user.id, request.form.get("current_password", "")):
         events.event("reauth_failed")
