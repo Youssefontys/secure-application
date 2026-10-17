@@ -1,4 +1,5 @@
-FROM python:3.15-slim
+# Vast op versie en digest (MIT-03): een tag als 3.15-slim schuift mee met elke nieuwe build van de image.
+FROM python:3.15.0-slim-trixie@sha256:2da676046630d7bf14c6764ae1143dc7fa0377a53f94bf5a642f0b214aca5bce
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
