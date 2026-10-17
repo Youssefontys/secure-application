@@ -105,7 +105,7 @@ def reset_2fa():
 
 
 # Het huidige wachtwoord én een code uit de app opnieuw vragen (MIT-16): wie alleen de sessie of alleen het
-# wachtwoord heeft, kan het wachtwoord niet wijzigen en het account niet verwijderen. None als beide kloppen.
+# wachtwoord heeft, kan wachtwoord, account en tweede factor niet aanpassen. None als beide kloppen.
 def refuse_without_both_factors():
     reauth_limit = throttle.limit("reauth_account", g.user.id)
     if minutes := throttle.attempt(reauth_limit):
