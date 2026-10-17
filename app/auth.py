@@ -27,9 +27,9 @@ CodeError = namedtuple("CodeError", "message minutes")
 SETUP_ENDPOINTS = {"account.setup_2fa", "account.qr_2fa"}
 # De enige routes zonder login; elke andere route is standaard dicht (MIT-24).
 PUBLIC_ENDPOINTS = {"auth.register", "auth.login", "auth.login_code", "auth.login_recover", "auth.forgot_password", "auth.logout", "static"}
-# Eén melding voor elke fout bij wachtwoord vergeten, ook voor een onbekende naam (MC-21).
 # 3 tot 20 tekens: letters, cijfers en _ (MIT-22). Bij inloggen telt een andere naam als onbekend.
 USERNAME = re.compile(r"[A-Za-z0-9_]{3,20}")
+# Eén melding voor elke fout bij wachtwoord vergeten, ook voor een onbekende naam (MC-21).
 FORGOT_WRONG = "Gebruikersnaam, herstelcode of code klopt niet."
 
 
@@ -100,8 +100,7 @@ def register():
         return render_template("auth.html", error="Vul een gebruikersnaam en wachtwoord in."), 400
     if not USERNAME.fullmatch(username):
         return render_template("auth.html", error="Kies een gebruikersnaam van 3 tot 20 tekens: letters, cijfers en _."), 400
-    error = passwords.password_problem(password)
-    if error:
+    if error := passwords.password_problem(password):
         return render_template("auth.html", error=error), 400
 
     try:
@@ -123,8 +122,7 @@ def login():
     password = request.form.get("password", "")
     # Tellen per adres en per naam per adres (MIT-10), ook voor onbekende namen: verraadt niets.
     limits = throttle.password_limits(username, request.remote_addr)
-    minutes = throttle.attempt(*limits)
-    if minutes:
+    if minutes := throttle.attempt(*limits):
         return render_template("auth.html", error=throttle.message(minutes)), *throttle.refusal(minutes)
     row = USERNAME.fullmatch(username) and query(
         "SELECT id, password_hash, totp_enabled, session_version FROM users WHERE username = %s", (username,), one=True,
@@ -173,8 +171,7 @@ def login_code():
     if request.method != "POST":
         return render_template("login_code.html")
 
-    error = check_code(user_id)
-    if error:
+    if error := check_code(user_id):
         return render_template("login_code.html", error=error.message), *throttle.refusal(error.minutes)
     # Pas nu ingelogd; start_session gooit de halve login helemaal weg.
     start_session(user_id, session["pending_version"])
@@ -210,8 +207,7 @@ def login_recover():
         return render_template("login_recover.html")
 
     recovery_limit = throttle.limit("recovery_account", user_id)
-    minutes = throttle.attempt(recovery_limit)
-    if minutes:
+    if minutes := throttle.attempt(recovery_limit):
         return render_template("login_recover.html", error=throttle.message(minutes)), *throttle.refusal(minutes)
     given = hash_recovery_code(request.form.get("code", ""))
     stored = query("SELECT recovery_hash FROM users WHERE id = %s", (user_id,), one=True)
@@ -240,13 +236,11 @@ def forgot_password():
 
     username = request.form.get("username", "").strip()
     password = request.form.get("password", "")
-    problem = passwords.password_problem(password, request.form.get("password_repeat", ""))
-    if problem:
+    if problem := passwords.password_problem(password, request.form.get("password_repeat", "")):
         return render_template("login_forgot.html", error=problem), 400
     # Bereikbaar zonder wachtwoord, dus dezelfde tellers als bij inloggen: per adres en per naam per adres.
     limits = throttle.password_limits(username, request.remote_addr)
-    minutes = throttle.attempt(*limits)
-    if minutes:
+    if minutes := throttle.attempt(*limits):
         return render_template("login_forgot.html", error=throttle.message(minutes)), *throttle.refusal(minutes)
     user = USERNAME.fullmatch(username) and query(
         "SELECT id, recovery_hash FROM users WHERE username = %s AND totp_enabled", (username,), one=True,
@@ -256,8 +250,7 @@ def forgot_password():
         return render_template("login_forgot.html", error=FORGOT_WRONG), 400
     throttle.succeeded(*limits)
     # De herstelcode klopt; pas nu telt een foute code per account, met de blokkade van de codestap (MIT-06).
-    code_error = check_code(user.id)
-    if code_error:
+    if code_error := check_code(user.id):
         error = code_error.message if code_error.minutes else FORGOT_WRONG
         return render_template("login_forgot.html", error=error), *throttle.refusal(code_error.minutes)
     # Alles in één UPDATE: wachtwoord, nieuwe herstelcode, sessies; de oude hash in de WHERE.
@@ -292,8 +285,7 @@ def check_code(user_id):
     if not secret:
         return CodeError("Er is geen tweestapsverificatie ingesteld.", 0)
     # Op slot: dan wordt ook de juiste code geweigerd (MIT-06).
-    minutes = throttle.attempt(code_limit)
-    if minutes:
+    if minutes := throttle.attempt(code_limit):
         return CodeError(throttle.message(minutes), minutes)
     step = totp.matching_step(secret, request.form.get("code", ""))
     # Eenmalig gebruik (MIT-07) en blokkade in één UPDATE: van twee verzoeken wint er één.

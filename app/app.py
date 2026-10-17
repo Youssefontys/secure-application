@@ -94,14 +94,7 @@ def format_date(value, with_time=True):
     return value.strftime("%d-%m-%Y %H:%M" if with_time else "%d-%m-%Y")
 
 
-# Goedemorgen, -middag, -avond of -nacht, naar de Nederlandse tijd.
+# Per blok van zes uur, naar de Nederlandse tijd: 0-6 nacht, 6-12 morgen, 12-18 middag, 18-24 avond.
 @app.template_global()
 def greeting():
-    hour = datetime.now(ZoneInfo(TIMEZONE)).hour
-    if hour < 6:
-        return "Goedenacht"
-    if hour < 12:
-        return "Goedemorgen"
-    if hour < 18:
-        return "Goedemiddag"
-    return "Goedenavond"
+    return ("Goedenacht", "Goedemorgen", "Goedemiddag", "Goedenavond")[datetime.now(ZoneInfo(TIMEZONE)).hour // 6]

@@ -60,8 +60,7 @@ def setup_2fa():
     if request.method != "POST":
         return render_template("setup_2fa.html", secret=grouped)
 
-    error = check_code(g.user.id)
-    if error:
+    if error := check_code(g.user.id):
         return render_template("setup_2fa.html", secret=grouped, error=error.message), *throttle.refusal(error.minutes)
     query("UPDATE users SET totp_enabled = true WHERE id = %s", (g.user.id,))
     # Sessies van vóór de tweede factor zijn met alleen een wachtwoord gestart.
@@ -73,8 +72,7 @@ def setup_2fa():
 @bp.route("/2fa/recovery", methods=["POST"])
 def new_recovery():
     # Vraagt een code uit de app: met alleen de sessie krijg je geen herstelcode (AU-06).
-    error = check_code(g.user.id)
-    if error:
+    if error := check_code(g.user.id):
         return render_account(error.message, *throttle.refusal(error.minutes))
     return render_template("recovery_code.html", code=new_recovery_code(g.user.id), first=False)
 
@@ -95,8 +93,7 @@ def qr_2fa():
 @bp.route("/2fa/reset", methods=["POST"])
 def reset_2fa():
     # Vraagt een code: met alleen de sessie haal je de tweede factor niet weg (AU-06).
-    error = check_code(g.user.id)
-    if error:
+    if error := check_code(g.user.id):
         return render_account(error.message, *throttle.refusal(error.minutes))
     query(
         "UPDATE users SET totp_secret = NULL, totp_enabled = false, totp_last_step = NULL, recovery_hash = NULL"
@@ -111,8 +108,7 @@ def reset_2fa():
 # Het huidige wachtwoord opnieuw vragen, met een limiet per account (MIT-16): None als het klopt.
 def refuse_without_password():
     reauth_limit = throttle.limit("reauth_account", g.user.id)
-    minutes = throttle.attempt(reauth_limit)
-    if minutes:
+    if minutes := throttle.attempt(reauth_limit):
         return render_account(throttle.message(minutes), *throttle.refusal(minutes))
     if not passwords.is_current(g.user.id, request.form.get("current_password", "")):
         return render_account("Je huidige wachtwoord klopt niet.", 400)
@@ -123,11 +119,9 @@ def refuse_without_password():
 @bp.route("/password", methods=["POST"])
 def change_password():
     password = request.form.get("password", "")
-    error = passwords.password_problem(password, request.form.get("password_repeat", ""))
-    if error:
+    if error := passwords.password_problem(password, request.form.get("password_repeat", "")):
         return render_account(error, 400)
-    refused = refuse_without_password()
-    if refused:
+    if refused := refuse_without_password():
         return refused
 
     # Alle andere sessies vervallen (MIT-09).
@@ -139,8 +133,7 @@ def change_password():
 
 @bp.route("/delete", methods=["POST"])
 def delete_account():
-    refused = refuse_without_password()
-    if refused:
+    if refused := refuse_without_password():
         return refused
     # De notities gaan mee via ON DELETE CASCADE; andere sessies vervallen via load_user.
     query("DELETE FROM users WHERE id = %s", (g.user.id,))
