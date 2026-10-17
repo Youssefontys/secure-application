@@ -56,7 +56,11 @@ def read_env():
     return ENV.read_text(encoding="utf-8").splitlines() if ENV.exists() else []
 
 
+# Alleen de eigenaar mag .env lezen (0600), al vóór het schrijven; anders leest elke gebruiker van de machine
+# de sleutels mee (MIT-32). Op Windows zet chmod alleen het alleen-lezen-vlag, en dat blijft uit.
 def write_env(lines):
+    ENV.touch(mode=0o600, exist_ok=True)
+    ENV.chmod(0o600)
     ENV.write_text("\n".join(lines) + "\n", encoding="utf-8", newline="")
 
 
