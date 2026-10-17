@@ -17,10 +17,13 @@ Notities van een ander lezen of wijzigen
               OR  het volume of een backup lezen
         AND de gegevenssleutel hebben (MC-22)                              [open]
   OR  De app overnemen, die de sleutel heeft (MC-11)
-        OR  bekende kwetsbaarheid, niet bijgewerkt                         [open]
+        OR  bekende kwetsbaarheid, niet bijgewerkt                         [MIT-33, deels]
         OR  kwaadaardige nieuwe pakketversie                               [MIT-03]
-        OR  kwetsbaarheid of andere image achter de tag                    [open]
+        OR  kwetsbaarheid of andere image achter de tag                    [MIT-03, MIT-33]
   OR  Script in een notitie laten uitvoeren (MC-07)                       [MIT-01, MIT-21]
+  OR  Op een gedeelde computer na de vorige gebruiker (MC-27)             [MIT-28, MIT-29]
+        OR  na uitloggen op Terug drukken                                  [MIT-28]
+        OR  een sessie waaruit niet is uitgelogd                           [MIT-29, deels]
   OR  Het hele account van het slachtoffer verwijderen (MC-13)            [MIT-16, deels]
         AND handelen als het slachtoffer (cookie van MC-04, of via MC-05)
         AND het wachtwoord kennen (MC-01, MC-03)
@@ -55,7 +58,7 @@ Account overnemen
         AND het account heeft op dat moment geen tweestapsverificatie
   OR  De sessiecookie hebben (MC-04)
         OR  meelezen op het netwerk (geen TLS)                             [open]
-        OR  kopieren van een gedeelde browser                              [open, MIT-09 na uitloggen]
+        OR  kopieren van een gedeelde browser                              [MIT-09 na uitloggen, MIT-29 na 8 uur]
         OR  zelf ondertekenen met de sessiesleutel                         [open]
   OR  Via een andere site handelen met de cookie (MC-05)                   [MIT-20]
   OR  Laten klikken in een onzichtbaar frame (MC-24)                       [MIT-21]
@@ -72,10 +75,19 @@ Dienst onbruikbaar
   OR  Zeer grote of veel verzoeken sturen (MC-10)
         OR  te lange titel of notitie opslaan                              [MIT-04]
         OR  groot verzoek, dat eerst helemaal wordt ingelezen              [MIT-22]
-        OR  veel accounts (elk een Argon2id-hash) of notities aanmaken     [open]
+        OR  veel accounts (elk een Argon2id-hash) of notities aanmaken     [MIT-30]
   OR  Alle notities wissen via MC-02                                       [open]
   OR  De database weggooien na overname van de app (MC-08)                 [MIT-27]
   OR  Alle rijen wissen met de rechten van de app, na overname (MC-08)     [open]
   OR  De ontwikkelserver van Flask overbelasten (MC-14)                    [MIT-26]
   OR  Een gebruiker buitensluiten met de blokkade (MC-18)                  [open]
+```
+
+## Doel 4: aanvallen zonder spoor
+
+```
+Onopgemerkt aanvallen (MC-28)                                              [MIT-31]
+  AND een van de andere aanvallen proberen (raden, CSRF, rijen wijzigen, massaal aanmaken)
+  AND OR  niemand kijkt live mee                                           [open]
+      OR  de log wissen, met beheer over de host of de container            [open]
 ```

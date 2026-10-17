@@ -126,9 +126,9 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
   - OR  1. De cookie meelezen op het netwerk (HTTP, geen TLS, geen `Secure`-vlag)
   - OR  2. De cookie kopieren van een gedeelde of onbeheerde browser
   - OR  3. De sessiesleutel (A-05) bemachtigen en zelf een cookie ondertekenen
-  - AND 4. De cookie blijft geldig tot hij verloopt (standaard 31 dagen). Uitloggen, een nieuw wachtwoord en tweestapsverificatie aanzetten of opnieuw instellen maken hem ongeldig (MIT-09)
-- Mitigaties: MIT-09 (stap 4, zodra de gebruiker uitlogt of een van zijn inloggegevens wijzigt). Verder geen: de `HttpOnly`-vlag staat standaard aan in Flask; dat houdt JavaScript buiten beeld maar stopt stap 1 tot 3 niet
-- Restrisico: een gekopieerde cookie werkt tot de gebruiker uitlogt of zijn wachtwoord of tweestapsverificatie wijzigt, en anders tot 31 dagen. Tweestapsverificatie helpt hier niet: de cookie is van na de code
+  - AND 4. De cookie blijft geldig tot hij verloopt (tot 2f1236e 31 dagen, nu 8 uur). Uitloggen, een nieuw wachtwoord en tweestapsverificatie aanzetten of opnieuw instellen maken hem eerder ongeldig (MIT-09)
+- Mitigaties: MIT-09 (stap 4, zodra de gebruiker uitlogt of een van zijn inloggegevens wijzigt). MIT-29 (stap 4: hooguit 8 uur, T-90). Verder geen: de `HttpOnly`-vlag staat standaard aan in Flask; dat houdt JavaScript buiten beeld maar stopt stap 1 tot 3 niet
+- Restrisico: een gekopieerde cookie werkt tot de gebruiker uitlogt of zijn wachtwoord of tweestapsverificatie wijzigt, en anders tot 8 uur. Tweestapsverificatie helpt hier niet: de cookie is van na de code
 - Status: open
 - Sinds: baseline
 
@@ -209,10 +209,10 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
   - OR  1. Zeer grote formulieren sturen. Titel en notitie hebben een lengtegrens (MIT-04), maar het verzoek wordt eerst helemaal ingelezen: er is geen `MAX_CONTENT_LENGTH`, en de standaard `MAX_FORM_MEMORY_SIZE` van Flask (500 kB) hield een gewoon formulier van 5 MB niet tegen (T-21). Gebruikersnaam en wachtwoord hebben geen lengtegrens
   - OR  2. Onbeperkt veel accounts aanmaken
   - OR  3. Onbeperkt veel notities aanmaken en tonen
-- Mitigaties: MIT-22 (stap 1: een verzoek boven 16 KiB krijgt 413 voordat het is ingelezen, en een gebruikersnaam is hoogstens 20 tekens). MIT-04 (titel en notitie). Nog geen (stap 2 en 3)
-- Restrisico: het aantal accounts en notities is onbeperkt. Sinds MIT-19 kost elke registratie, login en wachtwoordwijziging 19 MiB en een Argon2id-berekening; inloggen is begrensd (MIT-10), registreren niet, dus veel registraties tegelijk kunnen geheugen en rekentijd opmaken
-- Status: open
-- Sinds: baseline
+- Mitigaties: MIT-22 (stap 1: een verzoek boven 16 KiB krijgt 413 voordat het is ingelezen, en een gebruikersnaam is hoogstens 20 tekens). MIT-04 (titel en notitie). MIT-30 (stap 2: 10 nieuwe accounts per uur per adres; stap 3: 25 notities per account)
+- Restrisico: wie veel adressen heeft, maakt per adres 10 accounts per uur, elk met 25 notities. Sinds MIT-19 kost elke registratie, login en wachtwoordwijziging 19 MiB en een Argon2id-berekening. Voor 5d0f1d0 gingen 15 registraties vanaf één adres en 30 notities voor één account allemaal door, en werd `/login` voor anderen trager (15 naar 66 ms met vier scripts tegelijk)
+- Status: gebouwd
+- Sinds: baseline; begrensd sinds 5d0f1d0
 
 ### MC-11 Een kwetsbare of kwaadaardige afhankelijkheid
 - Aanvallersdoel: code uitvoeren in de app of de database zonder zelf een fout in onze code te vinden
@@ -224,8 +224,8 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
   - OR  2. Een kwaadaardige nieuwe versie van een pakket komt bij de volgende build vanzelf mee
   - OR  3. Een kwetsbaarheid in de base images (`python:3.15-slim`, `postgres:18`), bijvoorbeeld in de Debian-systeembibliotheken
   - OR  4. Een image-tag wijst bij een volgende build naar een andere image dan eerder (tags zijn niet vast)
-- Mitigaties: MIT-03 (stap 2, en stap 4 sinds 7bfd435), nog geen (stappen 1 en 3)
-- Restrisico: vastzetten maakt stap 1 en 3 erger: zonder iets dat waarschuwt (zoals Dependabot) komen ook patches niet meer vanzelf binnen, ook niet die van Debian in de images. Minder pakketten helpt wel: sinds 29d201d doet `cryptography` ook Argon2id, en zijn `argon2-cffi` en `argon2-cffi-bindings` weg
+- Mitigaties: MIT-03 (stap 2, en stap 4 sinds 7bfd435). MIT-33 (stap 1 en 3: Dependabot stelt elke week nieuwe versies voor)
+- Restrisico: Dependabot stelt alleen voor; iemand moet de pull request bekijken en samenvoegen. Of hij ook de digests van de images bijwerkt, moet de eerste pull request laten zien (T-97). Minder pakketten helpt wel: sinds 29d201d doet `cryptography` ook Argon2id, en zijn `argon2-cffi` en `argon2-cffi-bindings` weg
 - Status: open
 - Sinds: baseline
 
@@ -388,10 +388,10 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 - Assets / onderdelen: A-02, A-07, A-09, C-02
 - Gerelateerde use case: UC-07
 - Stappen:
-  - OR  1. De omgeving van de app-container lezen (`docker compose exec app printenv`); de app draait als root (MC-14)
+  - OR  1. De omgeving van de app-container lezen (`docker compose exec app printenv`); tot 13a2eb4 draaide de app als root (MC-14)
   - OR  2. `.env` op de ontwikkelmachine of in een backup daarvan lezen
   - OR  3. De app overnemen (MC-11), die de sleutel in het geheugen heeft
-- Mitigaties: nog geen. Gepland bij de Azure-aanvulling: de sleutel in Key Vault, met alleen de managed identity van de app als lezer, en eventueel een tweede sleutel (KEK) in Key Vault die deze sleutel versleutelt
+- Mitigaties: MIT-32 (stap 2, deels: andere gebruikers van de machine lezen `.env` niet meer). Gepland bij de Azure-aanvulling: de sleutel in Key Vault, met alleen de managed identity van de app als lezer, en eventueel een tweede sleutel (KEK) in Key Vault die deze sleutel versleutelt
 - Restrisico: de sleutel staat lokaal leesbaar in `.env` en in de omgeving van de container. Ook met Key Vault heeft de draaiende app hem, dus wie de app overneemt, heeft hem ook
 - Status: open
 - Sinds: 776931a
@@ -445,9 +445,38 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
   - OR  1. Een fout veroorzaken (vreemde invoer, of een moment dat de database weg is) en de foutpagina lezen
   - OR  2. Een regeleinde in de URL zetten, zodat een logregel met dat pad als twee regels in de log komt
 - Mitigaties: MIT-25 (stap 1: een korte melding zonder details; de debugmodus staat sinds de baseline uit. Stap 2: het pad gaat als repr de log in, dus een regeleinde wordt `\n`)
-- Restrisico: er is nog geen logging van security-events; dat komt bij Logging en monitoring
+- Restrisico: geen; security-events staan sinds 6992001 in de log (MIT-31, MC-28)
 - Status: gebouwd
 - Sinds: baseline; veilig falen sinds b362061
+
+### MC-27 De notities van de vorige gebruiker zien op een gedeelde computer
+- Aanvallersdoel: de notities en het account van wie eerder dezelfde computer gebruikte
+- Aanvaller: de volgende gebruiker van een gedeelde computer, zoals in een lokaal op school
+- Assets / onderdelen: A-02, A-03, A-04, C-01, F-02, AU-02
+- Gerelateerde use case: UC-02, UC-03
+- Stappen:
+  - OR  1. Na het uitloggen op Terug drukken: de browser toont de bewaarde pagina, zonder hem opnieuw aan de app te vragen (T-89)
+  - OR  2. De vorige gebruiker sluit alleen het tabblad en logt niet uit: de sessiecookie werkt nog, tot 31 dagen na het inloggen (T-90)
+- Mitigaties: MIT-28 (stap 1: geen pagina in de cache). MIT-29 (stap 2: hooguit 8 uur)
+- Restrisico: binnen die 8 uur, en zolang de browser openstaat, werkt een sessie waaruit niet is uitgelogd. Wat de browser zelf onthoudt (geschiedenis, een opgeslagen wachtwoord) valt buiten de app. OWASP waarschuwt dat een cache `no-store` kan negeren
+- Status: gebouwd
+- Sinds: baseline; dicht sinds dfa6a6f en 2f1236e
+
+### MC-28 Een aanval blijft onopgemerkt
+- Aanvallersdoel: aanvallen zonder dat iemand het merkt, en zonder spoor voor achteraf
+- Aanvaller: iedereen die een van de andere misuse cases probeert
+- Assets / onderdelen: alle assets, A-11, C-02, C-05, F-05
+- Gerelateerde use case: geen
+- Stappen:
+  - OR  1. Wachtwoorden, codes of herstelcodes raden (MC-03, MC-15, MC-19): de blokkades werken, maar niemand ziet ze
+  - OR  2. Een formulier van een andere site laten versturen (MC-05)
+  - OR  3. Rijen in de database wijzigen of verplaatsen (MC-08, MC-23): de notitie ontsleutelt niet meer, maar niemand ziet waarom
+  - OR  4. Massaal accounts of notities aanmaken (MC-10)
+  - OR  5. Met andermans gegevens het wachtwoord, de tweede factor of het account wijzigen (MC-12, MC-13, MC-20, MC-21)
+- Mitigaties: MIT-31 (stap 1 tot 5: elke gebeurtenis een JSON-regel met tijd, soort, adres en account; T-93)
+- Restrisico: niemand kijkt live mee en er zijn geen meldingen (alerts). Lokaal bewaart Docker de log zolang de container bestaat; op Azure is hij voorlopig alleen live te zien, en bewaren (Log Analytics) hoort bij de uitrol. Wie de host of de container beheert, kan de log wissen. Gewone verzoeken worden niet gelogd. De log bevat persoonsgegevens (A-11): doel en bewaartermijn horen bij de AVG-stap
+- Status: gebouwd
+- Sinds: baseline; gelogd sinds 6992001
 
 ## Mitigaties
 
@@ -510,9 +539,9 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 ### MIT-09 Sessieversie: oude sessies vervallen
 - Houdt tegen: MC-04 stap 4; maakt MC-12 kleiner
 - Wat: elke gebruiker heeft een `session_version` in de database, en de sessiecookie krijgt die mee. `load_user` accepteert de sessie alleen als beide gelijk zijn; anders wordt de sessie gewist met de melding "Je sessie is niet meer geldig". Uitloggen, een nieuw wachtwoord en tweestapsverificatie aanzetten of opnieuw instellen verhogen de versie. Na een nieuw wachtwoord of een 2FA-wijziging krijgt de huidige sessie de nieuwe versie en blijft ingelogd; alle andere vervallen. Ook een halve login vervalt als de versie verandert voordat de code is ingevuld. Uitloggen logt alle apparaten van het account uit: zonder sessies op de server bij te houden kan het niet preciezer
-- Waar: `load_user()`, `start_session()`, `end_other_sessions()`, `login_code()` en `logout()` in `app/auth.py`; `change_password()`, `setup_2fa()` en `reset_2fa()` in `app/account.py`
+- Waar: `load_user()`, `start_session()`, `keep_this_session()`, `login_code()` en `logout()` in `app/auth.py`; `change_password()`, `setup_2fa()` en `reset_2fa()` in `app/account.py`
 - Status: gebouwd
-- Sinds: 587955a
+- Sinds: 587955a; in dezelfde UPDATE als het nieuwe wachtwoord of de 2FA-wijziging sinds 96b892d, zodat het nooit het een zonder het ander is
 
 ### MIT-10 Blokkade op de wachtwoordstap
 - Houdt tegen: MC-03 stap 1 en 2
@@ -524,7 +553,7 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 ### MIT-11 Herstelcode
 - Houdt tegen: MC-19 stap 2a, 2c en 2d; maakt tweestapsverificatie mogelijk zonder dat een kwijtgeraakte telefoon het account onbereikbaar maakt
 - Wat: bij het aanzetten van tweestapsverificatie krijgt de gebruiker één keer een herstelcode van 128 willekeurige bits te zien. Alleen de SHA-256 wordt bewaard; een snelle hash is genoeg bij 128 willekeurige bits, anders dan bij een zelfverzonnen wachtwoord. Inloggen met de code kan alleen na het juiste wachtwoord; zonder wachtwoord werkt hij alleen samen met een code uit de app, om een nieuw wachtwoord in te stellen (MIT-14). De code werkt één keer. Bij inloggen zet hij tweestapsverificatie uit en verhoogt de sessieversie, en de app stuurt meteen naar het opnieuw instellen met een nieuwe telefoon (MIT-12). Het verbruik zit in een UPDATE met de hash in de WHERE, dus twee gelijktijdige verzoeken kunnen hem niet allebei gebruiken. 5 fouten in 15 minuten geven een blokkade (via `throttle.py`, met 429 en `Retry-After`). Een nieuwe code maken vraagt een code uit de app (AU-06) en maakt de vorige ongeldig; na wachtwoord vergeten krijgt de gebruiker meteen een nieuwe. De pagina's met de code worden met `Cache-Control: no-store` verstuurd
-- Waar: `new_recovery_code()`, `hash_recovery_code()` en `login_recover()` in `app/auth.py`; `setup_2fa()` en `new_recovery()` in `app/account.py`
+- Waar: `new_recovery_code()`, `hash_recovery_code()` en `login_recover()` in `app/auth.py`; `setup_2fa()` en `new_recovery()` in `app/account.py`. Sinds 54d4d62 kan de gebruiker de code kopiëren of downloaden, en gaat Verder pas na het vinkje dat hij hem bewaard heeft (`recovery_code.html`, `forms.js`; T-96); zonder JavaScript werkt de pagina als voorheen. Overgenomen uit BOK-SECENGINEER
 - Status: gebouwd
 - Sinds: dc7d258; `Retry-After` sinds 5a82eb5
 
@@ -639,3 +668,45 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 - Waar: `db/schema.sql`, `db/app-password.sh`, `DATABASE_URL` in `compose.yaml`; `azurerm_key_vault.admin` in `terraform/keyvault.tf`, `azurerm_container_app_job.schema` in `terraform/app.tf`
 - Status: gebouwd
 - Sinds: 1d1b4eb; Azure sinds 7535a78
+
+### MIT-28 Geen pagina in de cache
+- Houdt tegen: MC-27 stap 1
+- Wat: elk antwoord behalve een statisch bestand krijgt `Cache-Control: no-store`, zoals de OWASP Session Management Cheat Sheet aanraadt voor antwoorden met gevoelige sessiedata. De browser bewaart de pagina dan niet, dus na uitloggen toont Terug de inlogpagina in plaats van de notities (T-89). Dit vervangt de lijst van vier pagina's met het TOTP-geheim en de herstelcode (MIT-08, MIT-11). CSS en scripts bevatten niets van een gebruiker en mogen wel in de cache. Gevonden met de audit van 17-10-2026
+- Waar: `security_headers()` in `app/app.py`
+- Status: gebouwd
+- Sinds: dfa6a6f
+
+### MIT-29 Sessie van hooguit 8 uur
+- Houdt tegen: MC-04 stap 4, MC-27 stap 2
+- Wat: `PERMANENT_SESSION_LIFETIME` is 8 uur. Flask controleert bij elk verzoek hoe oud de handtekening van de sessiecookie is, ook bij een cookie die alleen voor de browsersessie geldt (gelezen in de broncode van Flask 3.1.3); een oudere cookie telt als geen sessie (T-90). De app schrijft de cookie bij het inloggen en bij een melding (`flash()`), dus de grens ligt ongeveer 8 uur na de login. Daarvoor gold de standaard van 31 dagen. OWASP noemt een absolute timeout voor elke sessie, met 4 tot 8 uur als voorbeeld voor een werkdag. Overgenomen uit BOK-SECENGINEER
+- Waar: `app/app.py`
+- Status: gebouwd
+- Sinds: 2f1236e
+
+### MIT-30 Limiet op registreren en op notities
+- Houdt tegen: MC-10 stap 2 en 3
+- Wat: elke registratie telt per adres in `auth_throttle`, ook een gelukte, want ook die kost een Argon2id-berekening van 19 MiB: 10 per uur, daarna een uur op slot, bij herhaling oplopend tot 4 uur; in de hackstand 60 per uur en 5 minuten (T-91). De teller staat vlak voor het hashen, dus een ongeldige naam of een te kort wachtwoord telt niet. Per account hooguit 25 notities, geteld en toegevoegd in één statement (T-92); gelijktijdige verzoeken kunnen er samen een paar overheen, hooguit één per worker, want een slot zou elke notitie trager maken voor een grens die alleen de groei afremt. Overgenomen uit BOK-SECENGINEER (10 per uur en 25 notities; de hackstand daar was 30 per uur)
+- Waar: `POLICIES` en `IP_MODES` in `app/throttle.py`; `register()` in `app/auth.py`; `index()` in `app/notes.py`
+- Status: gebouwd
+- Sinds: 5d0f1d0
+
+### MIT-31 Security-events loggen
+- Houdt tegen: MC-28 stap 1 tot 5
+- Wat: één functie, `events.event()`, schrijft per gebeurtenis een JSON-regel naar stderr: tijd (UTC), soort, IP-adres, en als dat bekend is het account. Dat is het "when, where, who and what" van de OWASP Logging Cheat Sheet. Lokaal in `docker compose logs`, op Azure in de log van Container Apps, zonder verschil in de code. 23 soorten, op de plekken waar de app al beslist: registreren, inloggen en de blokkades, codes en herstelcodes, wachtwoord vergeten, uitloggen, een verlopen sessie, tweestapsverificatie aan en opnieuw, een nieuw wachtwoord, herauthenticatie, account verwijderen, een geweigerd CSRF-token, de limiet op notities en een notitie die niet ontsleutelt. JSON escapet regeleindes en stuurtekens, dus invoer maakt geen valse regel (log injection). Een getypte gebruikersnaam komt er alleen in als hij aan de naamregel van MIT-22 voldoet; wachtwoorden, codes, geheimen en de sessiecookie nooit (T-93, T-94). Overgenomen uit BOK-SECENGINEER
+- Waar: `app/events.py`; aanroepen in `app/auth.py`, `app/account.py`, `app/csrf.py` en `app/notes.py`
+- Status: gebouwd
+- Sinds: 6992001
+
+### MIT-32 .env alleen voor de eigenaar
+- Houdt tegen: MC-22 stap 2, deels
+- Wat: `setup.py` zet `.env` op 0600 (alleen de eigenaar mag lezen en schrijven), al vóór het schrijven, en ook een bestaand bestand. Op Linux kreeg het eerst de standaard 0644, leesbaar voor elke gebruiker van de machine (T-95). Op Windows doet `chmod` verder niets; daar gelden de rechten van de map waarin de repo staat. Gevonden met de audit van 17-10-2026
+- Waar: `write_env()` in `scripts/setup.py`
+- Status: gebouwd
+- Sinds: 9d3f985
+
+### MIT-33 Dependabot
+- Houdt tegen: MC-11 stap 1 en 3
+- Wat: `.github/dependabot.yml` laat GitHub elke week een pull request openen als er een nieuwe versie is van een pip-pakket, de base-image in de Dockerfile, de image in `compose.yaml` of een Terraform-provider. Alles staat vast (MIT-03), dus zonder dit komen ook patches niet vanzelf binnen. Er is geen pipeline voor nodig; in de BoK hoort het bij CI/CD (Week 8). Of Dependabot ook de `@sha256`-digest bijwerkt, staat niet in de documentatie van GitHub (gelezen op 17-10-2026); dat blijkt bij de eerste pull request (T-97)
+- Waar: `.github/dependabot.yml`
+- Status: gebouwd
+- Sinds: 19999a9
