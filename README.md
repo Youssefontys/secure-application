@@ -53,3 +53,7 @@ The baseline plus the first security features, each with an entry in `BoK/Threat
 - a CSRF token on every form, strict security headers, input and configuration checks, every route closed by default, safe failure, gunicorn as an unprivileged user, and an own database role that can only read and write the app's tables (MIT-20 to MIT-27); see `BoK/Subjects/Week 7 Application Security.md`
 
 Still open: security events are not logged yet, the database role can still change every row the app can (MC-08), and the data key is read from `.env` until Key Vault on Azure (MC-22). Not deployed yet.
+
+## License
+
+MIT, see `LICENSE`. That covers the code, the BoK and the screenshots in this repo.
