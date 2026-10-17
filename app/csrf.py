@@ -5,6 +5,9 @@ import secrets
 
 from flask import render_template, request, session
 
+# Wat de bezoeker ziet als het token ontbreekt of niet klopt.
+REFUSED = "Dit formulier kwam niet van deze site, of de pagina was te oud. Laad de pagina opnieuw en probeer het nog eens."
+
 
 # Het token van deze sessie; de templates zetten het in elk formulier.
 def token():
@@ -18,6 +21,8 @@ def check():
     if request.endpoint == "static":
         return None
     expected = token()
-    if request.method == "POST" and not hmac.compare_digest(request.form.get("csrf_token", "").encode(), expected.encode()):
-        return render_template("error.html", message="Dit formulier kwam niet van deze site, of de pagina was te oud. Laad de pagina opnieuw en probeer het nog eens."), 400
+    if request.method == "POST":
+        sent = request.form.get("csrf_token", "")
+        if not hmac.compare_digest(sent.encode(), expected.encode()):
+            return render_template("error.html", message=REFUSED), 400
     return None
