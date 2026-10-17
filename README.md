@@ -24,7 +24,7 @@ Every feature that is added has an entry in `BoK/`: the use case, the misuse cas
 python scripts/setup.py lokaal   # creates missing secrets in .env and starts the stack
 ```
 
-Or by hand: copy `.env.example` to `.env`, fill in the three values, and run `docker compose up --build`.
+On Linux or macOS the command is often `python3`; the script works the same on Windows and Linux. Or by hand: copy `.env.example` to `.env`, fill in the three values, and run `docker compose up --build`.
 
 Then open http://127.0.0.1:5000.
 
