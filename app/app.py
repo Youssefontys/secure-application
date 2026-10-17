@@ -14,16 +14,29 @@ import notes
 import passwords
 from db import TIMEZONE, close_connection
 
+
+# Configuratie is ook invoer: alleen een bekende waarde, anders start de app niet (MIT-23).
+def setting(name, default, allowed):
+    value = os.environ.get(name, default)
+    if value not in allowed:
+        raise RuntimeError(f"{name} moet {' of '.join(allowed)} zijn, niet {value!r}.")
+    return value
+
+
 # De website (HTML-templates en statische bestanden) staat in web/, los van de code.
 app = Flask(__name__, template_folder="web/templates", static_folder="web/static")
-# Flask ondertekent de sessiecookie met deze sleutel.
+# Flask ondertekent de sessiecookie met deze sleutel; setup.py maakt er een van 64 tekens.
 app.secret_key = os.environ["FLASK_SECRET_KEY"]
-# Op Azure: het echte clientadres achter zoveel proxies, anders telt iedereen als één adres (MC-18). Lokaal 0.
-proxies = int(os.environ.get("TRUSTED_PROXIES", "0"))
-if proxies:
-    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=proxies, x_proto=proxies)
-# Op Azure (HTTPS): de sessiecookie nooit over gewoon HTTP (MC-04). Lokaal draait de app op HTTP.
-app.config["SESSION_COOKIE_SECURE"] = os.environ.get("HTTPS_ONLY") == "1"
+if len(app.secret_key) < 32:
+    raise RuntimeError("FLASK_SECRET_KEY moet minstens 32 tekens zijn.")
+# Op Azure: het echte clientadres achter de ene proxy van Container Apps (MC-18). Lokaal 0.
+# Alleen 0 of 1: met -1 of 2 kiest een aanvaller zelf zijn adres en omzeilt hij de limieten.
+if setting("TRUSTED_PROXIES", "0", ("0", "1")) == "1":
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1)
+# Standaard veilig: de sessiecookie alleen over HTTPS (MC-04). Lokaal, op HTTP, zet compose.yaml dit uit.
+app.config["SESSION_COOKIE_SECURE"] = setting("HTTPS_ONLY", "1", ("0", "1")) == "1"
+# Niet meesturen met een formulier van een andere site (MC-05); het CSRF-token is de tweede laag.
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 
 for blueprint in (auth.bp, account.bp, notes.bp):
     app.register_blueprint(blueprint)

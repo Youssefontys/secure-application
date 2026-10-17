@@ -28,6 +28,8 @@ services:
       FLASK_SECRET_KEY: ${FLASK_SECRET_KEY:?zet FLASK_SECRET_KEY in .env}
       # Versleutelt het TOTP-geheim (MIT-17); los van FLASK_SECRET_KEY, zodat elke sleutel één doel heeft.
       DATA_ENCRYPTION_KEY: ${DATA_ENCRYPTION_KEY:?zet DATA_ENCRYPTION_KEY in .env}
+      # Lokaal draait de app op HTTP; zonder deze regel geldt de veilige standaard (alleen HTTPS).
+      HTTPS_ONLY: "0"
       # Hackstand, alleen tijdens de hacking week (MC-18); standaard streng en zonder uitzonderingen.
       THROTTLE_IP_MODE: ${THROTTLE_IP_MODE:-strict}
       THROTTLE_PAIR_EXEMPT_USERS: ${THROTTLE_PAIR_EXEMPT_USERS:-}
