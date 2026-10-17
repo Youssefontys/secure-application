@@ -31,6 +31,7 @@ De ene helft vangt geen fouten van de andere op. MC-02, andermans notitie openen
 | Wachtwoord vergeten (MIT-14) | Wachtwoord vergeten betekende: account kwijt | Met de herstelcode en een code uit de app een nieuw wachtwoord, en meteen een nieuwe herstelcode; het oude wachtwoord is daarvoor niet nodig |
 | Sterkte-eis (MIT-13) | Elk wachtwoord werd geaccepteerd, ook `a` | Een nieuw wachtwoord moet 12 tot 64 tekens zijn |
 | Herstelcode (MIT-11) | Telefoon kwijt betekende: account kwijt | Een eenmalige herstelcode van 128 bits vervangt één keer de code; daarna stel je de tweede factor opnieuw in |
+| Herstelcode bewaren (MIT-11) | Alleen tonen, met een knop "Ik heb hem bewaard" | Kopiëren of downloaden, en Verder pas na het vinkje dat hij bewaard is; zonder JavaScript zoals eerst |
 | Eigenaarscontrole (MIT-15) | Met het id van een ander open, wijzig en verwijder je diens notitie | Andermans notitie geeft 404, net als een notitie die niet bestaat |
 | Herauthenticatie (MIT-16) | Met alleen de sessie wijzig je het wachtwoord of verwijder je het account | Eerst het huidige wachtwoord; na 5 fouten per account een blokkade |
 
@@ -47,7 +48,7 @@ De ene helft vangt geen fouten van de andere op. MC-02, andermans notitie openen
 | Wachtwoord vergeten | Twee van de drie factoren: herstelcode en telefoon. Een foute herstelcode telt per adres en per naam per adres, en een onbekende naam krijgt hetzelfde antwoord. Pas na een juiste herstelcode geldt de blokkade van de codestap. Nieuw wachtwoord en verbruik van de code in één UPDATE; daarna niet automatisch ingelogd | T-52, T-54 tot T-57 |
 | Sterkte-eis | 12 tot 64 tekens bij registreren, wijzigen en wachtwoord vergeten, zonder samenstellingsregels (NIST SP 800-63B-4) | T-13, T-53 |
 | Verplicht | `require_login` laat een gebruiker zonder tweede factor alleen het instellen afmaken | T-50 |
-| Geheim beschermd | QR-code en sleutel alleen tijdens het instellen, daarna 404; `Cache-Control: no-store` op alle pagina's met het geheim of de herstelcode | T-36, T-49 |
+| Geheim beschermd | QR-code en sleutel alleen tijdens het instellen, daarna 404; `Cache-Control: no-store` op alle pagina's met het geheim of de herstelcode, sinds MIT-28 op elke pagina | T-36, T-49, T-89 |
 | Niet buitensluiten, niet weghalen | Aanzetten pas na een eerste geldige code. Opnieuw instellen en een nieuwe herstelcode vragen een code (AU-06), dus wie alleen de sessie heeft, kan de tweede factor niet vervangen | T-28, T-45 |
 | Alleen je eigen notities | Elke query op één notitie heeft `user_id` uit de sessie in de WHERE: `own_note()` bij openen en aanpassen, en de DELETE zelf. "Bestaat niet" en "niet van jou" geven allebei 404 | T-11 |
 | Gevoelige acties pas na het wachtwoord | Wachtwoord wijzigen en account verwijderen vragen het huidige wachtwoord (`passwords.is_current()`); foute pogingen tellen per account | T-08, T-09, T-23, T-24, T-62 |
@@ -57,7 +58,7 @@ De ene helft vangt geen fouten van de andere op. MC-02, andermans notitie openen
 - **Raden met het wachtwoord in handen (MC-15).** Met de verdubbelende blokkade zijn dat ongeveer 1.855 pogingen per jaar: 0,56% kans om een code te raden. Met de vaste blokkade van eerst was dat ongeveer 41%.
 - **Phishing in real time (MC-16).** Een nepsite die de code direct doorgeeft, komt binnen. Daartegen helpt alleen een factor die aan het domein gebonden is, zoals WebAuthn of passkeys.
 - **Het TOTP-geheim stond leesbaar in de database (MC-17).** Een databaselek leverde wachtwoord en geheim samen. Sinds Week 6 is het versleuteld (MIT-17), zie `Week 6 Encryption.md`.
-- **Een gestolen sessiecookie (MC-04)** werkt tot de gebruiker uitlogt of zijn gegevens wijzigt, en anders tot 31 dagen. De tweede factor helpt daar niet: de cookie is van na de code.
+- **Een gestolen sessiecookie (MC-04)** werkt tot de gebruiker uitlogt of zijn gegevens wijzigt, en anders tot 8 uur (MIT-29, sinds 2f1236e; eerst 31 dagen). De tweede factor helpt daar niet: de cookie is van na de code.
 - **Uitloggen logt alle apparaten uit.** Zonder sessies op de server bij te houden kan het niet preciezer.
 - **Buitensluiten (MC-18).** Op een gedeeld netwerk delen gebruikers één IP-adres; de hackstand verkleint dat probleem, maar lost het niet op. Achter een proxy krijgt de app het echte clientadres via `ProxyFix` met `TRUSTED_PROXIES`, zonder de poort die Azure kan meesturen (T-72). Dat aantal moet op Azure gemeten worden: te laag en iedereen telt als het adres van de proxy, te hoog en een aanvaller kiest zelf zijn adres.
 - **Verspreid raden (MC-03).** Wie vanaf heel veel adressen raadt, wordt per account niet begrensd; dat is bewust, anders kan iedereen met een gebruikersnaam een account blokkeren. De tweede factor vangt dit op.
@@ -94,7 +95,7 @@ De ene helft vangt geen fouten van de andere op. MC-02, andermans notitie openen
 
 ## Vergelijking met BOK-SECENGINEER
 
-De oplossingen lijken nu veel meer op elkaar. Het grootste verschil dat overblijft, is dat de oude het TOTP-geheim versleutelt.
+De oplossingen lijken nu veel meer op elkaar. Wat de oude beter deed (sessieduur, limieten, het bewaren van de herstelcode en het loggen), is op 17-10-2026 overgenomen.
 
 | | BOK-SECENGINEER | Deze repo |
 |---|---|---|
@@ -104,9 +105,9 @@ De oplossingen lijken nu veel meer op elkaar. Het grootste verschil dat overblij
 | Verplicht | Ja, bij registratie | Ja, na het eerste wachtwoord |
 | Bevestigen met een eerste code | Nee | Ja |
 | Opnieuw instellen (nieuwe telefoon) | Niet mogelijk | Kan, met een code |
-| Geheim in de database | Versleuteld (pgcrypto) | Leesbaar (MC-17) |
+| Geheim in de database | Versleuteld met pgcrypto; de sleutel gaat bij elke query mee | Versleuteld met AES-256-GCM in de app (MIT-17); de sleutel komt nooit in de database |
 | Poginglimieten | Per account en per IP, oplopend; bij herstel telt een poging vóór de controle, bij inloggen en de code pas erna | Per account en per IP, oplopend; elke poging telt vóór de controle |
-| Hackstand | `strict`, `hackweek` en `observe` (alleen melden); het demoaccount uitgezonderd | `strict` en `hackweek`; het demoaccount uitgezonderd. Geen `observe`: die blokkeert nooit op IP, en er is nog geen logging om te melden |
+| Hackstand | `strict`, `hackweek` en `observe` (alleen melden); het demoaccount uitgezonderd | `strict` en `hackweek`; het demoaccount uitgezonderd. Geen `observe`: die blokkeert nooit op IP; wel staat elke blokkade in de log (MIT-31) |
 | Gelijktijdige verzoeken | Rijslot (`FOR UPDATE`) en een tweede controle | Voorwaarden in één UPDATE |
 | Halve login vervalt na | 10 minuten | 5 minuten, en bij een nieuwe sessieversie |
 | Oude sessies ongeldig | Sessieversie (`auth_version`) | Sessieversie (`session_version`) |
@@ -115,10 +116,12 @@ De oplossingen lijken nu veel meer op elkaar. Het grootste verschil dat overblij
 | Eigenaarscontrole op notities | `id` én `user_id` bij lezen, wijzigen en verwijderen | Idem, via `own_note()` en de DELETE |
 | Herauthenticatie | Geen routes voor wachtwoord wijzigen of account verwijderen; herstelcode beheren vroeg wachtwoord en 2FA-code | Het huidige wachtwoord bij wachtwoord wijzigen en account verwijderen, met een limiet per account |
 | Hash van de herstelcode | Argon2id | SHA-256 (128 willekeurige bits) |
-| CSRF-tokens | In elk geval op de authenticatieformulieren | Nee (MC-05) |
-| Logging van pogingen | Ja | Nee |
+| CSRF-tokens | In elk geval op de authenticatieformulieren | Op elk formulier (MIT-20) |
+| Logging van pogingen | Ja, als JSON | Ja, als JSON, naar het voorbeeld van de oude (MIT-31) |
+| Sessieduur | 8 uur | 8 uur (MIT-29; tot 2f1236e 31 dagen) |
+| Herstelcode bewaren | Kopiëren, downloaden en een vinkje | Idem (MIT-11, sinds 54d4d62) |
 
-Wat de oude meer heeft, hoort bij andere BoK-onderwerpen: versleuteling bij database security, CSRF bij secure coding, logging bij logging en monitoring.
+Wat de oude nog meer heeft: Vault Transit, waarbij de sleutel in Vault blijft (sterker tegen MC-22), en migraties voor een bestaande database. Die zijn bewust niet overgenomen.
 
 ## Screenshots
 
@@ -135,6 +138,7 @@ Voor het verslag, lokaal in `screenshots/Week 5 Authentication/` (niet in de rep
 | Wachtwoord vergeten en sterkte-eis | geen (basisonderdeel) | `week5_na_sterkte_1`, `week5_na_vergeten_1` tot `_4` | `week5_code_7_wachtwoord_vergeten` |
 | Eigenaarscontrole | `week5_voor_eigenaar_1`, `_2` | `week5_na_eigenaar_1` | `week5_code_8_autorisatie` |
 | Herauthenticatie | `week5_voor_herauth_1` | `week5_na_herauth_1`, `_2` | `week5_code_8_autorisatie` |
+| Herstelcode bewaren | `week5_voor_herstelcode_1_alleen_tonen` | `week5_na_herstelcode_1_kopieren_en_bewaren` | `week5_code_10_herstelcode_bewaren` |
 
 ## Bronnen
 
