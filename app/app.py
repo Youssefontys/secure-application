@@ -64,6 +64,10 @@ def security_headers(response):
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["Referrer-Policy"] = "same-origin"
+    # Geen pagina in een browser- of proxycache: na uitloggen toont Terug niets meer (MIT-28), en geheim en
+    # herstelcode blijven nergens staan (MIT-08, MIT-11). Statische bestanden mogen wel in de cache.
+    if request.endpoint != "static":
+        response.headers["Cache-Control"] = "no-store"
     if app.config["SESSION_COOKIE_SECURE"]:
         response.headers["Strict-Transport-Security"] = "max-age=31536000"
     return response

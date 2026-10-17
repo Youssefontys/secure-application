@@ -31,14 +31,6 @@ def render_account(error=None, status=200, headers=None):
     return render_template("account.html", profile=profile, error=error), status, headers or {}
 
 
-# Geheim en herstelcode niet in een browser- of proxycache laten staan (MIT-08, MIT-11).
-@bp.after_app_request
-def no_store(response):
-    if request.endpoint in ("account.setup_2fa", "account.qr_2fa", "account.new_recovery", "auth.forgot_password"):
-        response.headers["Cache-Control"] = "no-store"
-    return response
-
-
 @bp.route("/2fa", methods=["GET", "POST"])
 def setup_2fa():
     if g.user.totp_enabled:
