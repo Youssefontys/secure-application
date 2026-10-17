@@ -13,7 +13,7 @@ Notities van een ander lezen of wijzigen
         AND notitie-id raden (opeenvolgende getallen)
   OR  De database direct lezen (MC-23, MC-08)                             [MIT-18, deels]
         AND de database lezen                                              [open]
-              OR  rechtstreekse query met de eigenaarrol
+              OR  een query met de rechten van de app (lezen mag die nog, MC-08)
               OR  het volume of een backup lezen
         AND de gegevenssleutel hebben (MC-22)                              [open]
   OR  De app overnemen, die de sleutel heeft (MC-11)
@@ -74,7 +74,8 @@ Dienst onbruikbaar
         OR  groot verzoek, dat eerst helemaal wordt ingelezen              [MIT-22]
         OR  veel accounts (elk een Argon2id-hash) of notities aanmaken     [open]
   OR  Alle notities wissen via MC-02                                       [open]
-  OR  De database weggooien na overname van de app (MC-08)                 [open]
+  OR  De database weggooien na overname van de app (MC-08)                 [MIT-27]
+  OR  Alle rijen wissen met de rechten van de app, na overname (MC-08)     [open]
   OR  De ontwikkelserver van Flask overbelasten (MC-14)                    [MIT-26]
   OR  Een gebruiker buitensluiten met de blokkade (MC-18)                  [open]
 ```

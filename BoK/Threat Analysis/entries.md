@@ -175,15 +175,17 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 ### MC-08 Te veel rechten voor de applicatie in de database
 - Aanvallersdoel: de hele database overnemen of vernietigen
 - Aanvaller: iemand die de webapplicatie overneemt
-- Assets / onderdelen: A-01, A-02, A-06, C-02, C-03, F-03, AU-03, AZ-05
+- Assets / onderdelen: A-01, A-02, A-06, A-10, C-02, C-03, F-03, AU-03, AZ-05
 - Gerelateerde use case: UC-01 tot UC-03
 - Stappen:
   - AND 1. Een kwetsbaarheid in de app benutten (bijvoorbeeld MC-06 in een toekomstige route, of een afhankelijkheid uit MC-11)
-  - AND 2. Via de verbinding van de app (eigenaarrol) tabellen weggooien of alle data lezen
-- Mitigaties: geen (de app is eigenaar van de database)
-- Restrisico: een app-compromittering is een databasecompromittering
-- Status: open
-- Sinds: baseline
+  - AND 2. Met de rechten van de app meer doen dan de app zelf doet:
+    - OR  2a. Via de verbinding van de app tabellen weggooien, rollen aanmaken, of als superuser via `COPY` bestanden lezen en commando's uitvoeren op de databaseserver
+    - OR  2b. Het wachtwoord van de eigenaar uit de omgeving van de app halen en daarmee inloggen
+- Mitigaties: MIT-27 (stap 2a: de app logt in als `notities_app`, die alleen mag lezen en schrijven in de eigen tabellen; stap 2b: het wachtwoord van de eigenaar staat niet meer in de app, en op Azure kan de identiteit van de app de vault met dat wachtwoord niet lezen)
+- Restrisico: wat de app mag, mag de aanvaller ook: alle rijen lezen, wijzigen en wissen. Notities en TOTP-geheimen staan versleuteld en wachtwoorden als hash (MIT-17 tot MIT-19), maar hij kan bijvoorbeeld tweestapsverificatie uitzetten of alle notities wissen. Er zijn geen rechten per rij (row-level security); de app filtert zelf op `user_id` (MIT-15). Lokaal staan beide wachtwoorden in `.env` op dezelfde machine. De scheiding op Azure is nog niet gemeten (T-86)
+- Status: gebouwd
+- Sinds: baseline; dicht sinds 1d1b4eb
 
 ### MC-09 Bestaande gebruikersnamen opsporen
 - Aanvallersdoel: een lijst geldige gebruikersnamen voor gerichte aanvallen (MC-03)
@@ -260,7 +262,7 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 ### MC-14 Root en de ontwikkelserver in de container
 - Aanvallersdoel: na een overname van de app zo veel mogelijk kunnen in de container, of de dienst onderuit halen
 - Aanvaller: wie de app overneemt (bijvoorbeeld via MC-06 in een toekomstige route, of MC-11); voor stap 2 iedere bezoeker
-- Assets / onderdelen: C-02, A-05, A-06
+- Assets / onderdelen: C-02, A-05, A-10 (tot 1d1b4eb A-06, zie MC-08)
 - Gerelateerde use case: UC-01 tot UC-05
 - Stappen:
   - OR  1. Na een overname draait de aanvaller als root in de container: hij kan de code van de app aanpassen en gereedschap installeren, en een uitbraak uit de container begint met rootrechten
@@ -630,3 +632,10 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 - Waar: `app/Dockerfile`; `gunicorn` in `app/requirements.txt`
 - Status: gebouwd
 - Sinds: 13a2eb4
+
+### MIT-27 Eigen databaserol voor de app
+- Houdt tegen: MC-08 stap 2a en 2b
+- Wat: de app logt in als `notities_app`: geen superuser en nergens eigenaar van. Hij mag `SELECT`, `INSERT`, `UPDATE` en `DELETE` op `users`, `notes` en `auth_throttle`, en `USAGE` op de twee sequences, precies wat de app doet. Tabellen maken, wijzigen of weggooien, rollen aanmaken en `COPY` naar een bestand of programma kunnen niet. Dat laatste mag in PostgreSQL alleen een superuser of een lid van `pg_read_server_files`, `pg_write_server_files` of `pg_execute_server_program`. In een nieuwe database heeft `PUBLIC` sinds PostgreSQL 15 geen `CREATE` meer op het schema `public`, dus ook een eigen tabel maken lukt niet. Lokaal zet `db/app-password.sh` het wachtwoord bij de eerste start, met psql als letterlijke tekst; de app krijgt alleen dat wachtwoord. Op Azure staat het wachtwoord van de eigenaar in een eigen Key Vault die alleen de schema-job leest, met een eigen identiteit; Microsoft raadt een vault per applicatie aan en geen rechten per geheim. De job maakt het schema in een lege database en zet bij elke start het wachtwoord van de app-rol, met `sql.Literal`
+- Waar: `db/schema.sql`, `db/app-password.sh`, `DATABASE_URL` in `compose.yaml`; `azurerm_key_vault.admin` in `terraform/keyvault.tf`, `azurerm_container_app_job.schema` in `terraform/app.tf`
+- Status: gebouwd
+- Sinds: 1d1b4eb; Azure sinds 7535a78
