@@ -63,7 +63,7 @@ De details staan in de entries (MC-05, MC-07, MC-10, MC-14, MC-18, MC-24 tot MC-
   | `THROTTLE_IP_MODE` | Een bekende stand |
 - **Standaard dicht (MIT-24).** Eén hook (`require_login`) vraagt voor elke route een login met tweestapsverificatie. Alleen `PUBLIC_ENDPOINTS` mag zonder.
 - **Veilig falen (MIT-25).**
-  - HTTP-fouten krijgen de eigen foutpagina, met behoud van status en headers.
+  - HTTP-fouten krijgen de eigen foutpagina, met behoud van status en headers. Die pagina toont een grote robot die het heeft begeven, met de statuscode op zijn borst; een inline SVG zonder `style`-attributen, met de opmaak en animatie in `style.css`, zodat de CSP streng blijft.
   - Een onverwachte fout geeft "Er ging iets mis". De fout zelf gaat met traceback naar stderr: lokaal `docker compose logs`, op Azure de log van Container Apps.
   - Het pad gaat als repr de log in, dus een regeleinde in de URL wordt `\n`.
 - **Gewone gebruiker (MIT-26).** De image maakt de systeemgebruiker `app` zonder shell en draait daaronder, met Gunicorn en twee workers. De code is van root, dus de app kan hem lezen maar niet aanpassen.
