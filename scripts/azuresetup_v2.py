@@ -1,354 +1,190 @@
-# --- AZURE TERRAFORM STATE BOOTSTRAP (v2) ---
-#
-# Deze versie bevat:
-# 1. Zero Trust Customer Managed Keys (CMK) voor de Terraform State.
-# 2. Strict RBAC Role Separation (Least Privilege).
-# 3. Geoptimaliseerde wachttijden en 4096-bit encryptie.
-# 4. Robuuste, cross-platform automatische configuratie van GitHub Secrets (via gh CLI).
-#
-# Verschil met v1, na een security-review:
-# - Alle user-input die in een shell-commando terechtkomt gaat nu door
-#   shlex.quote(), om command injection te voorkomen (bijv. als je bij
-#   "Resource Group naam" iets met ; of && intypt).
-# - SNYK_TOKEN wordt ingevoerd via getpass i.p.v. input(), dus het
-#   verschijnt nergens op het scherm, ook niet één keer tijdens het typen.
-#   Wordt ook niet meer teruggeprint in het handmatige fallback-overzicht.
-# - De twee kale `except:`-blokken zijn vervangen door het al bestaande
-#   ignore_error=True-mechanisme van run_az_cmd(). De oude except-blokken
-#   vingen in de praktijk niks: run_az_cmd() roept zelf al sys.exit(1) aan
-#   bij een fout, dus de exception kwam nooit bij de caller aan.
-#
-# Aangepast na de import in secure-application (2026-10-17):
-# - Geen shell meer: elk commando gaat als lijst van argumenten naar
-#   subprocess (shlex.split is de omkering van shlex.quote). shlex.quote
-#   alleen beschermde op Windows niet, want cmd.exe kent geen enkele
-#   aanhalingstekens.
-# - Invoer moet aan een allowlist voldoen (letters, cijfers, - _ .). Dat is
-#   de echte bescherming: op Windows is az een .cmd-bestand, en dan leest
-#   cmd.exe de argumenten toch opnieuw, ook zonder shell=True.
-# - gh secret set krijgt de waarde via stdin in plaats van --body, zodat een
-#   geheim niet in de proceslijst staat.
+# Zet eenmalig de opslag voor de Terraform-state op Azure op, plus de koppeling met GitHub Actions (OIDC).
+# - De opslag is versleuteld met een eigen sleutel (RSA 4096) in Key Vault, met purge protection.
+# - Gescheiden rollen: wie dit draait beheert de sleutel; de identiteit van de opslag mag hem alleen gebruiken.
+# - Geen shell: elk commando is een lijst van argumenten. Op Windows is az een .cmd-bestand en leest cmd.exe
+#   de argumenten toch opnieuw, dus de echte bescherming is de allowlist op alle invoer (letters, cijfers, - _ .).
+# Uit BOK-SECENGINEER, daarna aangepast; de wijzigingen staan in de git-geschiedenis. Werkt op Windows en Linux.
 
-import os
-import subprocess
-import time
 import random
-import sys
 import re
 import shutil
-import shlex
-import getpass
+import subprocess
+import sys
+import time
 
-# ---------- Configuratie ----------
 DEFAULT_LOCATION = "westeurope"
 DEFAULT_RG_NAME = "rg-tfstate-mgmt"
 PROPAGATION_WAIT = 120
 # Allowlist voor een subscription ID: een GUID, verder niets.
 GUID = r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"
+# Fouten die bij het doorvoeren in Azure horen en vanzelf overgaan, en fouten die betekenen dat het er al is.
+RETRYABLE = ("ResourceNotFound", "ConnectionAbortedError", "PrincipalNotFound", "AuthorizationFailed")
+IGNORABLE = ("RoleAssignmentExists", "already exists", "Subscription is not registered")
 
-# ---------- Hulpfuncties ----------
-def get_concise_cmd_name(command):
-    """Geeft een korte naam terug voor logs."""
-    tokens = command.split()
-    return " ".join(tokens[:3]) + "..." if tokens else "Leeg"
 
-def as_args(command):
-    """Het commando als lijst van argumenten, zonder shell; het programma via PATH (op Windows az.cmd)."""
-    args = shlex.split(command)
-    args[0] = shutil.which(args[0]) or args[0]
-    return args
+# Het commando als lijst van argumenten, zonder shell; het programma via PATH (op Windows az.cmd).
+def as_args(*args):
+    return [shutil.which(args[0]) or args[0], *args[1:]]
 
-def run_az_cmd(command, ignore_error=False):
-    """Voert een Azure CLI commando uit en returnt de output."""
-    try:
-        result = subprocess.run(as_args(command), check=True,
-                                stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+
+# Voert az uit en geeft de uitvoer; bij een fout stoppen, of None met ignore_error.
+def az(*args, ignore_error=False):
+    result = subprocess.run(as_args("az", *args), capture_output=True, text=True)
+    if result.returncode == 0:
         return result.stdout.strip()
-    except subprocess.CalledProcessError as e:
-        if not ignore_error:
-            print(f"\n❌ FOUT: {e.stderr.strip()}\n🛑 Stoppen.")
-            sys.exit(1)
+    if ignore_error:
         return None
+    sys.exit(f"\n❌ FOUT: {result.stderr.strip()}\n🛑 Stoppen.")
 
-def run_az_cmd_with_retry(command, max_retries=10, delay=10):
-    """Voert commando uit met retry logica voor specifieke Azure propagatie-fouten."""
-    name = get_concise_cmd_name(command)
-    retryable_errors = [
-        "ResourceNotFound", "ConnectionAbortedError",
-        "PrincipalNotFound", "AuthorizationFailed"
-    ]
-    ignorable_errors = [
-        "RoleAssignmentExists", "already exists", "Subscription is not registered"
-    ]
 
-    for attempt in range(max_retries):
-        try:
-            print(f"   ⏳ {name} (poging {attempt+1})...")
-            result = subprocess.run(as_args(command), check=True,
-                                    stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-            return result.stdout.strip(), True
-        except subprocess.CalledProcessError as e:
-            err = e.stderr.strip()
-            if any(x in err for x in ignorable_errors): return "ℹ️ Genegeerd.", True
-            if any(x in err for x in retryable_errors) and attempt < max_retries-1:
-                print(f"    ⚠️ Tijdelijke Azure fout. Wachten {delay}s...")
-                time.sleep(delay)
-                delay += 5
-                continue
-            print(f"❌ FATAL: {err}\n🛑 Stoppen.")
-            sys.exit(1)
-    return "", False
+# Zoals az, maar opnieuw proberen zolang Azure nog bezig is; "bestaat al" telt als gelukt.
+def az_retry(*args, tries=10, delay=10):
+    for attempt in range(1, tries + 1):
+        print(f"   ⏳ az {' '.join(args[:2])}... (poging {attempt})")
+        result = subprocess.run(as_args("az", *args), capture_output=True, text=True)
+        err = result.stderr.strip()
+        if result.returncode == 0 or any(x in err for x in IGNORABLE):
+            return result.stdout.strip()
+        if attempt == tries or not any(x in err for x in RETRYABLE):
+            sys.exit(f"❌ FATAL: {err}\n🛑 Stoppen.")
+        print(f"    ⚠️ Tijdelijke Azure-fout. Wachten {delay}s...")
+        time.sleep(delay)
+        delay += 5
 
+
+def assign(role, assignee, scope):
+    az_retry("role", "assignment", "create", "--role", role, "--assignee", assignee, "--scope", scope, "-o", "none")
+
+
+# Een vraag met een standaardwaarde; met pattern alleen een antwoord dat er helemaal aan voldoet.
 def ask_user(question, default=None, pattern=None):
-    """Vraagt input aan de gebruiker; met pattern alleen een antwoord dat er helemaal aan voldoet."""
     prompt = f"{question} [{default}]: " if default else f"{question}: "
     while True:
         ans = input(prompt).strip() or default
-        if ans is None: continue
-        if pattern is None or re.fullmatch(pattern, ans): return ans
+        if ans is None:
+            continue
+        if pattern is None or re.fullmatch(pattern, ans):
+            return ans
         print("❌ Ongeldige invoer: alleen letters, cijfers en - _ . zijn toegestaan.")
 
-def ask_secret(question):
-    """Zoals ask_user, maar voor geheimen: gebruikt getpass zodat er niks op het scherm verschijnt."""
-    while True:
-        ans = getpass.getpass(f"{question} (niet zichtbaar tijdens typen): ").strip()
-        if ans:
-            return ans
 
-def check_and_configure_gh():
-    """Controleert of gh CLI bestaat én is ingelogd, en instrueert de gebruiker indien nodig."""
-    if not shutil.which('gh'):
-        print("\n⚠️ GitHub CLI (gh) niet gevonden.")
-        print("   Automatische secrets configuratie is niet mogelijk.")
-        print("   Installeer via https://cli.github.com en probeer opnieuw.")
+# Is gh er en ingelogd? Anders kunnen de GitHub-secrets niet automatisch.
+def gh_ready():
+    gh = shutil.which("gh")
+    if not gh:
+        print("\n⚠️ GitHub CLI (gh) niet gevonden; installeer via https://cli.github.com om de secrets automatisch te zetten.")
         return False
-
-    # Controleer of de gebruiker is ingelogd
-    print("\n🔍 GitHub CLI authenticatie controleren...")
-
-    try:
-        result = subprocess.run(
-            ["gh", "auth", "status"],
-            capture_output=True,
-            text=True,
-            check=False
-        )
-    except FileNotFoundError:
-        print("❌ gh CLI is gevonden, maar kan niet worden uitgevoerd.")
+    if subprocess.run([gh, "auth", "status"], capture_output=True).returncode != 0:
+        print("❌ gh is niet ingelogd of het token is verlopen: gh auth login")
         return False
-
-    if result.returncode != 0:
-        print("❌ gh CLI is geïnstalleerd, maar niet ingelogd of token is verlopen.")
-        print("   Authenticeer de CLI aub met: `gh auth login`")
-        return False
-
-    print("✅ gh CLI is ingelogd en klaar voor gebruik.")
+    print("✅ gh is ingelogd.")
     return True
 
-# ---------- Start Script ----------
-print("\n╔═══════════════════════════════════════════════╗")
-print("║        🛡️  Azure Terraform Bootstrap           ║")
-print("╚═══════════════════════════════════════════════╝\n")
 
-# 1. Login & Context
-# ignore_error=True i.p.v. try/except: run_az_cmd zou anders zelf al
-# sys.exit(1) aanroepen bij een fout, vóór een except hier iets kan vangen.
-current_sub_name = run_az_cmd("az account show --query name -o tsv", ignore_error=True)
-if current_sub_name:
-    active_sub_id = run_az_cmd("az account show --query id -o tsv")
-    tenant_id = run_az_cmd("az account show --query tenantId -o tsv")
-    print(f"✅ Context: {current_sub_name} ({active_sub_id})")
-else:
+# De uitrol zelf.
+print("\n🛡️  Azure Terraform Bootstrap\n")
+
+# 1. Inloggen en de subscription; de ID's pas daarna lezen, ook de tenant van een andere subscription.
+name = az("account", "show", "--query", "name", "-o", "tsv", ignore_error=True)
+if not name:
     print("⚠️ Inloggen...")
-    run_az_cmd("az login -o none")
-    active_sub_id = run_az_cmd("az account show --query id -o tsv")
-    tenant_id = run_az_cmd("az account show --query tenantId -o tsv")
-
-if ask_user("Andere subscription? (j/n)", "n").lower() == 'j':
-    sub_id = ask_user("Subscription ID", pattern=GUID)
-    run_az_cmd(f"az account set --subscription {shlex.quote(sub_id)}")
-    active_sub_id = run_az_cmd("az account show --query id -o tsv")
-
-current_object_id = run_az_cmd("az ad signed-in-user show --query id -o tsv")
+    az("login", "-o", "none")
+    name = az("account", "show", "--query", "name", "-o", "tsv")
+print(f"✅ Context: {name}")
+if ask_user("Andere subscription? (j/n)", "n").lower() == "j":
+    az("account", "set", "--subscription", ask_user("Subscription ID", pattern=GUID))
+sub_id = az("account", "show", "--query", "id", "-o", "tsv")
+tenant_id = az("account", "show", "--query", "tenantId", "-o", "tsv")
+me = az("ad", "signed-in-user", "show", "--query", "id", "-o", "tsv")
 
 # 2. Providers
 print("\n⚙️  Providers check...")
-for p in ["Microsoft.Storage", "Microsoft.KeyVault", "Microsoft.ManagedIdentity"]:
-    run_az_cmd_with_retry(f"az provider register --namespace {p} --wait -o none", max_retries=2)
+for namespace in ("Microsoft.Storage", "Microsoft.KeyVault", "Microsoft.ManagedIdentity"):
+    az_retry("provider", "register", "--namespace", namespace, "--wait", "-o", "none", tries=2)
 
-# 3. Input
-rg_name   = ask_user("Resource Group naam", DEFAULT_RG_NAME, pattern=r"[A-Za-z0-9_.-]{0,89}[A-Za-z0-9_-]")
-location  = ask_user("Regio", DEFAULT_LOCATION, pattern=r"[a-z0-9]+")
+# 3. Invoer; met vier cijfers erachter blijft de naam van de opslag binnen de 3 tot 24 tekens van Azure.
+rg = ask_user("Resource Group naam", DEFAULT_RG_NAME, pattern=r"[A-Za-z0-9_.-]{0,89}[A-Za-z0-9_-]")
+location = ask_user("Regio", DEFAULT_LOCATION, pattern=r"[a-z0-9]+")
 container = ask_user("Blob container naam", "tfstate", pattern=r"[a-z0-9](?!.*--)[a-z0-9-]{1,61}[a-z0-9]")
+prefix = ask_user("Storage prefix (3-10 chars)", "tfstate", pattern=r"[a-z0-9]{3,10}")
+sa_name = f"{prefix}{random.randint(1000, 9999)}"
+suffix = random.randint(1000, 9999)
+mi_name, kv_name, key_name = f"mi-{prefix}-{suffix}", f"kv-{prefix}-{suffix}", "tfstate-cmk-key"
+if ask_user("\nStarten? (j/n)", "j").lower() != "j":
+    sys.exit(0)
 
-while True:
-    prefix = ask_user("Storage prefix (3-10 chars)", "tfstate", pattern=r"[a-z0-9]{3,10}")
-    sa_name = f"{prefix}{random.randint(1000,9999)}"
-    if 3 <= len(sa_name) <= 24 and re.match("^[a-z0-9]+$", sa_name): break
-    print("❌ Ongeldige naam.")
-
-suffix = f"{random.randint(1000,9999)}"
-mi_name = f"mi-{prefix}-{suffix}"
-kv_name = f"kv-{prefix}-{suffix}"
-key_name = "tfstate-cmk-key"
-
-# Belangrijke checks voor de deployment
-if ask_user("\nStarten? (j/n)", "j").lower() != 'j': sys.exit(0)
-
-# ---------- UITROL ----------
 print(f"\n🚀 Start setup in {location}...")
+az("group", "create", "--name", rg, "--location", location, "-o", "none")
 
-# A. Resource Group
-run_az_cmd(f"az group create --name {shlex.quote(rg_name)} --location {shlex.quote(location)} -o none")
-
-# B. Managed Identity (UAMI)
+# A. De identiteit van de opslag, en wachten tot Azure hem kent.
 print(f"→ UAMI '{mi_name}' aanmaken...")
-run_az_cmd_with_retry(f'az identity create --name {shlex.quote(mi_name)} --resource-group {shlex.quote(rg_name)} --location {shlex.quote(location)} -o none')
-
+az_retry("identity", "create", "--name", mi_name, "--resource-group", rg, "--location", location, "-o", "none")
 print("   ⏳ ID propagation...")
-mi_principal_id = ""
 for _ in range(12):
-    # ignore_error=True i.p.v. try/except pass: zelfde reden als bij Login hierboven.
-    mi_principal_id = run_az_cmd(
-        f'az identity show --name {shlex.quote(mi_name)} --resource-group {shlex.quote(rg_name)} --query principalId -o tsv',
-        ignore_error=True
-    )
+    mi_principal_id = az("identity", "show", "--name", mi_name, "--resource-group", rg,
+                         "--query", "principalId", "-o", "tsv", ignore_error=True)
     if mi_principal_id:
         break
     time.sleep(5)
-mi_client_id = run_az_cmd(f'az identity show --name {shlex.quote(mi_name)} --resource-group {shlex.quote(rg_name)} --query clientId -o tsv')
-uami_id = f"/subscriptions/{active_sub_id}/resourceGroups/{rg_name}/providers/Microsoft.ManagedIdentity/userAssignedIdentities/{mi_name}"
+mi_client_id = az("identity", "show", "--name", mi_name, "--resource-group", rg, "--query", "clientId", "-o", "tsv")
+uami_id = f"/subscriptions/{sub_id}/resourceGroups/{rg}/providers/Microsoft.ManagedIdentity/userAssignedIdentities/{mi_name}"
 
-# C. Key Vault
+# B. Key Vault met gescheiden rollen: jij beheert de sleutel, de identiteit mag hem alleen gebruiken.
 print(f"→ Key Vault '{kv_name}'...")
-run_az_cmd(f'az keyvault create --name {shlex.quote(kv_name)} --resource-group {shlex.quote(rg_name)} --location {shlex.quote(location)} \
-            --enable-rbac-authorization true --enable-purge-protection true --retention-days 90 -o none')
+az("keyvault", "create", "--name", kv_name, "--resource-group", rg, "--location", location,
+   "--enable-rbac-authorization", "true", "--enable-purge-protection", "true", "--retention-days", "90", "-o", "none")
+kv_scope = f"/subscriptions/{sub_id}/resourceGroups/{rg}/providers/Microsoft.KeyVault/vaults/{kv_name}"
+assign("Key Vault Crypto Officer", me, kv_scope)
+assign("Key Vault Crypto Service Encryption User", mi_principal_id, kv_scope)
 
-# D. KV RBAC - Separation of Duties
-print("→ Key Vault RBAC...")
-kv_scope = f"/subscriptions/{active_sub_id}/resourceGroups/{rg_name}/providers/Microsoft.KeyVault/vaults/{kv_name}"
-
-run_az_cmd_with_retry(f'az role assignment create --role "Key Vault Crypto Officer" --assignee {shlex.quote(current_object_id)} --scope {shlex.quote(kv_scope)} -o none')
-run_az_cmd_with_retry(f'az role assignment create --role "Key Vault Crypto Service Encryption User" --assignee {shlex.quote(mi_principal_id)} --scope {shlex.quote(kv_scope)} -o none')
-
-# E. CMK Key (RSA 4096)
+# C. De eigen sleutel (RSA 4096).
 print(f"→ CMK '{key_name}' (RSA 4096)...")
 time.sleep(15)
-run_az_cmd_with_retry(f'az keyvault key create --vault-name {shlex.quote(kv_name)} --name {shlex.quote(key_name)} --kty RSA --size 4096 -o none')
+az_retry("keyvault", "key", "create", "--vault-name", kv_name, "--name", key_name, "--kty", "RSA", "--size", "4096", "-o", "none")
 
-# F. Storage Account (CMK)
+# D. De opslag, versleuteld met die sleutel, alleen over HTTPS en niet publiek.
 print(f"→ Storage '{sa_name}' met CMK...")
-kv_uri = run_az_cmd(f'az keyvault show --name {shlex.quote(kv_name)} --query properties.vaultUri -o tsv').strip()
-
-storage_cmd = f"""az storage account create \
-    --name {shlex.quote(sa_name)} \
-    --resource-group {shlex.quote(rg_name)} \
-    --location {shlex.quote(location)} \
-    --sku Standard_LRS \
-    --kind StorageV2 \
-    --allow-blob-public-access false \
-    --min-tls-version TLS1_2 \
-    --https-only true \
-    --identity-type UserAssigned \
-    --user-identity-id {shlex.quote(uami_id)} \
-    --encryption-key-source Microsoft.Keyvault \
-    --encryption-key-vault {shlex.quote(kv_uri)} \
-    --encryption-key-name {shlex.quote(key_name)} \
-    --encryption-services blob \
-    --key-vault-user-identity-id {shlex.quote(uami_id)} \
-    -o none"""
-
-run_az_cmd_with_retry(storage_cmd)
-
-# G. Storage Hardening & RBAC
+kv_uri = az("keyvault", "show", "--name", kv_name, "--query", "properties.vaultUri", "-o", "tsv")
+az_retry("storage", "account", "create", "--name", sa_name, "--resource-group", rg, "--location", location,
+         "--sku", "Standard_LRS", "--kind", "StorageV2", "--allow-blob-public-access", "false",
+         "--min-tls-version", "TLS1_2", "--https-only", "true",
+         "--identity-type", "UserAssigned", "--user-identity-id", uami_id,
+         "--encryption-key-source", "Microsoft.Keyvault", "--encryption-key-vault", kv_uri,
+         "--encryption-key-name", key_name, "--encryption-services", "blob",
+         "--key-vault-user-identity-id", uami_id, "-o", "none")
 print("→ Storage settings...")
-run_az_cmd_with_retry(f"""az storage account blob-service-properties update \
-    --account-name {shlex.quote(sa_name)} --resource-group {shlex.quote(rg_name)} \
-    --enable-versioning true --enable-delete-retention true --delete-retention-days 7 \
-    --enable-container-delete-retention true --container-delete-retention-days 7 -o none""")
-
-print("→ Storage RBAC...")
-sa_scope = f"/subscriptions/{active_sub_id}/resourceGroups/{rg_name}/providers/Microsoft.Storage/storageAccounts/{sa_name}"
-
-run_az_cmd_with_retry(f'az role assignment create --role "Storage Blob Data Owner" --assignee {shlex.quote(current_object_id)} --scope {shlex.quote(sa_scope)} -o none')
-run_az_cmd_with_retry(f'az role assignment create --role "Storage Blob Data Contributor" --assignee {shlex.quote(mi_principal_id)} --scope {shlex.quote(sa_scope)} -o none')
-
-# H. Container
+az_retry("storage", "account", "blob-service-properties", "update", "--account-name", sa_name, "--resource-group", rg,
+         "--enable-versioning", "true", "--enable-delete-retention", "true", "--delete-retention-days", "7",
+         "--enable-container-delete-retention", "true", "--container-delete-retention-days", "7", "-o", "none")
+sa_scope = f"/subscriptions/{sub_id}/resourceGroups/{rg}/providers/Microsoft.Storage/storageAccounts/{sa_name}"
+assign("Storage Blob Data Owner", me, sa_scope)
+assign("Storage Blob Data Contributor", mi_principal_id, sa_scope)
 print(f"⏳ {PROPAGATION_WAIT}s wachten op CMK & RBAC propagatie...")
 time.sleep(PROPAGATION_WAIT)
-run_az_cmd_with_retry(f"az storage container create --name {shlex.quote(container)} --account-name {shlex.quote(sa_name)} --auth-mode login -o none")
+az_retry("storage", "container", "create", "--name", container, "--account-name", sa_name, "--auth-mode", "login", "-o", "none")
 
-# I. AUTOMATISCH GITHUB SECRETS ZETTEN
+# E. GitHub: geen geheimen, alleen ID's en namen voor OIDC en de backend.
 print("\n--- GitHub Integratie ---")
-gh_configured = check_and_configure_gh()
-set_secrets_auto = False
-repo = None
-
-# Vraag of secrets automatisch gezet moeten worden
-if gh_configured:
-    set_secrets_auto = ask_user("GitHub Secrets automatisch instellen? (j/n)", "j").lower() == 'j'
-
-# Optionele SNYK integratie vraag
-use_snyk = ask_user("Snyk testen integreren (SNYK_TOKEN)? (j/n)", "n").lower() == 'j'
-snyk_token = None
-
-if use_snyk:
-    print("\n➡️  Voer je Snyk API Token in.")
-    print("   (Ga naar https://snyk.io → Account Settings → API Token)")
-    snyk_token = ask_secret("SNYK_TOKEN")
-
-# Secrets dictionary (Definieer deze ALTIJD, ongeacht of ze automatisch worden gezet of handmatig getoond)
-secrets = {
-    "AZURE_CLIENT_ID": mi_client_id,
-    "AZURE_SUBSCRIPTION_ID": active_sub_id,
-    "AZURE_TENANT_ID": tenant_id,
-    "BACKEND_RG_NAME": rg_name,
-    "BACKEND_STORAGE_ACCOUNT": sa_name,
-    "BACKEND_CONTAINER_NAME": container
-}
-
-if use_snyk:
-    secrets["SNYK_TOKEN"] = snyk_token
-
-# Dit blok wordt alleen uitgevoerd als GH CLI is geconfigureerd EN de gebruiker koos voor auto-instellen
-if gh_configured and set_secrets_auto:
+values = {"AZURE_CLIENT_ID": mi_client_id, "AZURE_SUBSCRIPTION_ID": sub_id, "AZURE_TENANT_ID": tenant_id,
+          "BACKEND_RG_NAME": rg, "BACKEND_STORAGE_ACCOUNT": sa_name, "BACKEND_CONTAINER_NAME": container}
+if gh_ready() and ask_user("GitHub Secrets automatisch instellen? (j/n)", "j").lower() == "j":
     repo = ask_user("Volledige GitHub repo (bijv. user/repo)", pattern=r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+")
     print(f"Secrets aan het zetten in {repo}...")
-
-    for name, value in secrets.items():
-        result = subprocess.run([shutil.which("gh"), "secret", "set", name, "--repo", repo],
-                                input=str(value), capture_output=True, text=True)
-        if result.returncode == 0:
-            print(f"   ✅ {name}")
-        else:
-            print(f"   ❌ {name} (mislukt: {result.stderr.strip()})")
-
-    print("\nALLES KLAAR! Je repo is nu 100% klaar voor GitHub Actions OIDC.")
+    for key, value in values.items():
+        # De waarde via stdin, niet als argument: dan staat hij niet in de proceslijst.
+        result = subprocess.run(as_args("gh", "secret", "set", key, "--repo", repo), input=value, capture_output=True, text=True)
+        print(f"   ✅ {key}" if result.returncode == 0 else f"   ❌ {key} (mislukt: {result.stderr.strip()})")
 else:
-    # Handmatige instructies
     print("\nHandmatig kopiëren:")
+    for key, value in values.items():
+        print(f"   {key:23} = {value}")
 
-    # Toon alle benodigde secrets, behalve SNYK_TOKEN: dat heb je net zelf
-    # ingetypt via getpass, dus die staat nergens om terug te printen.
-    for name, value in secrets.items():
-        display_value = "(niet opnieuw getoond, je hebt 'm net zelf ingevoerd)" if name == "SNYK_TOKEN" else value
-        print(f"   {name:23} = {display_value}")
-
-    if use_snyk:
-        print("ℹ️ SNYK_TOKEN staat niet in dit overzicht (zie hierboven waarom); zorg dat je 'm ergens veilig bewaart.")
-
-# J. Output & Files
+# F. Een backend-bestand per omgeving voor terraform init.
 print("\n📝 Backend Configs genereren...")
-for env in ["dev", "test", "prod"]:
-    with open(f"backend.{env}.conf", "w") as f:
-        f.write(f"""resource_group_name  = "{rg_name}"
-storage_account_name = "{sa_name}"
-container_name       = "{container}"
-key                  = "{env}/terraform.tfstate"
-use_azuread_auth     = true
-
-subscription_id      = "{active_sub_id}"
-tenant_id            = "{tenant_id}"
-""")
+for env in ("dev", "test", "prod"):
+    with open(f"backend.{env}.conf", "w", encoding="utf-8", newline="\n") as f:
+        f.write(f'resource_group_name  = "{rg}"\nstorage_account_name = "{sa_name}"\ncontainer_name       = "{container}"\n'
+                f'key                  = "{env}/terraform.tfstate"\nuse_azuread_auth     = true\n\n'
+                f'subscription_id      = "{sub_id}"\ntenant_id            = "{tenant_id}"\n')
 
 print("\n🎉 GEREED! Setup voltooid. Gebruik nu de backend.conf in Terraform.")
