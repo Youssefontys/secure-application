@@ -146,13 +146,13 @@ Waar de geheimen nu staan, wie ze kan lezen en hoe ze gemaakt worden:
 | `FLASK_SECRET_KEY` (A-05) | Ondertekent de sessiecookie, en is de HMAC-sleutel van de tellers | `.env`, omgeving van de app | 256 willekeurige bits |
 | `POSTGRES_PASSWORD` (A-06) | Wachtwoord waarmee de app inlogt op de database | `.env`, omgeving van app en database | 256 willekeurige bits |
 
-- **Nooit in git.** `.env` en `backend.*.conf` staan in `.gitignore`; in de repo zit alleen `.env.example`, zonder waarden. Op 17-10-2026 is de hele geschiedenis doorzocht: geen sleutelwaarde, en nooit een `.env` of `backend.*.conf` gecommit.
+- **Nooit in git.** `.env` en `backend.conf` staan in `.gitignore` (tot 31d93f9 `backend.*.conf`, één per omgeving); in de repo zit alleen `.env.example`, zonder waarden. Op 17-10-2026 is de hele geschiedenis doorzocht: geen sleutelwaarde, en nooit een `.env` of backend-bestand gecommit.
 - **Zelf gemaakt, nooit getoond.** `python scripts/setup.py lokaal` vult een ontbrekende of lege sleutel aan met 256 bits uit de module `secrets` van Python, en noemt alleen de naam. Een bestaande sleutel blijft staan.
 - **Niet leeg starten.** Compose start niet als een van de vier leeg is (`${...:?}`). De app start niet met een `DATA_ENCRYPTION_KEY` die geen 256 bits is.
 - **Eén doel per sleutel, op één na.** De gegevenssleutel staat los van de rest. `FLASK_SECRET_KEY` heeft twee taken. Een nieuwe sessiesleutel maakt daardoor ook alle tellers van de poginglimieten ongeldig (A-05).
 - **De geheimen in de Azure-scripts.** `scripts/azuresetup_v2.py`:
   - geeft de waarden via stdin aan `gh` en niet als argument, dus ze staan niet in de proceslijst;
-  - zet in GitHub alleen id's (client, tenant, subscription) en geen wachtwoord, want de pipeline hoort in te loggen met OIDC. De koppeling daarvoor (een federated credential op de managed identity) maakt het script nog niet aan; die komt bij de Terraform-stap.
+  - zet in GitHub alleen id's en namen (tenant, subscription, de opslag van de state) en geen wachtwoord, want de pipeline hoort in te loggen met OIDC. De client-ID daarvoor komt bij de CI-stap, van een eigen identiteit met een federated credential. Tot b733d12 zette het script de identiteit van de opslag in GitHub: die heeft geen federated credential, mag geen resources maken, en mag wel de sleutel van de state gebruiken.
 - **De sleutel van de Terraform-state.** Een eigen RSA-4096-sleutel in Key Vault, met purge protection en 90 dagen bewaartijd na verwijderen. De rollen zijn gescheiden: wie het script draait, beheert de sleutel (Key Vault Crypto Officer); de managed identity mag hem alleen gebruiken (Key Vault Crypto Service Encryption User).
 
 Wat nog mist:

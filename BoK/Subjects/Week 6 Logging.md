@@ -2,7 +2,7 @@
 
 De app logt nu elke security-gebeurtenis als één JSON-regel (MIT-31): wanneer, wat, vanaf welk adres en, als dat bekend is, van welk account. Dat gebeurt op de plekken waar de app al beslist. Een aanval laat daardoor een spoor na (MC-28), lokaal en op Azure op dezelfde manier. Wachtwoorden, codes en geheimen komen er nooit in.
 
-De details staan in de entries (MC-28, MIT-31; A-11, C-05 en F-05 in de architectuur) en de tests (T-93, T-94, T-100, T-101). Overgenomen uit BOK-SECENGINEER, dat dit al deed; de audit van 18-10-2026 maakte twee dingen strakker: een naam alleen als het account bestaat, en één regel per blokkade.
+De details staan in de entries (MC-28, MIT-31; A-11, C-05 en F-05 in de architectuur) en de tests (T-93, T-94, T-100, T-101; T-102 na de uitrol). Overgenomen uit BOK-SECENGINEER, dat dit al deed; de audit van 18-10-2026 maakte twee dingen strakker: een naam alleen als het account bestaat, en één regel per blokkade.
 
 ## De dreiging
 
@@ -18,6 +18,7 @@ De details staan in de entries (MC-28, MIT-31; A-11, C-05 en F-05 in de architec
 | Soorten gebeurtenissen | Alleen onverwachte fouten (MIT-25) | 21 soorten, op elke plek waar de app beslist |
 | Een wachtwoord per ongeluk in het naamveld | Stond leesbaar in de log, want het voldeed aan de naamregel | Niet in de log: een naam alleen als het account bestaat |
 | 40 pogingen tijdens een blokkade | 41 regels, één per geweigerde poging | Eén regel per blokkade (`lockout_started`) |
+| De log op Azure | Alleen live te volgen; na een herstart weg | 30 dagen in Log Analytics, waar de app niet bij kan (nog niet uitgerold) |
 | Een naam met een regeleinde | Kwam niet in de log, want er werd niets gelogd | Komt er nog steeds niet in: alleen de naam van een bestaand account, en JSON escapet stuurtekens |
 
 ## Hoe het werkt
@@ -29,7 +30,7 @@ De details staan in de entries (MC-28, MIT-31; A-11, C-05 en F-05 in de architec
   {"time": "2026-10-17T23:05:48+00:00", "event": "lockout_started", "ip": "172.18.0.1", "scope": "password_account_ip", "minutes": 15}
   ```
 
-- **De plek:** stderr van de container. Lokaal is dat `docker compose logs app`, op Azure de log van Container Apps. De code is op beide hetzelfde.
+- **De plek:** stderr van de container. Lokaal is dat `docker compose logs app`; op Azure zet Container Apps hem in Log Analytics, in de tabel `ContainerAppConsoleLogs_CL` (de regel staat in `Log_s`). De code is op beide hetzelfde. De output `security_log_command` van Terraform geeft de blokkades van de laatste dag.
 - **Een gebruikersnaam** komt er alleen in als het account bestaat (`target()`); anders staat er `"known": false`. Wat iemand in het naamveld typt, ook een wachtwoord, blijft zo buiten de log.
 - **Een blokkade** logt zichzelf één keer, op het moment dat hij begint: `lockout_started` in `throttle.attempt()`, met de soort teller (`scope`) en hoe lang.
 
@@ -62,23 +63,28 @@ De details staan in de entries (MC-28, MIT-31; A-11, C-05 en F-05 in de architec
 
 Een IP-adres en een gebruikersnaam zijn persoonsgegevens (A-11). Daarom:
 - staat er alleen in wat voor het spoor nodig is: geen notities, geen wachtwoord, geen sessiecookie;
-- hoort er een doel en een bewaartermijn bij. Die komen bij de AVG-stap; de OWASP Logging Cheat Sheet noemt ook pseudonimiseren als mogelijkheid.
+- hoort er een bewaartermijn bij: op Azure 30 dagen, en dan echt weg. Zonder `immediate_data_purge_on_30_days_enabled` kan het 31 dagen worden, zegt Microsoft.
+- hoort er een doel bij; dat komt bij de AVG-stap. De OWASP Logging Cheat Sheet noemt ook pseudonimiseren als mogelijkheid.
 
 ## Lokaal en op Azure
 
 - **Lokaal** bewaart Docker de log zolang de container bestaat. Een `docker compose down` of een nieuwe build begint met een lege log.
-- **Op Azure** staat de log voorlopig alleen live in Container Apps. Bewaren, met een termijn, kan met een Log Analytics-workspace in Terraform; dat hoort bij de uitrol, samen met de drie Trivy-punten over de databaselog (AZU-0019, AZU-0021, AZU-0024).
+- **Op Azure** zet Container Apps de log in een Log Analytics-workspace (`terraform/logs.tf`, sinds d547182): 30 dagen, met een rem van 0,1 GB per dag. Een regel staat er een paar minuten na het gebeuren; live meekijken kan nog steeds met de log stream. Nog niet uitgerold, dus nog niet gemeten (T-102).
+- **De databaselog** gaat nog nergens heen: de drie Trivy-punten daarover (AZU-0019, AZU-0021, AZU-0024) staan nog open.
 
 ## Wat het niet oplost
 
 - **Niemand kijkt mee.** Er zijn geen meldingen (alerts) bij een blokkade of een reeks mislukte logins.
-- **Wie de host of de container beheert, kan de log wissen.** Een log die de app zelf niet meer kan veranderen, vraagt een aparte plek, zoals Log Analytics op Azure.
+- **Lokaal kan wie de host beheert de log wissen.** Op Azure niet vanuit de app: de identiteit van de app heeft geen rechten op de workspace.
+- **De rem van 0,1 GB per dag kan het spoor stoppen.** Is hij bereikt, dan verzamelt Log Analytics niets meer tot de volgende dag, en wat er toch nog binnenkomt, wordt betaald. Microsoft noemt de rem een vangnet tegen onverwachte pieken, geen filter. Wie hem met een script haalt, valt daarna niet meer op.
 - **Gewone verzoeken worden niet gelogd.** Gunicorn draait zonder access-log; daarmee blijven ook de healthchecks van elke 5 seconden buiten de log.
 - **Geen `observe`-stand.** BOK-SECENGINEER kon de IP-limieten alleen laten melden in plaats van blokkeren. Hier blokkeren ze altijd; de log laat nu wel zien wat er geblokkeerd is.
 
 ## Keuzes
 
 - **stderr, geen bestand.** Een bestand in de container is weg met de container, en op Azure leest Container Apps stderr. Zo is lokaal gelijk aan Azure.
+- **Log Analytics als bestemming.** Het is de standaard van Container Apps, en de enige waarbij de query-editor in de portal werkt. Azure Monitor als bestemming vraagt nog diagnostic settings, voor hier hetzelfde resultaat.
+- **30 dagen.** Daarvan zitten er 31 in de prijs, dus korter scheelt niets en langer kost extra. Lang genoeg om een aanval achteraf terug te zien, en niet langer dan nodig voor persoonsgegevens.
 - **JSON, niet vrije tekst.** Elk veld is apart te zoeken, en JSON escapet wat een aanvaller in een veld stopt.
 - **Op de plekken waar de app al beslist.** Geen aparte laag die raadt wat er gebeurde; de route die weigert, logt ook waarom.
 - **Een naam alleen als het account bestaat.** Zo zie je bij een aanval wie het doelwit was. Eerst gold de naamregel, maar een wachtwoord als `Zomervakantie2026` voldoet daar ook aan; dat liet de audit van 18-10-2026 zien.
@@ -94,10 +100,15 @@ Voor het verslag, lokaal in `screenshots/Week 6 Logging/` (niet in de repo).
 | Security-events | `week6_voor_logging_1_geen_spoor` | `week6_na_logging_1_json_per_gebeurtenis` | `week6_code_logging_1_events` |
 | Wachtwoord in het naamveld | `week6_voor_logging_2_wachtwoord_in_log` | `week6_na_logging_2_alleen_bestaande_namen` | `week6_code_logging_1_events` |
 | Een regel per blokkade | `week6_voor_logging_3_regel_per_poging` | `week6_na_logging_3_een_regel_per_blokkade` | `week6_code_logging_1_events` |
+| De log op Azure | na de uitrol | na de uitrol | `week6_code_logging_2_azure` |
 
 ## Bronnen
 
-Opgehaald en gecontroleerd op 17-10-2026.
+Opgehaald en gecontroleerd op 17-10-2026; de pagina's van Microsoft op 18-10-2026.
 
 - OWASP Logging Cheat Sheet ("when, where, who and what", geen wachtwoorden, sanitizen tegen log injection, bewaartermijn): https://cheatsheetseries.owasp.org/cheatsheets/Logging_Cheat_Sheet.html
 - OWASP Session Management Cheat Sheet (geen sessie-ID in de log): https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html
+- Microsoft, log-opties van Container Apps (log-analytics, azure-monitor of none; zonder bewaren alleen de log stream): https://learn.microsoft.com/en-us/azure/container-apps/log-options
+- Microsoft, logs van Container Apps in Log Analytics (tabel `ContainerAppConsoleLogs_CL`, kolom `Log_s`): https://learn.microsoft.com/en-us/azure/container-apps/log-monitoring
+- Microsoft, bewaartermijn (standaard 30 dagen, 31 in de prijs, `immediatePurgeDataOn30Days`): https://learn.microsoft.com/en-us/azure/azure-monitor/logs/data-retention-configure
+- Microsoft, dagelijkse rem (een vangnet, geen filter; daarna niets verzameld tot de volgende dag): https://learn.microsoft.com/en-us/azure/azure-monitor/logs/daily-cap
