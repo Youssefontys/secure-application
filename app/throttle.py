@@ -24,6 +24,15 @@ POLICIES = {
     # Herauthenticatie, per account: alleen met een sessie te bereiken, dus het account mag op slot (MIT-16).
     "reauth_account": Policy(5, 15, 15, 24 * 60),
 }
+# Hackstand voor de hacking week: een klas achter één adres van school. Ruimer en een vaste blokkade van
+# 5 minuten zonder verdubbeling: een scanner wordt nog afgeremd, de klas wacht hooguit 5 minuten (MC-18).
+IP_MODES = {"strict": POLICIES["password_ip"], "hackweek": Policy(100, 15, 5, 5)}
+_mode = os.environ.get("THROTTLE_IP_MODE", "strict")
+if _mode not in IP_MODES:
+    raise RuntimeError(f"Onbekende THROTTLE_IP_MODE {_mode!r}; kies uit {', '.join(IP_MODES)}.")
+POLICIES["password_ip"] = IP_MODES[_mode]
+# Namen zonder teller per naam per adres, voor het demoaccount: anders sluit één klasgenoot het voor de klas af.
+PAIR_EXEMPT = {name.strip() for name in os.environ.get("THROTTLE_PAIR_EXEMPT_USERS", "").split(",") if name.strip()}
 # Een geslaagde poging wist deze teller niet: anders zet een eigen account hem steeds terug.
 KEEP_ON_SUCCESS = {"password_ip"}
 
@@ -38,6 +47,8 @@ def limit(kind, *parts):
 # De tellers van inloggen en wachtwoord vergeten: per adres en per naam per adres (MIT-10).
 def password_limits(username, remote_addr):
     ip = client_ip(remote_addr)
+    if username in PAIR_EXEMPT:
+        return (limit("password_ip", ip),)
     return limit("password_ip", ip), limit("password_account_ip", username, ip)
 
 
