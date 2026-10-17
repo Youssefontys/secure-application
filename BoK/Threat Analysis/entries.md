@@ -80,13 +80,15 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 - Assets / onderdelen: A-01, C-03, C-04, F-03
 - Gerelateerde use case: UC-01, UC-02
 - Stappen:
-  - OR  1. De database rechtstreeks bevragen (`SELECT username, password FROM users`)
-  - OR  2. Het databasevolume of een backup lezen (C-04)
-  - OR  3. De webapplicatie overnemen en de wachtwoorden via F-03 opvragen
-- Mitigaties: geen (het wachtwoord staat leesbaar)
-- Restrisico: elk gelezen wachtwoord is direct bruikbaar. Bij een account met tweestapsverificatie is het wachtwoord alleen niet genoeg (MIT-05), en het TOTP-geheim staat sinds MIT-17 versleuteld, dus de database alleen levert geen volledige overname meer op (MC-17); wie ook de sleutel heeft (MC-22), wel
-- Status: open
-- Sinds: baseline
+  - AND 1. De opgeslagen wachtwoorden buitmaken
+    - OR  1a. De database rechtstreeks bevragen (`SELECT username, password_hash FROM users`)
+    - OR  1b. Het databasevolume of een backup lezen (C-04)
+    - OR  1c. De webapplicatie overnemen en ze via F-03 opvragen
+  - AND 2. Er het wachtwoord uit halen: sinds MIT-19 staat er alleen een Argon2id-hash, dus offline raden, per account opnieuw door de eigen salt
+- Mitigaties: MIT-19 (stap 2: elke gok kost 19 MiB en een Argon2id-berekening, en een hash geldt maar voor één account). MIT-13 (stap 2: minstens 12 tekens maakt raden duurder)
+- Restrisico: een zwak of veelgebruikt wachtwoord blijft te raden; er is geen blocklist (geparkeerd). Wie de app overneemt (MC-08, MC-11), ziet het wachtwoord bij het inloggen voorbijkomen. Wie de database kan wijzigen (MC-08), zet er een eigen hash in. Bij een account met tweestapsverificatie is het wachtwoord alleen niet genoeg (MIT-05), en het TOTP-geheim staat versleuteld (MIT-17); wie ook de sleutel heeft (MC-22), kan beide
+- Status: gebouwd
+- Sinds: baseline; gehasht sinds 9e6e365
 
 ### MC-02 Notities van een ander lezen, aanpassen of verwijderen
 - Aanvallersdoel: notities van een andere gebruiker lezen of vernietigen
@@ -191,8 +193,8 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 - Stappen:
   - AND 1. Veel namen proberen te registreren
   - AND 2. Het antwoord "Die gebruikersnaam is al in gebruik" onderscheidt bestaande namen
-- Mitigaties: geen (geen limiet op registreren)
-- Restrisico: onbeperkt opsporen; de melding zelf is bij zelfgekozen namen niet te vermijden
+- Mitigaties: geen voor registreren (geen limiet). Bij inloggen rekent de app ook voor een onbekende naam een Argon2id-hash (MIT-19), zodat de responstijd geen tweede manier wordt (T-70)
+- Restrisico: onbeperkt opsporen via registreren; de melding zelf is bij zelfgekozen namen niet te vermijden
 - Status: open
 - Sinds: baseline
 
@@ -206,7 +208,7 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
   - OR  2. Onbeperkt veel accounts aanmaken
   - OR  3. Onbeperkt veel notities aanmaken en tonen
 - Mitigaties: MIT-04 (stap 1, alleen voor titel en notitie), nog geen (stap 2 en 3, en de grootte van het verzoek zelf)
-- Restrisico: elk verzoek wordt helemaal ingelezen, het aantal accounts en notities is onbeperkt, en een gebruikersnaam kan elke lengte hebben
+- Restrisico: elk verzoek wordt helemaal ingelezen, het aantal accounts en notities is onbeperkt, en een gebruikersnaam kan elke lengte hebben. Sinds MIT-19 kost elke registratie, login en wachtwoordwijziging 19 MiB en een Argon2id-berekening; inloggen is begrensd (MIT-10), registreren niet, dus veel registraties tegelijk kunnen geheugen en rekentijd opmaken
 - Status: open
 - Sinds: baseline
 
@@ -318,8 +320,8 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 - Stappen:
   - OR  1. Vanaf het adres van het slachtoffer 5 foute wachtwoorden voor zijn naam invullen, of 20 voor willekeurige namen
   - OR  2. Met het wachtwoord 5 foute codes invullen: de codestap van het account gaat op slot, oplopend tot 24 uur
-- Mitigaties: in het ontwerp van MIT-10: de wachtwoordstap blokkeert nooit een account over alle adressen, alleen per adres. Wie een naam kent maar niet op het netwerk van het slachtoffer zit, kan hem niet buitensluiten
-- Restrisico: op een gedeeld netwerk of achter een proxy delen gebruikers één adres. Achter een proxy moet de app het echte clientadres krijgen (bijvoorbeeld met `ProxyFix` en het juiste aantal proxies), anders telt iedereen als één adres. Stap 2 kan alleen wie het wachtwoord al heeft
+- Mitigaties: in het ontwerp van MIT-10: de wachtwoordstap blokkeert nooit een account over alle adressen, alleen per adres. Wie een naam kent maar niet op het netwerk van het slachtoffer zit, kan hem niet buitensluiten. Voor de hacking week, met een klas achter één adres van school, de hackstand: `THROTTLE_IP_MODE=hackweek` (100 per adres en een vaste blokkade van 5 minuten) en `THROTTLE_PAIR_EXEMPT_USERS` voor het demoaccount (T-71). Achter een proxy het echte clientadres via `ProxyFix` met `TRUSTED_PROXIES` (3a7c5ae), zonder de poort die Azure kan meesturen (T-72)
+- Restrisico: op een gedeeld netwerk delen gebruikers één adres; de hackstand verkleint dat, maar lost het niet op. `TRUSTED_PROXIES` moet bij de uitrol gemeten worden: te laag en iedereen deelt het adres van de proxy, te hoog en een aanvaller kiest zelf zijn adres. In de hackstand mag vanaf één adres meer geraden worden en heeft het demoaccount geen teller per naam, dus de stand hoort alleen aan tijdens de hacking week. Stap 2 kan alleen wie het wachtwoord al heeft
 - Status: open
 - Sinds: 484eca3
 
@@ -377,9 +379,9 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 - Sinds: 428858e
 
 ### MC-22 De gegevenssleutel buitmaken
-- Aanvallersdoel: met de sleutel (A-09) elk versleuteld TOTP-geheim ontsleutelen, en daarmee samen met de database de tweede factor van elk account
+- Aanvallersdoel: met de sleutel (A-09) elk versleuteld TOTP-geheim en elke notitie ontsleutelen, en daarmee samen met de database de tweede factor van elk account
 - Aanvaller: iemand met toegang tot de app-container, de ontwikkelmachine of een backup van `.env`
-- Assets / onderdelen: A-07, A-09, C-02
+- Assets / onderdelen: A-02, A-07, A-09, C-02
 - Gerelateerde use case: UC-07
 - Stappen:
   - OR  1. De omgeving van de app-container lezen (`docker compose exec app printenv`); de app draait als root (MC-14)
@@ -389,6 +391,19 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 - Restrisico: de sleutel staat lokaal leesbaar in `.env` en in de omgeving van de container. Ook met Key Vault heeft de draaiende app hem, dus wie de app overneemt, heeft hem ook
 - Status: open
 - Sinds: 776931a
+
+### MC-23 Notities uit de database lezen
+- Aanvallersdoel: de privénotities van alle gebruikers lezen
+- Aanvaller: iemand met leestoegang tot de database of een backup (beheerder, gelekt volume)
+- Assets / onderdelen: A-02, C-03, C-04, F-03
+- Gerelateerde use case: UC-03
+- Stappen:
+  - AND 1. De database, het volume of een backup lezen
+  - AND 2. De gegevenssleutel hebben, want sinds MIT-18 staan titel en inhoud versleuteld (MC-22)
+- Mitigaties: MIT-18 (stap 2)
+- Restrisico: wie ook de sleutel heeft (MC-22) of de app overneemt, leest alles. Een waarde is gebonden aan de eigenaar, niet aan de notitie: wie de database kan wijzigen, kan titels en inhoud tussen notities van dezelfde gebruiker verwisselen; tussen gebruikers of tussen titel en inhoud lukt dat niet (T-67). Hoeveel notities iemand heeft en wanneer ze zijn gemaakt, blijft leesbaar
+- Status: gebouwd
+- Sinds: baseline; versleuteld sinds b2b60e1
 
 ## Mitigaties
 
@@ -457,10 +472,10 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 
 ### MIT-10 Blokkade op de wachtwoordstap
 - Houdt tegen: MC-03 stap 1 en 2
-- Wat: foute wachtwoorden worden geteld per IP-adres (20 in 15 minuten) en per account vanaf één adres (5 in 15 minuten). Daarna volgt een blokkade van 15 minuten, die bij herhaling verdubbelt tot een uur; ook het juiste wachtwoord wordt dan geweigerd, met status 429 en `Retry-After`. De tellers hangen aan wat er is ingevuld en niet aan of het account bestaat, dus een blokkade verraadt geen namen. Elke poging telt vóór de controle, zoals bij MIT-06. Een geslaagde login wist de teller van het account; van de teller van het adres gaat alleen die ene poging af, anders zet een aanvaller met een eigen account de adresteller steeds terug. Bewust geen blokkade per account over alle adressen (MC-18). IPv6-adressen tellen per /64; een IPv4-adres dat via een IPv6-socket binnenkomt, telt als dat IPv4-adres (T-60). De sleutels in `auth_throttle` zijn HMAC's, dus de tabel bevat geen leesbare IP-adressen of gebruikersnamen. Bij een nieuwe blokkade gaan de tellers weg waarvan venster en blokkade meer dan een dag voorbij zijn (T-61)
+- Wat: foute wachtwoorden worden geteld per IP-adres (20 in 15 minuten) en per account vanaf één adres (5 in 15 minuten). Daarna volgt een blokkade van 15 minuten, die bij herhaling verdubbelt tot een uur; ook het juiste wachtwoord wordt dan geweigerd, met status 429 en `Retry-After`. De tellers hangen aan wat er is ingevuld en niet aan of het account bestaat, dus een blokkade verraadt geen namen. Elke poging telt vóór de controle, zoals bij MIT-06. Een geslaagde login wist de teller van het account; van de teller van het adres gaat alleen die ene poging af, anders zet een aanvaller met een eigen account de adresteller steeds terug. Bewust geen blokkade per account over alle adressen (MC-18). IPv6-adressen tellen per /64; een IPv4-adres dat via een IPv6-socket binnenkomt, telt als dat IPv4-adres (T-60). De sleutels in `auth_throttle` zijn HMAC's, dus de tabel bevat geen leesbare IP-adressen of gebruikersnamen. Bij een nieuwe blokkade gaan de tellers weg waarvan venster en blokkade meer dan een dag voorbij zijn (T-61). Achter een proxy komt het adres uit `X-Forwarded-For` via `ProxyFix` (`TRUSTED_PROXIES`, lokaal 0); een poort erachter valt eraf (T-72). De hackstand voor de hacking week (`THROTTLE_IP_MODE=hackweek`) maakt de limiet per adres 100, met een vaste blokkade van 5 minuten zonder verdubbeling, en `THROTTLE_PAIR_EXEMPT_USERS` haalt het demoaccount uit de teller per naam per adres. Standaard staat beide uit, en een onbekende stand laat de app niet starten (T-71)
 - Waar: `login()` in `app/auth.py`, `app/throttle.py`
 - Status: gebouwd
-- Sinds: 484eca3; `Retry-After` sinds 5a82eb5; tellen vóór de controle sinds 49baae5, blokkade in hetzelfde statement sinds 467623d; IPv4 achter IPv6 sinds 87a5006; opruimen sinds db7c907
+- Sinds: 484eca3; `Retry-After` sinds 5a82eb5; tellen vóór de controle sinds 49baae5, blokkade in hetzelfde statement sinds 467623d; IPv4 achter IPv6 sinds 87a5006; opruimen sinds db7c907; zonder poort sinds 67a2636; hackstand sinds 8c3fc87
 
 ### MIT-11 Herstelcode
 - Houdt tegen: MC-19 stap 2a, 2c en 2d; maakt tweestapsverificatie mogelijk zonder dat een kwijtgeraakte telefoon het account onbereikbaar maakt
@@ -499,7 +514,7 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 
 ### MIT-16 Herauthenticatie bij wachtwoord wijzigen en account verwijderen
 - Houdt tegen: MC-12 stap 2 en MC-13 stap 2; ook via een andere site (MC-05) lukken deze twee acties niet meer, want die site kent het wachtwoord niet
-- Wat: beide formulieren vragen het huidige wachtwoord, en `passwords.is_current()` controleert het. Dat is de enige plek, zodat bij Argon2 alleen die functie verandert. Elke poging telt vóór de controle, per account (`reauth_account`): na 5 fouten in 15 minuten wordt de volgende geweigerd, 15 minuten, verdubbelend tot 24 uur. Per account mag hier, want deze stap is alleen met een sessie te bereiken; zonder limiet kan iemand met een gestolen sessie het wachtwoord raden. Bij wachtwoord wijzigen gaat de sterkte-eis (MIT-13) eerst, zodat een fout in het nieuwe wachtwoord geen poging kost. Het OWASP Authentication Cheat Sheet vraagt de huidige gegevens opnieuw voor het wijzigen van gevoelige accountgegevens, zoals het wachtwoord
+- Wat: beide formulieren vragen het huidige wachtwoord, en `passwords.is_current()` controleert het. Dat is de enige plek; sinds MIT-19 met Argon2id. Elke poging telt vóór de controle, per account (`reauth_account`): na 5 fouten in 15 minuten wordt de volgende geweigerd, 15 minuten, verdubbelend tot 24 uur. Per account mag hier, want deze stap is alleen met een sessie te bereiken; zonder limiet kan iemand met een gestolen sessie het wachtwoord raden. Bij wachtwoord wijzigen gaat de sterkte-eis (MIT-13) eerst, zodat een fout in het nieuwe wachtwoord geen poging kost. Het OWASP Authentication Cheat Sheet vraagt de huidige gegevens opnieuw voor het wijzigen van gevoelige accountgegevens, zoals het wachtwoord
 - Waar: `refuse_without_password()`, `change_password()` en `delete_account()` in `app/account.py`; `is_current()` in `app/passwords.py`
 - Status: gebouwd
 - Sinds: f40781b
@@ -510,3 +525,17 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 - Waar: `app/encryption.py`; `setup_2fa()` en `qr_2fa()` in `app/account.py`; `check_code()` in `app/auth.py`
 - Status: gebouwd
 - Sinds: 776931a
+
+### MIT-18 Versleuteling van notities
+- Houdt tegen: MC-23 stap 2
+- Wat: titel en inhoud gaan met dezelfde helper en sleutel als het TOTP-geheim (MIT-17) de database in: AES-256-GCM, een nieuwe nonce per waarde, de sleutelversie vooraan. De soort (`note_title`, `note_body`) en de `user_id` van de eigenaar gaan mee als associated data, dus een titel als inhoud, of een notitie in de rij van een ander account, ontsleutelt niet (T-67). Wat niet ontsleutelt, staat op de pagina als "(niet te lezen)". De lengtegrens (MIT-04) geldt voor de tekst zelf, vóór het versleutelen
+- Waar: `sealed()` en `readable()` in `app/notes.py`; `app/encryption.py`
+- Status: gebouwd
+- Sinds: b2b60e1
+
+### MIT-19 Wachtwoorden als Argon2id-hash
+- Houdt tegen: MC-01 stap 2
+- Wat: wachtwoorden worden gehasht met Argon2id uit `argon2-cffi`, met de minimale instelling uit het OWASP Password Storage Cheat Sheet: 19 MiB geheugen, 2 iteraties, 1 thread. De library maakt per hash een eigen salt, en zet algoritme, instelling en salt in de hash zelf (T-68). Hashen en niet versleutelen: de app hoeft het wachtwoord nooit terug te lezen, en OWASP noemt versleutelen alleen voor uitzonderingen waarin dat wel moet. Bij een onbekende naam rekent de app tegen een vaste hash, zodat de responstijd niet verraadt of een naam bestaat (T-70). Is een hash met een oudere instelling gemaakt, dan maakt de app bij de volgende geslaagde login een nieuwe, zoals OWASP aanraadt (T-69). Geen pepper: OWASP noemt dat alleen extra verdediging, en een pepper kan niet meer veranderen zonder de wachtwoorden. Geen omzetting van leesbare wachtwoorden: in de ontwikkelfase begint de database leeg
+- Waar: `app/passwords.py`; `register()`, `login()` en `forgot_password()` in `app/auth.py`; `change_password()` in `app/account.py`
+- Status: gebouwd
+- Sinds: 9e6e365

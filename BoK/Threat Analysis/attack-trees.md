@@ -11,13 +11,15 @@ Notities van een ander lezen of wijzigen
   OR  Via een eigen account andermans notitie-id invullen (MC-02)        [MIT-15]
         AND eigen account aanmaken en inloggen
         AND notitie-id raden (opeenvolgende getallen)
-  OR  De database direct lezen (MC-01, MC-08)                             [open]
-        OR  rechtstreekse query met de eigenaarrol
-        OR  het volume of een backup lezen
-        OR  de app overnemen via een afhankelijkheid (MC-11)
-              OR  bekende kwetsbaarheid, niet bijgewerkt                   [open]
-              OR  kwaadaardige nieuwe pakketversie                         [MIT-03]
-              OR  kwetsbaarheid of andere image achter de tag              [open]
+  OR  De database direct lezen (MC-23, MC-08)                             [MIT-18, deels]
+        AND de database lezen                                              [open]
+              OR  rechtstreekse query met de eigenaarrol
+              OR  het volume of een backup lezen
+        AND de gegevenssleutel hebben (MC-22)                              [open]
+  OR  De app overnemen, die de sleutel heeft (MC-11)
+        OR  bekende kwetsbaarheid, niet bijgewerkt                         [open]
+        OR  kwaadaardige nieuwe pakketversie                               [MIT-03]
+        OR  kwetsbaarheid of andere image achter de tag                    [open]
   OR  Script in een notitie laten uitvoeren (MC-07)                       [MIT-01]
   OR  Het hele account van het slachtoffer verwijderen (MC-13)            [MIT-16, deels]
         AND handelen als het slachtoffer (cookie van MC-04, of via MC-05)
@@ -31,7 +33,9 @@ Notities van een ander lezen of wijzigen
 Account overnemen
   OR  Inloggen als het slachtoffer
         AND het wachtwoord kennen
-              OR  uit de database lezen (MC-01)                            [open]
+              OR  uit de database halen (MC-01)                            [MIT-19, deels]
+                    AND de hash lezen                                      [open]
+                    AND het wachtwoord raden, 19 MiB per gok per account   [MIT-19, MIT-13]
               OR  raden of stuffing (MC-03)                                [MIT-10, MIT-13, deels]
                     AND gebruikersnaam kennen (MC-09)                      [open]
         AND de code kennen (tweestapsverificatie is verplicht)             [MIT-05, MIT-12]
@@ -67,7 +71,7 @@ Dienst onbruikbaar
   OR  Zeer grote of veel verzoeken sturen (MC-10)
         OR  te lange titel of notitie opslaan                              [MIT-04]
         OR  groot verzoek, dat eerst helemaal wordt ingelezen              [open]
-        OR  veel accounts of notities aanmaken                             [open]
+        OR  veel accounts (elk een Argon2id-hash) of notities aanmaken     [open]
   OR  Alle notities wissen via MC-02                                       [open]
   OR  De database weggooien na overname van de app (MC-08)                 [open]
   OR  De ontwikkelserver van Flask overbelasten (MC-14)                    [open]

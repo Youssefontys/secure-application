@@ -40,7 +40,7 @@ regressietest, behalve waar iets anders staat.
 
 | ID | Dekt | Test | Nu | Na de mitigatie |
 |----|------|------|----|-----------------|
-| T-10 | MC-01 | Na registreren `users.password` uitlezen | Het wachtwoord staat er leesbaar | Een hash, niet terug te rekenen |
+| T-10 | MC-01 | Na registreren `users.password_hash` uitlezen | `$argon2id$v=19$m=19456,t=2,p=1$`, een salt en de hash; het wachtwoord staat er niet in (gemeten op 2026-10-17). Voor 9e6e365: leesbaar in `users.password` | Idem; bewijs voor MIT-19 |
 | T-11 | MC-02 | Gebruiker B opent, wijzigt en verwijdert een notitie van A via `/notes/<id>/edit` en `/notes/<id>/delete` | 404 bij openen, wijzigen en verwijderen; de notitie van A ongewijzigd (sinds MIT-15, gemeten op 2026-10-16) | Idem; bewijs voor MIT-15 |
 | T-12 | MC-03 | Foute wachtwoorden achter elkaar op één account | Na 5 fouten geeft de volgende poging 429 met `Retry-After: 900`: een blokkade van 15 minuten; ook het juiste wachtwoord wordt dan geweigerd (sinds MIT-10) | Idem; dit is het bewijs voor MIT-10 |
 | T-13 | MC-03 | Registreren of wijzigen naar wachtwoord `a` | Geweigerd: 400, "Kies een wachtwoord van 12 tot 64 tekens." (sinds MIT-13, gemeten op 2026-10-16) | Idem; dit is het bewijs voor MIT-13 |
@@ -89,3 +89,10 @@ regressietest, behalve waar iets anders staat.
 | T-62 | MC-12 | 5 foute huidige wachtwoorden bij account verwijderen, daarna het juiste | Daarna geeft de 6e poging 429 met `Retry-After: 900`, ook met het juiste wachtwoord; het account bestaat nog | Idem; bewijs voor MIT-16 |
 | T-63 | MC-17 | Het versleutelde geheim van account A in de rij van account B zetten, en dan met een code van A inloggen als B | 400: de waarde ontsleutelt op een andere plek niet | Idem; bewijs voor MIT-17 |
 | T-64 | MC-22 | De gegevenssleutel lezen uit de omgeving van de app-container | Lukt: `printenv DATA_ENCRYPTION_KEY` geeft 64 tekens, als root; de sleutel staat niet in de database (gemeten op 2026-10-17) | Op Azure: alleen te lezen door de app zelf via Key Vault, niet op een ontwikkelmachine of in de repo |
+| T-66 | MC-23 | Na een notitie `notes.title` en `notes.body` uitlezen | Beide `v1:` met nonce, versleutelde tekst en tag; de tekst staat er niet in, en de eigenaar leest hem gewoon op de pagina (gemeten op 2026-10-17). Voor b2b60e1: leesbaar | Idem; bewijs voor MIT-18 |
+| T-67 | MC-23 | De versleutelde notitie van A in de rij van een notitie van B zetten; bij A titel en inhoud omwisselen | Beide keren "(niet te lezen)" voor titel en inhoud | Idem; bewijs voor MIT-18 |
+| T-68 | MC-01 | Twee accounts met hetzelfde wachtwoord: de hashes vergelijken | Verschillend, door de eigen salt | Idem; bewijs voor MIT-19 |
+| T-69 | MC-01 | Een hash met een oudere instelling (7 MiB, 5 iteraties) en dan inloggen | Inloggen lukt; daarna staat er een hash met 19 MiB en 2 iteraties | Idem; bewijs voor MIT-19 |
+| T-70 | MC-09 | Responstijd van een fout wachtwoord voor een bestaande en voor een onbekende naam, mediaan van 4 | Zelfde orde: 101 en 100 ms (gemeten op 2026-10-17) | Idem; bewijs voor MIT-19 |
+| T-71 | MC-18 | Hackstand: `THROTTLE_IP_MODE=hackweek` en `THROTTLE_PAIR_EXEMPT_USERS=hackingweek`; 101 pogingen op één adres, en nog eens na een eerdere blokkade; een typfout in de stand; zonder instelling | De 101e zet het adres 5 minuten op slot, ook na eerdere blokkades; het demoaccount heeft alleen de teller per adres; een typfout laat de app niet starten; zonder instelling 20 per adres | Idem; bewijs voor MIT-10 |
+| T-72 | MC-18 | `client_ip()` met de poort erachter, zoals Azure die in `X-Forwarded-For` kan zetten (`203.0.113.9:54321`, `[2001:db8::1]:54321`) | `203.0.113.9`, `2001:db8::/64`. Voor 67a2636: `ValueError`, dus een 500 bij elke login | Idem; bewijs voor MIT-10 |
