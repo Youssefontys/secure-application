@@ -6,7 +6,7 @@ Wie de database leest, vindt geen bruikbaar geheim meer:
 
 De versleutelde gegevens kan de app terug ontsleutelen met een sleutel die buiten de database staat. Van een wachtwoord bestaat alleen een hash die niet terug te rekenen is.
 
-De gekozen focus is **databaseversleuteling op kolomniveau, in de app**. Key management met Azure Key Vault is de volgende laag en komt bij de Azure-aanvulling (zie "Later").
+De gekozen focus is **databaseversleuteling op kolomniveau, in de app**. Ook key management en secrets horen bij deze week: hoe dat nu geregeld is, staat onder "Key management en secrets". Key Vault is de volgende laag en komt bij de Azure-aanvulling (zie "Later").
 
 De details staan in de entries (MC-01, MC-17, MC-22, MC-23; MIT-17 tot MIT-19) en de tests (T-10, T-34, T-63 tot T-70). Dit bestand vat ze samen.
 
@@ -96,7 +96,7 @@ Per gegeven waar het staat en waar het hoort:
 | Gebruikersnamen (A-04) | Leesbaar | Nodig om op te zoeken bij het inloggen |
 | Aantal notities en hun tijden | Leesbaar | Nodig om te sorteren; geen inhoud |
 | Sessiecookie (A-03) | Ondertekend, niet versleuteld: de inhoud (`user_id`, sessieversie) is leesbaar voor wie de cookie heeft | Bewust: er staat niets geheims in |
-| Verkeer tussen browser en app (F-01, F-02) | HTTP zonder TLS, lokaal | TLS bij Azure (App Service, `HTTPS_ONLY`) |
+| Verkeer tussen browser en app (F-01, F-02) | HTTP zonder TLS, lokaal | TLS bij Azure: de hosting (App Service of Container Apps, nog te kiezen) zet TLS ervoor, met `HTTPS_ONLY` |
 | Verbinding tussen app en database (F-03) | Zonder TLS, lokaal | `sslmode=require` op Azure |
 | Databasebestanden en volume (C-04, F-04) | Geen schijfversleuteling lokaal | Op Azure versleutelt de dienst de opslag; te controleren bij de Azure-stap |
 | Geheimen in `.env` (A-05, A-06, A-09) | Leesbaar op de ontwikkelmachine en in de omgeving van de container | Key Vault, bij de Azure-aanvulling |
@@ -135,11 +135,36 @@ Per gegeven waar het staat en waar het hoort:
 - **Een aparte sleutel voor de data**, niet `FLASK_SECRET_KEY` hergebruiken. OWASP raadt aan om verschillende sleutels volledig onafhankelijk te houden.
 - **Geen omzetting van bestaande gegevens.** We zitten in de ontwikkelfase. De lokale database is voor deze stap leeg opnieuw aangemaakt, en de eerste uitrol op Azure begint ook leeg.
 
+## Key management en secrets
+
+Waar de geheimen nu staan, wie ze kan lezen en hoe ze gemaakt worden:
+
+| Geheim | Doel | Waar | Gemaakt |
+|---|---|---|---|
+| `DATA_ENCRYPTION_KEY` (A-09) | Versleutelt het TOTP-geheim en de notities | `.env`, omgeving van de app | 256 willekeurige bits |
+| `FLASK_SECRET_KEY` (A-05) | Ondertekent de sessiecookie, en is de HMAC-sleutel van de tellers | `.env`, omgeving van de app | 256 willekeurige bits |
+| `POSTGRES_PASSWORD` (A-06) | Wachtwoord waarmee de app inlogt op de database | `.env`, omgeving van app en database | 256 willekeurige bits |
+
+- **Nooit in git.** `.env` en `backend.*.conf` staan in `.gitignore`; in de repo zit alleen `.env.example`, zonder waarden. Op 17-10-2026 is de hele geschiedenis doorzocht: geen sleutelwaarde, en nooit een `.env` of `backend.*.conf` gecommit.
+- **Zelf gemaakt, nooit getoond.** `python scripts/setup.py lokaal` vult een ontbrekende of lege sleutel aan met 256 bits uit de module `secrets` van Python, en noemt alleen de naam. Een bestaande sleutel blijft staan.
+- **Niet leeg starten.** Compose start niet als een van de drie leeg is (`${...:?}`). De app start niet met een `DATA_ENCRYPTION_KEY` die geen 256 bits is.
+- **Eén doel per sleutel, op één na.** De gegevenssleutel staat los van de rest. `FLASK_SECRET_KEY` heeft twee taken. Een nieuwe sessiesleutel maakt daardoor ook alle tellers van de poginglimieten ongeldig (A-05).
+- **De geheimen in de Azure-scripts.** `scripts/azuresetup_v2.py`:
+  - vraagt het Snyk-token met `getpass` en toont het niet terug;
+  - geeft het token via stdin aan `gh`, dus het staat niet in de proceslijst;
+  - zet in GitHub alleen id's (client, tenant, subscription) en geen wachtwoord, want de pipeline hoort in te loggen met OIDC. De koppeling daarvoor (een federated credential op de managed identity) maakt het script nog niet aan; die komt bij de Terraform-stap.
+- **De sleutel van de Terraform-state.** Een eigen RSA-4096-sleutel in Key Vault, met purge protection en 90 dagen bewaartijd na verwijderen. De rollen zijn gescheiden: wie het script draait, beheert de sleutel (Key Vault Crypto Officer); de managed identity mag hem alleen gebruiken (Key Vault Crypto Service Encryption User).
+
+Wat nog mist:
+- Lokaal staan de sleutels leesbaar in `.env` en in de omgeving van de container (T-64, MC-22).
+- Er is nog geen rotatie: `v2:` is voorbereid, niet gebouwd.
+- De pipeline scant nog niet op geheimen.
+
 ## Later: key management op Azure
 
 Dit onderdeel wordt verder uitgewerkt bij de Azure-aanvulling:
 
-- **De sleutel uit Key Vault**, met alleen de managed identity van de app als lezer. App Service kan de omgevingsvariabele daaruit vullen, dus de code blijft gelijk. Met soft delete en purge protection raakt de sleutel niet per ongeluk kwijt, en daarmee de notities niet.
+- **De sleutel uit Key Vault**, met alleen de managed identity van de app als lezer. App Service en Container Apps kunnen de omgevingsvariabele daaruit vullen, dus de code blijft gelijk. Met soft delete en purge protection raakt de sleutel niet per ongeluk kwijt, en daarmee de notities niet.
 - **Eventueel envelope-versleuteling:** een tweede sleutel (KEK) in Key Vault die `DATA_ENCRYPTION_KEY` (de DEK) versleutelt. Volgens OWASP werkt dat alleen als de KEK apart van de DEK staat; de versleutelde DEK mag dan bij de data.
 - **Een nieuwe sleutel** via `v2:`, naast `v1:`.
 - **De opslag van de Terraform-state** wordt al versleuteld met een eigen sleutel (RSA 4096) in Key Vault, door `scripts/azuresetup_v2.py`. Dat is key management voor de infrastructuur.
