@@ -11,7 +11,10 @@ import shutil
 import subprocess
 import sys
 import time
+from pathlib import Path
 
+# backend.conf komt in de hoofdmap van de repo, waar setup.py en terraform init hem zoeken.
+BACKEND_CONF = Path(__file__).resolve().parent.parent / "backend.conf"
 DEFAULT_LOCATION = "westeurope"
 DEFAULT_RG_NAME = "rg-tfstate-mgmt"
 PROPAGATION_WAIT = 120
@@ -179,12 +182,11 @@ else:
     for key, value in values.items():
         print(f"   {key:23} = {value}")
 
-# F. Een backend-bestand per omgeving voor terraform init.
-print("\n📝 Backend Configs genereren...")
-for env in ("dev", "test", "prod"):
-    with open(f"backend.{env}.conf", "w", encoding="utf-8", newline="\n") as f:
-        f.write(f'resource_group_name  = "{rg}"\nstorage_account_name = "{sa_name}"\ncontainer_name       = "{container}"\n'
-                f'key                  = "{env}/terraform.tfstate"\nuse_azuread_auth     = true\n\n'
-                f'subscription_id      = "{sub_id}"\ntenant_id            = "{tenant_id}"\n')
+# F. Het backend-bestand voor terraform init; één omgeving, dus één state.
+print("\n📝 backend.conf genereren...")
+with open(BACKEND_CONF, "w", encoding="utf-8", newline="\n") as f:
+    f.write(f'resource_group_name  = "{rg}"\nstorage_account_name = "{sa_name}"\ncontainer_name       = "{container}"\n'
+            f'key                  = "terraform.tfstate"\nuse_azuread_auth     = true\n\n'
+            f'subscription_id      = "{sub_id}"\ntenant_id            = "{tenant_id}"\n')
 
-print("\n🎉 GEREED! Setup voltooid. Gebruik nu de backend.conf in Terraform.")
+print(f"\n🎉 GEREED! Setup voltooid. Terraform gebruikt nu {BACKEND_CONF}.")

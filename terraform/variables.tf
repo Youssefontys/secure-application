@@ -1,14 +1,3 @@
-# Bepaalt de namen en welk state-bestand (backend.<omgeving>.conf) hoort bij deze uitrol.
-variable "environment" {
-  type    = string
-  default = "dev"
-
-  validation {
-    condition     = contains(["dev", "test", "prod"], var.environment)
-    error_message = "Kies dev, test of prod."
-  }
-}
-
 variable "location" {
   type    = string
   default = "westeurope"

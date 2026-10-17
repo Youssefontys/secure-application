@@ -8,12 +8,11 @@ resource "random_string" "suffix" {
 }
 
 locals {
-  name   = "notities-${var.environment}"
+  name   = "notities"
   unique = "${local.name}-${random_string.suffix.result}"
   tags = {
-    app      = "secure-application"
-    omgeving = var.environment
-    beheer   = "terraform"
+    app    = "secure-application"
+    beheer = "terraform"
   }
   # Server en database; het wachtwoord komt los via PGPASSWORD, dus de adressen zijn geen geheim.
   # verify-full controleert certificaat en hostnaam; Microsoft raadt require af, want dat houdt geen man-in-the-middle tegen.

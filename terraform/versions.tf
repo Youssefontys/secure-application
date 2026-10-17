@@ -16,7 +16,7 @@ terraform {
   }
 
   # De state staat in de opslag van scripts/azuresetup_v2.py, versleuteld met een eigen sleutel in Key Vault.
-  # Init: terraform -chdir=terraform init -backend-config=../backend.dev.conf
+  # Init: terraform -chdir=terraform init -backend-config=../backend.conf
   backend "azurerm" {}
 }
 

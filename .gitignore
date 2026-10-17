@@ -13,8 +13,8 @@ __pycache__/
 # De lokale regressietest: staat in de map, maar (nog) niet in de repo.
 tests/regress.py
 
-# Gemaakt door scripts/azuresetup*.py: subscription- en tenant-id van je Azure-omgeving.
-backend.*.conf
+# Gemaakt door scripts/azuresetup_v2.py: subscription- en tenant-id van je Azure-omgeving.
+backend.conf
 
 # Uitvoer van de scanners (zie de profiles in compose.yaml).
 scan/

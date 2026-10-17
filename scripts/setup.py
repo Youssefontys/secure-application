@@ -123,10 +123,9 @@ def local():
 # Nog niet automatisch: eerst de image en de koppeling met GitHub (OIDC). Wel de juiste stappen, met deze keuzes.
 def azure():
     check_tools("azure")
-    env = ask("Omgeving", "dev", r"dev|test|prod") if INTERACTIVE else "dev"
     hack = hackstand() if INTERACTIVE else {"THROTTLE_IP_MODE": None, "THROTTLE_PAIR_EXEMPT_USERS": None}
     image = "ghcr.io/youssefontys/secure-application:<tag>"
-    variables = [f"environment={env}", f"app_image={image}"]
+    variables = [f"app_image={image}"]
     if hack["THROTTLE_IP_MODE"]:
         variables += ["throttle_ip_mode=hackweek", "min_replicas=1"]
     if hack["THROTTLE_PAIR_EXEMPT_USERS"]:
@@ -134,7 +133,7 @@ def azure():
     print("\nAzure rolt nog niet automatisch uit. De stappen:")
     print("  1. Eenmalig de Terraform-state:  python scripts/azuresetup_v2.py")
     print(f"  2. De image:                     docker build -t {image} app  en  docker push {image}")
-    print(f"  3. Terraform:                    terraform -chdir=terraform init -backend-config=../backend.{env}.conf")
+    print("  3. Terraform:                    terraform -chdir=terraform init -backend-config=../backend.conf")
     print("                                   terraform -chdir=terraform apply " + " ".join(f"-var {v}" for v in variables))
     print("  4. Het schema, eenmalig:         het commando uit de output schema_job_command")
     sys.exit(1)
