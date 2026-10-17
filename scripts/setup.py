@@ -92,10 +92,15 @@ def set_env(name, value):
 
 # De hackstand voor de hacking week (MC-18), standaard uit. Geeft de instellingen, of None per instelling.
 def hackstand():
-    if not yes("Hackstand voor de hacking week (een klas achter één adres)?"):
+    print("\nHackstand, alleen voor de hacking week, als de hele klas aanvalt vanaf één schooladres:\n"
+          "  n  normaal (standaard): per adres 20 foute inlogpogingen per kwartier en 10 nieuwe accounts per uur\n"
+          "  j  hacking week: per adres 100 foute inlogpogingen per kwartier en 60 nieuwe accounts per uur,\n"
+          "     zodat klasgenoten elkaar niet buitensluiten")
+    if not yes("Hackstand aan?"):
         return {"THROTTLE_IP_MODE": None, "THROTTLE_PAIR_EXEMPT_USERS": None}
+    print("\nEen gedeeld demo-account dat iedereen mag aanvallen: foute wachtwoorden sluiten het dan niet af voor de rest.")
     # Dezelfde regel als een gebruikersnaam in de app; "-" is geen demo-account.
-    demo = ask("Demo-account zonder teller per naam (- voor geen)", "hackingweek", r"[A-Za-z0-9_]{3,20}|-")
+    demo = ask("Naam van het demo-account (- voor geen)", "hackingweek", r"[A-Za-z0-9_]{3,20}|-")
     return {"THROTTLE_IP_MODE": "hackweek", "THROTTLE_PAIR_EXEMPT_USERS": None if demo == "-" else demo}
 
 
