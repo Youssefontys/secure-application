@@ -13,7 +13,7 @@ resource "azurerm_postgresql_flexible_server" "main" {
   private_dns_zone_id           = azurerm_private_dns_zone.db.id
   public_network_access_enabled = false
 
-  # De app logt nog in als eigenaar, net als lokaal (MC-08); een eigen rol volgt bij database security.
+  # De eigenaar, alleen voor de schema-job; de app logt in als notities_app (MIT-27).
   administrator_login               = "notities"
   administrator_password_wo         = ephemeral.azurerm_key_vault_secret.db_password.value
   administrator_password_wo_version = var.secret_version

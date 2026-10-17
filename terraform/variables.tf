@@ -47,7 +47,8 @@ variable "throttle_pair_exempt_users" {
   default = ""
 }
 
-# Ophogen maakt een nieuw databasewachtwoord en een nieuwe sessiesleutel; dat laatste logt iedereen uit.
+# Ophogen maakt nieuwe databasewachtwoorden en een nieuwe sessiesleutel; dat laatste logt iedereen uit.
+# Start daarna de schema-job: die zet het nieuwe wachtwoord van notities_app in de database.
 variable "secret_version" {
   type    = number
   default = 1

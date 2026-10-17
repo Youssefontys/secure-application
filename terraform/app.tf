@@ -18,11 +18,11 @@ locals {
   app_secrets = {
     DATA_ENCRYPTION_KEY = azurerm_key_vault_secret.data_key
     FLASK_SECRET_KEY    = azurerm_key_vault_secret.flask_key
-    PGPASSWORD          = azurerm_key_vault_secret.db_password
+    PGPASSWORD          = azurerm_key_vault_secret.app_db_password
   }
   app_settings = merge(
     {
-      DATABASE_URL = local.database_url
+      DATABASE_URL = local.database_url_app
       # De OpenSSL in psycopg vindt zo de rootcertificaten van Debian, voor sslrootcert=system.
       SSL_CERT_FILE = "/etc/ssl/certs/ca-certificates.crt"
       # Container Apps zet alleen het meest rechtse adres in X-Forwarded-For: één proxy (MC-18).
@@ -125,7 +125,28 @@ resource "azurerm_container_app" "app" {
   }
 }
 
-# Laadt db/schema.sql in de lege database; handmatig starten na de eerste apply (zie outputs).
+# De schema-job logt in als eigenaar, dus een eigen identiteit: alleen die leest de vault met dat wachtwoord.
+resource "azurerm_user_assigned_identity" "schema" {
+  name                = "id-${local.name}-schema"
+  location            = azurerm_resource_group.main.location
+  resource_group_name = azurerm_resource_group.main.name
+  tags                = local.tags
+}
+
+# De admin-vault helemaal; uit de app-vault alleen het wachtwoord van notities_app. Een geheim dat twee
+# applicaties delen is de uitzondering waarvoor Microsoft rechten per geheim noemt.
+resource "azurerm_role_assignment" "schema_secrets" {
+  for_each = {
+    admin  = azurerm_key_vault.admin.id
+    app_db = azurerm_key_vault_secret.app_db_password.resource_versionless_id
+  }
+  scope                = each.value
+  role_definition_name = "Key Vault Secrets User"
+  principal_id         = azurerm_user_assigned_identity.schema.principal_id
+}
+
+# Laadt db/schema.sql in de lege database en zet het wachtwoord van notities_app; handmatig starten (zie outputs).
+# Opnieuw starten mag: het schema alleen als de tabellen er nog niet zijn, het wachtwoord elke keer.
 # De app-image, want die heeft psycopg en de rootcertificaten; postgres:18 heeft geen CA-bundel.
 resource "azurerm_container_app_job" "schema" {
   name                         = "caj-${local.name}-schema"
@@ -136,7 +157,7 @@ resource "azurerm_container_app_job" "schema" {
   replica_timeout_in_seconds   = 300
   replica_retry_limit          = 0
   tags                         = local.tags
-  depends_on                   = [azurerm_role_assignment.app_secrets]
+  depends_on                   = [azurerm_role_assignment.schema_secrets]
 
   manual_trigger_config {
     parallelism              = 1
@@ -145,13 +166,16 @@ resource "azurerm_container_app_job" "schema" {
 
   identity {
     type         = "UserAssigned"
-    identity_ids = [azurerm_user_assigned_identity.app.id]
+    identity_ids = [azurerm_user_assigned_identity.schema.id]
   }
 
-  secret {
-    name                = azurerm_key_vault_secret.db_password.name
-    key_vault_secret_id = azurerm_key_vault_secret.db_password.versionless_id
-    identity            = azurerm_user_assigned_identity.app.id
+  dynamic "secret" {
+    for_each = [azurerm_key_vault_secret.db_password, azurerm_key_vault_secret.app_db_password]
+    content {
+      name                = secret.value.name
+      key_vault_secret_id = secret.value.versionless_id
+      identity            = azurerm_user_assigned_identity.schema.id
+    }
   }
 
   template {
@@ -160,16 +184,29 @@ resource "azurerm_container_app_job" "schema" {
       image  = var.app_image
       cpu    = 0.25
       memory = "0.5Gi"
-      # Eén transactie: lukt een statement niet, dan staat er niets half.
-      command = ["python", "-c", "import os, psycopg; c = psycopg.connect(os.environ['DATABASE_URL']); c.execute(os.environ['SCHEMA_SQL']); c.commit()"]
+      # Eén transactie: lukt een statement niet, dan staat er niets half. sql.Literal maakt van het
+      # wachtwoord tekst, nooit SQL.
+      command = ["python", "-c", <<-PY
+        import os, psycopg
+        from psycopg import sql
+        with psycopg.connect(os.environ["DATABASE_URL"]) as c:
+            if c.execute("SELECT to_regclass('public.users')").fetchone()[0] is None:
+                c.execute(os.environ["SCHEMA_SQL"])
+            c.execute(sql.SQL("ALTER ROLE notities_app PASSWORD {}").format(sql.Literal(os.environ["APP_DB_PASSWORD"])))
+        PY
+      ]
 
       env {
         name        = "PGPASSWORD"
         secret_name = azurerm_key_vault_secret.db_password.name
       }
       env {
+        name        = "APP_DB_PASSWORD"
+        secret_name = azurerm_key_vault_secret.app_db_password.name
+      }
+      env {
         name  = "DATABASE_URL"
-        value = local.database_url
+        value = local.database_url_admin
       }
       env {
         name  = "SSL_CERT_FILE"

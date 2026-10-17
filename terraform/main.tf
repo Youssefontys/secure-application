@@ -15,9 +15,12 @@ locals {
     omgeving = var.environment
     beheer   = "terraform"
   }
-  # Gebruiker, server en database; het wachtwoord komt los via PGPASSWORD, dus dit is geen geheim.
+  # Server en database; het wachtwoord komt los via PGPASSWORD, dus de adressen zijn geen geheim.
   # verify-full controleert certificaat en hostnaam; Microsoft raadt require af, want dat houdt geen man-in-the-middle tegen.
-  database_url = "postgresql://${azurerm_postgresql_flexible_server.main.administrator_login}@${azurerm_postgresql_flexible_server.main.fqdn}:5432/${azurerm_postgresql_flexible_server_database.notities.name}?sslmode=verify-full&sslrootcert=system"
+  db_address = "${azurerm_postgresql_flexible_server.main.fqdn}:5432/${azurerm_postgresql_flexible_server_database.notities.name}?sslmode=verify-full&sslrootcert=system"
+  # De eigenaar alleen voor de schema-job; de app logt in met een eigen rol (MIT-27).
+  database_url_admin = "postgresql://${azurerm_postgresql_flexible_server.main.administrator_login}@${local.db_address}"
+  database_url_app   = "postgresql://notities_app@${local.db_address}"
 }
 
 resource "azurerm_resource_group" "main" {
