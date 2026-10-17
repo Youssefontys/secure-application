@@ -5,14 +5,15 @@ psycopg[binary]==3.3.6  # PostgreSQL-driver; [binary] levert eigen libpq en Open
 segno==1.6.6            # QR-code voor het instellen van tweestapsverificatie; pure Python, geen eigen dependencies
 cryptography==50.0.2    # AES-256-GCM voor het TOTP-geheim en de notities (MIT-17, MIT-18); AES schrijf je niet zelf
 argon2-cffi==25.1.0     # Argon2id voor wachtwoorden (MIT-19), met salt; de C-code van de referentie-implementatie
+gunicorn==26.2.0        # WSGI-server voor productie, in plaats van de ontwikkelserver van Flask (MC-14); zonder eigen dependencies
 
 argon2-cffi-bindings==26.1.0  # via argon2-cffi: de gecompileerde Argon2-referentiecode
 blinker==1.9.0          # via flask: interne signalen (gebeurtenissen binnen Flask)
 cffi==2.1.1             # via cryptography en argon2-cffi-bindings: koppeling tussen Python en hun C-code
-click==8.5.0            # via flask: het commando `flask run` uit de Dockerfile
+click==8.5.0            # via flask: de commandoregel van Flask; de Dockerfile gebruikt die niet meer
 itsdangerous==2.2.0     # via flask: ondertekent de sessiecookie (A-03) met FLASK_SECRET_KEY (A-05)
 jinja2==3.1.6           # via flask: rendert de HTML-templates, escapet standaard (MIT-01)
 markupsafe==3.0.4       # via jinja2: het eigenlijke escapen van tekst naar veilige HTML (MIT-01)
 pycparser==3.11         # via cffi: leest C-declaraties voor cffi
 psycopg-binary==3.3.6   # via psycopg[binary]: voorgecompileerde C-versie met eigen kopieen van libpq, libssl en libcrypto
-werkzeug==3.1.9         # via flask: HTTP-afhandeling, en de ontwikkelserver waar de app nu op draait
+werkzeug==3.1.9         # via flask: HTTP-afhandeling, ProxyFix (MC-18) en de foutpagina's
