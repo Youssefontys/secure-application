@@ -7,12 +7,15 @@ services:
       POSTGRES_DB: notities
       POSTGRES_USER: notities
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?zet POSTGRES_PASSWORD in .env}
+      # Alleen voor app-password.sh; de app zelf krijgt het wachtwoord van de eigenaar niet (MIT-27).
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD:?zet APP_DB_PASSWORD in .env}
     volumes:
       # Vanaf PostgreSQL 18 hoort het volume op /var/lib/postgresql. De image
       # zet de data zelf in een submap per hoofdversie (18/docker).
       - dbdata:/var/lib/postgresql
       # Draait alleen bij de allereerste start van een leeg volume.
       - ./db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./db/app-password.sh:/docker-entrypoint-initdb.d/02-app-password.sh:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U notities -d notities"]
       interval: 5s
@@ -33,9 +36,8 @@ services:
       # Hackstand, alleen tijdens de hacking week (MC-18); standaard streng en zonder uitzonderingen.
       THROTTLE_IP_MODE: ${THROTTLE_IP_MODE:-strict}
       THROTTLE_PAIR_EXEMPT_USERS: ${THROTTLE_PAIR_EXEMPT_USERS:-}
-      # De app verbindt met de eigenaarrol waarmee de database is aangemaakt,
-      # en mag daarmee alles, ook tabellen weggooien (MC-08).
-      DATABASE_URL: postgresql://notities:${POSTGRES_PASSWORD}@db:5432/notities
+      # Een eigen rol: lezen en schrijven in de eigen tabellen, verder niets (MIT-27, MC-08).
+      DATABASE_URL: postgresql://notities_app:${APP_DB_PASSWORD}@db:5432/notities
     ports:
       - "127.0.0.1:5000:5000"
     # Gezond zodra Flask antwoordt, zodat `docker compose up --wait` pas

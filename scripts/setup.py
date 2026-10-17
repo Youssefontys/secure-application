@@ -13,7 +13,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parent.parent
 ENV = REPO / ".env"
 # Deze geheimen moeten in .env staan; ontbreekt er een of is hij leeg, dan maakt setup hem aan.
-SECRETS = ("POSTGRES_PASSWORD", "FLASK_SECRET_KEY", "DATA_ENCRYPTION_KEY")
+SECRETS = ("POSTGRES_PASSWORD", "APP_DB_PASSWORD", "FLASK_SECRET_KEY", "DATA_ENCRYPTION_KEY")
 # Wat er per doel op de machine moet staan, en waarvoor.
 NEEDS = {
     "lokaal": [("docker", "Docker met Compose v2, voor de containers")],

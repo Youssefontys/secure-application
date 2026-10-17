@@ -46,3 +46,11 @@ CREATE TABLE notes (
     -- Leeg tot de notitie voor het eerst wordt aangepast.
     updated_at TIMESTAMPTZ
 );
+
+-- De app logt in als deze rol, niet als de eigenaar (MIT-27): lezen en schrijven in de
+-- eigen tabellen, en verder niets. Geen tabellen maken of weggooien, geen rollen, geen
+-- bestanden of programma's via COPY. Het wachtwoord zet db/app-password.sh (lokaal) of
+-- de schema-job (Azure), dus het staat niet in dit bestand.
+CREATE ROLE notities_app LOGIN;
+GRANT SELECT, INSERT, UPDATE, DELETE ON users, notes, auth_throttle TO notities_app;
+GRANT USAGE ON SEQUENCE users_id_seq, notes_id_seq TO notities_app;
