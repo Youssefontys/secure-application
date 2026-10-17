@@ -17,6 +17,7 @@ Every feature that is added has an entry in `BoK/`: the use case, the misuse cas
 - `BoK/Subjects/` - per BoK subject (week) what was built, why it is safe and what it does not solve
 - `compose.yaml` - app and database for local use, with scanner profiles in comments
 - `scripts/` - `setup.py` to deploy (locally now, Azure follows), and the Terraform state bootstrap scripts imported from BOK-SECENGINEER
+- `terraform/` - Azure: Container Apps, PostgreSQL B1ms in a private network and Key Vault; secrets stay out of the Terraform state. Not deployed yet
 
 ## Run it
 
