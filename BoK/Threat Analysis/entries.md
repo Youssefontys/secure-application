@@ -224,8 +224,8 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
   - OR  2. Een kwaadaardige nieuwe versie van een pakket komt bij de volgende build vanzelf mee
   - OR  3. Een kwetsbaarheid in de base images (`python:3.15-slim`, `postgres:18`), bijvoorbeeld in de Debian-systeembibliotheken
   - OR  4. Een image-tag wijst bij een volgende build naar een andere image dan eerder (tags zijn niet vast)
-- Mitigaties: MIT-03 (stap 2), nog geen (stappen 1, 3 en 4)
-- Restrisico: vastzetten maakt stap 1 erger: zonder iets dat waarschuwt (zoals Dependabot) komen ook patches niet meer vanzelf binnen
+- Mitigaties: MIT-03 (stap 2, en stap 4 sinds 7bfd435), nog geen (stappen 1 en 3)
+- Restrisico: vastzetten maakt stap 1 en 3 erger: zonder iets dat waarschuwt (zoals Dependabot) komen ook patches niet meer vanzelf binnen, ook niet die van Debian in de images. Minder pakketten helpt wel: sinds 29d201d doet `cryptography` ook Argon2id, en zijn `argon2-cffi` en `argon2-cffi-bindings` weg
 - Status: open
 - Sinds: baseline
 
@@ -465,10 +465,10 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 - Status: gebouwd
 - Sinds: baseline
 
-### MIT-03 Vastgezette versies van de Python-pakketten
+### MIT-03 Vastgezette versies van de Python-pakketten en de images
 - Houdt tegen: MC-11 stap 2
-- Wat: elk pakket staat op een exacte versie in `requirements.txt`, ook de pakketten die Flask en psycopg meetrekken. Een nieuwe versie komt dus alleen binnen als iemand hem bewust kiest. Er staan geen hashes bij, dus pip controleert niet of het bestand hetzelfde is als toen de versie werd gekozen. De images staan op een tag en niet op een digest, dus voor stap 4 doet dit niets.
-- Waar: `app/requirements.txt`
+- Wat: elk pakket staat op een exacte versie in `requirements.txt`, ook de pakketten die Flask en psycopg meetrekken. Een nieuwe versie komt dus alleen binnen als iemand hem bewust kiest. Er staan geen hashes bij, dus pip controleert niet of het bestand hetzelfde is als toen de versie werd gekozen. Sinds 7bfd435 staan ook de base-images vast, op versie en digest (`python:3.15.0-slim-trixie@sha256:…`, `postgres:18.6-trixie@sha256:…`): een tag kan bij een volgende build niet meer naar een andere image wijzen (stap 4). Op 17-10-2026 bleek waarom: `python:3.15-slim` kreeg die dag een nieuwe digest
+- Waar: `app/requirements.txt`, `FROM` in `app/Dockerfile`, `image` van `db` in `compose.yaml`
 - Status: gebouwd
 - Sinds: db6698e
 
@@ -579,7 +579,7 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 
 ### MIT-19 Wachtwoorden als Argon2id-hash
 - Houdt tegen: MC-01 stap 2
-- Wat: wachtwoorden worden gehasht met Argon2id uit `argon2-cffi`, met de minimale instelling uit het OWASP Password Storage Cheat Sheet: 19 MiB geheugen, 2 iteraties, 1 thread. De library maakt per hash een eigen salt, en zet algoritme, instelling en salt in de hash zelf (T-68). Hashen en niet versleutelen: de app hoeft het wachtwoord nooit terug te lezen, en OWASP noemt versleutelen alleen voor uitzonderingen waarin dat wel moet. Bij een onbekende naam rekent de app tegen een vaste hash, zodat de responstijd niet verraadt of een naam bestaat (T-70). Is een hash met een oudere instelling gemaakt, dan maakt de app bij de volgende geslaagde login een nieuwe, zoals OWASP aanraadt (T-69). Geen pepper: OWASP noemt dat alleen extra verdediging, en een pepper kan niet meer veranderen zonder de wachtwoorden. Geen omzetting van leesbare wachtwoorden: in de ontwikkelfase begint de database leeg
+- Wat: wachtwoorden worden gehasht met Argon2id uit `cryptography` (via OpenSSL; tot 29d201d uit `argon2-cffi`, met hetzelfde formaat), met de minimale instelling uit het OWASP Password Storage Cheat Sheet: 19 MiB geheugen, 2 iteraties, 1 thread. Elke hash krijgt een eigen salt van 16 willekeurige bytes, en algoritme, instelling en salt staan in de hash zelf, in het PHC-formaat (T-68). Hashen en niet versleutelen: de app hoeft het wachtwoord nooit terug te lezen, en OWASP noemt versleutelen alleen voor uitzonderingen waarin dat wel moet. Bij een onbekende naam rekent de app tegen een vaste hash, zodat de responstijd niet verraadt of een naam bestaat (T-70). Is een hash met een oudere instelling gemaakt, dan maakt de app bij de volgende geslaagde login een nieuwe, zoals OWASP aanraadt (T-69). Geen pepper: OWASP noemt dat alleen extra verdediging, en een pepper kan niet meer veranderen zonder de wachtwoorden. Geen omzetting van leesbare wachtwoorden: in de ontwikkelfase begint de database leeg
 - Waar: `app/passwords.py`; `register()`, `login()` en `forgot_password()` in `app/auth.py`; `change_password()` in `app/account.py`
 - Status: gebouwd
 - Sinds: 9e6e365
