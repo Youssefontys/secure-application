@@ -52,6 +52,22 @@ app.jinja_env.globals.update(
 )
 
 
+# Alleen eigen bestanden en geen inline script: een tweede laag tegen XSS (MC-07); geen frame op een andere site (MC-24).
+CSP = "default-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
+
+
+# Op elk antwoord, ook op foutpagina's (MIT-21). HSTS alleen over HTTPS, anders onthoudt de browser het verkeerd.
+@app.after_request
+def security_headers(response):
+    response.headers["Content-Security-Policy"] = CSP
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["Referrer-Policy"] = "same-origin"
+    if app.config["SESSION_COOKIE_SECURE"]:
+        response.headers["Strict-Transport-Security"] = "max-age=31536000"
+    return response
+
+
 # Te groot: 413 met een korte melding, zonder dat de app het verzoek leest (MIT-22).
 @app.errorhandler(413)
 def too_large(error):
