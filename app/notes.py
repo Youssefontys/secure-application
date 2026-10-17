@@ -2,6 +2,7 @@
 
 from flask import Blueprint, abort, g, redirect, render_template, request, url_for
 
+import encryption
 from auth import login_required
 from db import query
 
@@ -10,6 +11,8 @@ bp = Blueprint("notes", __name__)
 # Maximale lengte in tekens (MIT-04); de templates gebruiken ze ook voor maxlength.
 TITLE_MAX = 15
 BODY_MAX = 250
+# Wat er staat als een titel of inhoud niet ontsleutelt (gewijzigd, verplaatst of een andere sleutel).
+UNREADABLE = "(niet te lezen)"
 
 
 @bp.route("/", methods=["GET", "POST"])
@@ -19,7 +22,7 @@ def index():
         title, body, error = read_note_form()
         if error:
             return render_template("notes.html", notes=fetch_notes(), error=error, title=title, body=body), 400
-        query("INSERT INTO notes (user_id, title, body) VALUES (%s, %s, %s)", (g.user.id, title, body))
+        query("INSERT INTO notes (user_id, title, body) VALUES (%s, %s, %s)", (g.user.id, *sealed(title, body)))
         return redirect(url_for("notes.index"))
 
     return render_template("notes.html", notes=fetch_notes())
@@ -40,9 +43,23 @@ def read_note_form():
 
 
 def fetch_notes():
-    return query(
+    rows = query(
         "SELECT id, title, body, created_at, updated_at FROM notes WHERE user_id = %s ORDER BY created_at DESC",
         (g.user.id,),
+    )
+    return [readable(note) for note in rows]
+
+
+# Titel en inhoud staan alleen versleuteld in de database, gebonden aan de eigenaar (MIT-18).
+def sealed(title, body):
+    return encryption.encrypt(title, "note_title", g.user.id), encryption.encrypt(body, "note_body", g.user.id)
+
+
+# Ontsleuteld voor de pagina; wat niet ontsleutelt, telt niet als tekst van de gebruiker.
+def readable(note):
+    return note._replace(
+        title=encryption.decrypt(note.title, "note_title", g.user.id) or UNREADABLE,
+        body=encryption.decrypt(note.body, "note_body", g.user.id) or UNREADABLE,
     )
 
 
@@ -51,7 +68,7 @@ def own_note(note_id):
     note = query("SELECT title, body FROM notes WHERE id = %s AND user_id = %s", (note_id, g.user.id), one=True)
     if note is None:
         abort(404)
-    return note
+    return readable(note)
 
 
 @bp.route("/notes/<int:note_id>/edit", methods=["GET", "POST"])
@@ -66,7 +83,7 @@ def edit_note(note_id):
         return render_template("edit_note.html", title=title, body=body, error=error), 400
     query(
         "UPDATE notes SET title = %s, body = %s, updated_at = now() WHERE id = %s AND user_id = %s",
-        (title, body, note_id, g.user.id),
+        (*sealed(title, body), note_id, g.user.id),
     )
     return redirect(url_for("notes.index"))
 
