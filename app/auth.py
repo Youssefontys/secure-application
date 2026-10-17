@@ -102,6 +102,10 @@ def register():
         return render_template("auth.html", error="Kies een gebruikersnaam van 3 tot 20 tekens: letters, cijfers en _."), 400
     if error := passwords.password_problem(password):
         return render_template("auth.html", error=error), 400
+    # Pas vlak voor het hashen tellen: alleen een registratie die echt rekent, telt mee (MIT-30, MC-10).
+    if minutes := throttle.attempt(throttle.limit("register_ip", throttle.client_ip(request.remote_addr))):
+        error = f"Te veel nieuwe accounts vanaf dit adres. Probeer het over {minutes} minuten opnieuw."
+        return render_template("auth.html", error=error), *throttle.refusal(minutes)
 
     try:
         query("INSERT INTO users (username, password_hash) VALUES (%s, %s)", (username, passwords.hash_password(password)))

@@ -19,7 +19,7 @@
     </form>
   </details>
 
-  <p class="count">{{ notes|length }} notities</p>
+  <p class="count">{{ notes|length }} van {{ NOTES_MAX }} notities</p>
 
   {# Jinja escapet de waarden hieronder standaard, dus een notitie met een
      script-tag erin verschijnt als tekst. Gebruik hier nooit |safe. #}

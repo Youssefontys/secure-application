@@ -10,6 +10,8 @@ bp = Blueprint("notes", __name__)
 # Maximale lengte in tekens (MIT-04); de templates gebruiken ze ook voor maxlength.
 TITLE_MAX = 15
 BODY_MAX = 250
+# Hooguit zoveel notities per account, tegen een database die volloopt (MIT-30, MC-10).
+NOTES_MAX = 25
 # Wat er staat als een titel of inhoud niet ontsleutelt (gewijzigd, verplaatst of een andere sleutel).
 UNREADABLE = "(niet te lezen)"
 
@@ -20,7 +22,15 @@ def index():
         title, body, error = read_note_form()
         if error:
             return render_template("notes.html", notes=fetch_notes(), error=error, title=title, body=body), 400
-        query("INSERT INTO notes (user_id, title, body) VALUES (%s, %s, %s)", (g.user.id, *sealed(title, body)))
+        # Tellen en toevoegen in één statement. shortcut: gelijktijdige verzoeken kunnen er samen een paar
+        # overheen, hooguit één per worker; een slot zou elke notitie vertragen voor een grens tegen groei.
+        if query(
+            "INSERT INTO notes (user_id, title, body) SELECT %s, %s, %s"
+            " WHERE (SELECT count(*) FROM notes WHERE user_id = %s) < %s RETURNING id",
+            (g.user.id, *sealed(title, body), g.user.id, NOTES_MAX), one=True,
+        ) is None:
+            error = f"Je hebt het maximum van {NOTES_MAX} notities bereikt. Verwijder er eerst een."
+            return render_template("notes.html", notes=fetch_notes(), error=error, title=title, body=body), 400
         return redirect(url_for("notes.index"))
 
     return render_template("notes.html", notes=fetch_notes())

@@ -23,14 +23,16 @@ POLICIES = {
     "recovery_account": Policy(5, 15, 15, 24 * 60),
     # Herauthenticatie, per account: alleen met een sessie te bereiken, dus het account mag op slot (MIT-16).
     "reauth_account": Policy(5, 15, 15, 24 * 60),
+    # Nieuwe accounts per adres, ook gelukte: elke registratie kost een Argon2id-berekening van 19 MiB (MIT-30).
+    "register_ip": Policy(10, 60, 60, 4 * 60),
 }
 # Hackstand voor de hacking week: een klas achter één adres van school. Ruimer en een vaste blokkade van
 # 5 minuten zonder verdubbeling: een scanner wordt nog afgeremd, de klas wacht hooguit 5 minuten (MC-18).
-IP_MODES = {"strict": POLICIES["password_ip"], "hackweek": Policy(100, 15, 5, 5)}
+IP_MODES = {"strict": {}, "hackweek": {"password_ip": Policy(100, 15, 5, 5), "register_ip": Policy(60, 60, 5, 5)}}
 _mode = os.environ.get("THROTTLE_IP_MODE", "strict")
 if _mode not in IP_MODES:
     raise RuntimeError(f"Onbekende THROTTLE_IP_MODE {_mode!r}; kies uit {', '.join(IP_MODES)}.")
-POLICIES["password_ip"] = IP_MODES[_mode]
+POLICIES.update(IP_MODES[_mode])
 # Namen zonder teller per naam per adres, voor het demoaccount: anders sluit één klasgenoot het voor de klas af.
 PAIR_EXEMPT = {name.strip() for name in os.environ.get("THROTTLE_PAIR_EXEMPT_USERS", "").split(",") if name.strip()}
 # Een geslaagde poging wist deze teller niet: anders zet een eigen account hem steeds terug.

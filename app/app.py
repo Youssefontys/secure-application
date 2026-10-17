@@ -51,7 +51,7 @@ for blueprint in (auth.bp, account.bp, notes.bp):
     app.register_blueprint(blueprint)
 app.teardown_appcontext(close_connection)
 app.jinja_env.globals.update(
-    TITLE_MAX=notes.TITLE_MAX, BODY_MAX=notes.BODY_MAX,
+    TITLE_MAX=notes.TITLE_MAX, BODY_MAX=notes.BODY_MAX, NOTES_MAX=notes.NOTES_MAX,
     PASSWORD_MIN=passwords.PASSWORD_MIN, PASSWORD_MAX=passwords.PASSWORD_MAX, csrf_token=csrf.token,
 )
 
