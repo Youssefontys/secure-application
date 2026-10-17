@@ -626,7 +626,7 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 
 ### MIT-26 Gunicorn als gewone gebruiker
 - Houdt tegen: MC-14 stap 1 en 2
-- Wat: de image maakt een systeemgebruiker `app` zonder shell en draait daaronder. De code is van root, dus de app kan hem lezen maar niet aanpassen. Gunicorn met twee workers vervangt de ontwikkelserver van Flask, die zelf waarschuwt niet voor productie te zijn. CIS Benchmarks raden voor webservers ook aan om niet als root te draaien
+- Wat: de image maakt een systeemgebruiker `app` zonder shell en draait daaronder. De code is van root, dus de app kan hem lezen maar niet aanpassen. Gunicorn met twee workers vervangt de ontwikkelserver van Flask, die zelf waarschuwt niet voor productie te zijn. Docker raadt zelf aan: kan een dienst zonder rechten draaien, zet dan met `USER` een gewone gebruiker
 - Waar: `app/Dockerfile`; `gunicorn` in `app/requirements.txt`
 - Status: gebouwd
 - Sinds: 13a2eb4
