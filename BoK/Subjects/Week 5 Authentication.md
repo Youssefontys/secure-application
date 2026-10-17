@@ -33,7 +33,7 @@ De ene helft vangt geen fouten van de andere op. MC-02, andermans notitie openen
 | Herstelcode (MIT-11) | Telefoon kwijt betekende: account kwijt | Een eenmalige herstelcode van 128 bits vervangt één keer de code; daarna stel je de tweede factor opnieuw in |
 | Herstelcode bewaren (MIT-11) | Alleen tonen, met een knop "Ik heb hem bewaard" | Kopiëren of downloaden, en Verder pas na het vinkje dat hij bewaard is; zonder JavaScript zoals eerst |
 | Eigenaarscontrole (MIT-15) | Met het id van een ander open, wijzig en verwijder je diens notitie | Andermans notitie geeft 404, net als een notitie die niet bestaat |
-| Herauthenticatie (MIT-16) | Met alleen de sessie wijzig je het wachtwoord of verwijder je het account | Eerst het huidige wachtwoord; na 5 fouten per account een blokkade |
+| Herauthenticatie (MIT-16) | Met alleen de sessie wijzig je het wachtwoord of verwijder je het account; later met de sessie en het wachtwoord | Het huidige wachtwoord én een code uit de app; na 5 fouten per account een blokkade |
 
 ## Waarom het veilig is
 
@@ -64,7 +64,7 @@ De ene helft vangt geen fouten van de andere op. MC-02, andermans notitie openen
 - **Verspreid raden (MC-03).** Wie vanaf heel veel adressen raadt, wordt per account niet begrensd; dat is bewust, anders kan iedereen met een gebruikersnaam een account blokkeren. De tweede factor vangt dit op.
 - **De bewaarde herstelcode (MC-19, MC-21)** is zo veilig als de plek waar hij ligt; met het wachtwoord of met de telefoon erbij is het account over. De gebruiker merkt het pas bij het volgende inloggen, want er is geen e-mail.
 - **De eerste instelling (MC-20).** Wie het wachtwoord heeft van een account dat de tweede factor nog niet heeft ingesteld, kan zijn eigen app koppelen ("trust on first use"). Daartegen helpt een tweede kanaal, zoals een bevestigde e-mail.
-- **Wie het wachtwoord kent, komt ook door de herauthenticatie.** Die beschermt tegen iemand met alleen de sessie. Tegen iemand met het wachtwoord helpt de tweede factor bij het inloggen.
+- **Wie het wachtwoord én de telefoon heeft, komt ook door de herauthenticatie.** Die beschermt tegen iemand met alleen de sessie, of de sessie en het wachtwoord.
 - **CSRF (MC-05) voor notities en uitloggen.** Wachtwoord wijzigen en account verwijderen vragen nu het wachtwoord, en dat kent een andere site niet. Notities aanmaken, aanpassen en verwijderen en uitloggen kunnen nog wel via een andere site.
 - **Autorisatie in de database en in de cloud** komt later; zie "Authenticatie en autorisatie" hierboven.
 - **Wachtwoorden stonden leesbaar opgeslagen (MC-01).** Sinds Week 6 staat er alleen een Argon2id-hash (MIT-19), zie `Week 6 Encryption.md`.
@@ -85,7 +85,7 @@ De ene helft vangt geen fouten van de andere op. MC-02, andermans notitie openen
 - **12 tot 64 tekens, geen samenstellingsregels.** NIST SP 800-63B-4 eist minstens 8 tekens voor een wachtwoord dat één van meer factoren is, en 15 als het de enige factor is; 12 ligt ertussen, net als in BOK-SECENGINEER. 64 is de lengte die NIST minstens wil toestaan. Verplichte cijfers of leestekens verbiedt NIST.
 - **400 bij een fout, 429 bij een blokkade, geen 401.** Een 401 moet volgens RFC 9110 een `WWW-Authenticate`-header hebben, en die hoort bij HTTP-authenticatie, niet bij een inlogformulier. 429 is de code voor rate limiting (RFC 6585); `Retry-After` geeft in seconden hoe lang de blokkade nog duurt. Dat verraadt niets nieuws: de melding op de pagina noemt dezelfde tijd.
 - **404, geen 403, bij andermans notitie.** Een 403 verraadt dat de notitie bestaat, en de ids zijn opeenvolgende getallen. Het OWASP IDOR Prevention Cheat Sheet raadt aan om "bestaat niet" en "niet van jou" hetzelfde antwoord te geven.
-- **Herauthenticatie met het wachtwoord, niet met een code.** Het OWASP Authentication Cheat Sheet vraagt de huidige gegevens opnieuw voor het wijzigen van gevoelige accountgegevens, zoals het wachtwoord. Een code uit de app blijft voor het vervangen van de tweede factor zelf (AU-06).
+- **Herauthenticatie met het wachtwoord én een code.** Eerst vroeg de app alleen het wachtwoord; het OWASP Authentication Cheat Sheet vraagt de huidige gegevens opnieuw voor het wijzigen van gevoelige accountgegevens. Sinds 72ddaed ook een code uit de app: wie alleen het wachtwoord heeft, moet hier niets kunnen, net als bij het inloggen. Vervangen van de tweede factor zelf vroeg al een code (AU-06).
 - **Een limiet per account voor de herauthenticatie.** Die stap is alleen met een sessie te bereiken, dus een buitenstaander kan het account er niet mee blokkeren. Zonder limiet kan iemand met een gestolen sessie het wachtwoord raden.
 - **Eén plek voor de controle van het huidige wachtwoord.** `passwords.is_current()`. Daardoor veranderde bij Argon2id (Week 6) alleen `passwords.py`, plus de plekken die een wachtwoord opslaan.
 - **Een hackstand voor de hacking week, standaard uit.** Een klas zit achter één adres van school. Met 20 fouten per adres zet één scanner of een paar typfouten de hele klas 15 minuten of langer op slot.
@@ -114,7 +114,7 @@ De oplossingen lijken nu veel meer op elkaar. Wat de oude beter deed (sessieduur
 | Herstel | Wachtwoord herstellen met herstelcode én 2FA-code; voor een kwijtgeraakte telefoon geen route | Allebei: telefoon kwijt (wachtwoord en herstelcode) en wachtwoord vergeten (herstelcode en 2FA-code) |
 | Wachtwoordeisen | 12 tot 1024 tekens | 12 tot 64 tekens |
 | Eigenaarscontrole op notities | `id` én `user_id` bij lezen, wijzigen en verwijderen | Idem, via `own_note()` en de DELETE |
-| Herauthenticatie | Geen routes voor wachtwoord wijzigen of account verwijderen; herstelcode beheren vroeg wachtwoord en 2FA-code | Het huidige wachtwoord bij wachtwoord wijzigen en account verwijderen, met een limiet per account |
+| Herauthenticatie | Geen routes voor wachtwoord wijzigen of account verwijderen; herstelcode beheren vroeg wachtwoord en 2FA-code | Het huidige wachtwoord en een code uit de app bij wachtwoord wijzigen en account verwijderen, met een limiet per account |
 | Hash van de herstelcode | Argon2id | SHA-256 (128 willekeurige bits) |
 | CSRF-tokens | In elk geval op de authenticatieformulieren | Op elk formulier (MIT-20) |
 | Logging van pogingen | Ja, als JSON | Ja, als JSON, naar het voorbeeld van de oude (MIT-31) |
@@ -138,6 +138,7 @@ Voor het verslag, lokaal in `screenshots/Week 5 Authentication/` (niet in de rep
 | Wachtwoord vergeten en sterkte-eis | geen (basisonderdeel) | `week5_na_sterkte_1`, `week5_na_vergeten_1` tot `_4` | `week5_code_7_wachtwoord_vergeten` |
 | Eigenaarscontrole | `week5_voor_eigenaar_1`, `_2` | `week5_na_eigenaar_1` | `week5_code_8_autorisatie` |
 | Herauthenticatie | `week5_voor_herauth_1` | `week5_na_herauth_1`, `_2` | `week5_code_8_autorisatie` |
+| Herauthenticatie met code | `week5_voor_stapup_1_wachtwoord_zonder_code`, `_2_verwijderd_zonder_code` | `week5_na_stapup_1_wachtwoord_zonder_juiste_code`, `_2_met_code_gewijzigd` | `week5_code_8_autorisatie` |
 | Herstelcode bewaren | `week5_voor_herstelcode_1_alleen_tonen` | `week5_na_herstelcode_1_kopieren_en_bewaren` | `week5_code_10_herstelcode_bewaren` |
 
 ## Bronnen
