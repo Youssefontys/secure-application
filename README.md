@@ -11,12 +11,12 @@ Every feature that is added has an entry in `BoK/`: the use case, the misuse cas
 ## Structure
 
 - `app/` - the notes application, one file per part: `app.py` creates the app, `db.py` talks to the database, `auth.py` handles logging in (including the second step), `account.py` the profile, `notes.py` the notes, `totp.py` the TOTP calculation, `throttle.py` the login limits, `passwords.py` the rule for a new password and the Argon2id hashing, `encryption.py` the encryption of the TOTP secret and the notes, `csrf.py` the CSRF token of every form. The website (HTML, CSS, JS) is in `app/web/`
-- `db/` - the database schema, run by the database container on first start
+- `db/` - the database schema and the password of the app role, run by the database container on first start
 - `BoK/Architecture/` - components, data flows, trust boundaries and the authentication and authorization points
 - `BoK/Threat Analysis/` - use cases, misuse cases, mitigations, attack trees and the tests that go with them
 - `BoK/Subjects/` - per BoK subject (week) what was built, why it is safe and what it does not solve
 - `compose.yaml` - app and database for local use, with scanner profiles in comments
-- `scripts/` - `setup.py` to deploy (locally now, Azure follows), and the Terraform state bootstrap scripts imported from BOK-SECENGINEER
+- `scripts/` - `setup.py` to deploy (locally now, Azure follows), and `azuresetup_v2.py`, the one-time Terraform state bootstrap imported from BOK-SECENGINEER
 - `terraform/` - Azure: Container Apps, PostgreSQL B1ms in a private network and Key Vault; secrets stay out of the Terraform state. Not deployed yet
 
 ## Requirements
