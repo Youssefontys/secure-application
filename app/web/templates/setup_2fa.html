@@ -17,8 +17,8 @@
       <li>Lukt scannen niet, vul dan deze sleutel in de app in: <span class="secret">{{ secret }}</span></li>
       <li>Vul hieronder de code van 6 cijfers in die de app nu toont. Pas daarna staat de tweede factor aan.</li>
     </ol>
-    {# Het plaatje komt van een eigen route en staat niet inline, zodat een strikte
-       CSP later kan (img-src 'self'). #}
+    {# Het plaatje komt van een eigen route en staat niet inline, zodat de CSP
+       (MIT-21) geen data:-plaatjes hoeft toe te staan. #}
     <img class="qr" src="{{ url_for('account.qr_2fa') }}" alt="QR-code voor je authenticator-app" width="232" height="232">
     <form method="post">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
