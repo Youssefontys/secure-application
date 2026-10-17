@@ -49,7 +49,7 @@ De ene helft vangt geen fouten van de andere op. MC-02, andermans notitie openen
 | Sterkte-eis | 12 tot 64 tekens bij registreren, wijzigen en wachtwoord vergeten, zonder samenstellingsregels (NIST SP 800-63B-4) | T-13, T-53 |
 | Verplicht | `require_login` laat een gebruiker zonder tweede factor alleen het instellen afmaken | T-50 |
 | Geheim beschermd | QR-code en sleutel alleen tijdens het instellen, daarna 404; `Cache-Control: no-store` op alle pagina's met het geheim of de herstelcode, sinds MIT-28 op elke pagina | T-36, T-49, T-89 |
-| Niet buitensluiten, niet weghalen | Aanzetten pas na een eerste geldige code. Opnieuw instellen en een nieuwe herstelcode vragen een code (AU-06), dus wie alleen de sessie heeft, kan de tweede factor niet vervangen | T-28, T-45 |
+| Niet buitensluiten, niet weghalen | Aanzetten pas na een eerste geldige code. Opnieuw instellen en een nieuwe herstelcode vragen het huidige wachtwoord en een code (AU-06, sinds 997e641), dus wie de sessie en één code heeft, kan de tweede factor niet vervangen (MC-29) | T-28, T-45 |
 | Alleen je eigen notities | Elke query op één notitie heeft `user_id` uit de sessie in de WHERE: `own_note()` bij openen en aanpassen, en de DELETE zelf. "Bestaat niet" en "niet van jou" geven allebei 404 | T-11 |
 | Gevoelige acties pas na het wachtwoord | Wachtwoord wijzigen en account verwijderen vragen het huidige wachtwoord (`passwords.is_current()`); foute pogingen tellen per account | T-08, T-09, T-23, T-24, T-62 |
 
@@ -139,6 +139,7 @@ Voor het verslag, lokaal in `screenshots/Week 5 Authentication/` (niet in de rep
 | Eigenaarscontrole | `week5_voor_eigenaar_1`, `_2` | `week5_na_eigenaar_1` | `week5_code_8_autorisatie` |
 | Herauthenticatie | `week5_voor_herauth_1` | `week5_na_herauth_1`, `_2` | `week5_code_8_autorisatie` |
 | Herauthenticatie met code | `week5_voor_stapup_1_wachtwoord_zonder_code`, `_2_verwijderd_zonder_code` | `week5_na_stapup_1_wachtwoord_zonder_juiste_code`, `_2_met_code_gewijzigd` | `week5_code_8_autorisatie` |
+| Overname met sessie en één code (MC-29) | `week5_voor_overname_1_zonder_wachtwoord` | `week5_na_overname_1_gestopt` | `week5_code_8_autorisatie` |
 | Herstelcode bewaren | `week5_voor_herstelcode_1_alleen_tonen` | `week5_na_herstelcode_1_kopieren_en_bewaren` | `week5_code_10_herstelcode_bewaren` |
 
 ## Bronnen

@@ -2,7 +2,7 @@
 
 De app logt nu elke security-gebeurtenis als één JSON-regel (MIT-31): wanneer, wat, vanaf welk adres en, als dat bekend is, van welk account. Dat gebeurt op de plekken waar de app al beslist. Een aanval laat daardoor een spoor na (MC-28), lokaal en op Azure op dezelfde manier. Wachtwoorden, codes en geheimen komen er nooit in.
 
-De details staan in de entries (MC-28, MIT-31; A-11, C-05 en F-05 in de architectuur) en de tests (T-93, T-94). Overgenomen uit BOK-SECENGINEER, dat dit al deed.
+De details staan in de entries (MC-28, MIT-31; A-11, C-05 en F-05 in de architectuur) en de tests (T-93, T-94, T-100, T-101). Overgenomen uit BOK-SECENGINEER, dat dit al deed; de audit van 18-10-2026 maakte twee dingen strakker: een naam alleen als het account bestaat, en één regel per blokkade.
 
 ## De dreiging
 
@@ -15,7 +15,9 @@ De details staan in de entries (MC-28, MIT-31; A-11, C-05 en F-05 in de architec
 | Onderdeel | Voor | Na |
 |---|---|---|
 | Een kleine aanval: zes foute wachtwoorden, een onbekende naam, een formulier zonder CSRF-token | De log was leeg | Acht regels: vijf mislukte logins, de blokkade, de onbekende naam en het geweigerde token |
-| Soorten gebeurtenissen | Alleen onverwachte fouten (MIT-25) | 26 soorten, op elke plek waar de app beslist |
+| Soorten gebeurtenissen | Alleen onverwachte fouten (MIT-25) | 21 soorten, op elke plek waar de app beslist |
+| Een wachtwoord per ongeluk in het naamveld | Stond leesbaar in de log, want het voldeed aan de naamregel | Niet in de log: een naam alleen als het account bestaat |
+| 40 pogingen tijdens een blokkade | 41 regels, één per geweigerde poging | Eén regel per blokkade (`lockout_started`) |
 | Een naam met een regeleinde | Kwam niet in de log, want er werd niets gelogd | Komt er nog steeds niet in: alleen een geldige naam, en JSON escapet stuurtekens |
 
 ## Hoe het werkt
@@ -24,21 +26,23 @@ De details staan in de entries (MC-28, MIT-31; A-11, C-05 en F-05 in de architec
 - **Het formaat:** één JSON-regel per gebeurtenis, bijvoorbeeld:
 
   ```
-  {"time": "2026-10-17T17:40:37+00:00", "event": "login_blocked", "ip": "172.18.0.1", "username": "laura", "minutes": 15}
+  {"time": "2026-10-17T23:05:48+00:00", "event": "lockout_started", "ip": "172.18.0.1", "scope": "password_account_ip", "minutes": 15}
   ```
 
 - **De plek:** stderr van de container. Lokaal is dat `docker compose logs app`, op Azure de log van Container Apps. De code is op beide hetzelfde.
-- **Een getypte gebruikersnaam** komt er alleen in als hij aan de naamregel van MIT-22 voldoet (`logged_name()`). Wat een aanval verder intypt, blijft buiten de log.
+- **Een gebruikersnaam** komt er alleen in als het account bestaat (`target()`); anders staat er `"known": false`. Wat iemand in het naamveld typt, ook een wachtwoord, blijft zo buiten de log.
+- **Een blokkade** logt zichzelf één keer, op het moment dat hij begint: `lockout_started` in `throttle.attempt()`, met de soort teller (`scope`) en hoe lang.
 
 | Soort | Wanneer | Extra velden | Misuse case |
 |---|---|---|---|
-| `account_created`, `register_taken`, `register_blocked` | Registreren: gelukt, naam bezet, limiet | naam, minuten | MC-09, MC-10 |
-| `login_failed`, `login_blocked`, `login_ok` | Inloggen met het wachtwoord, en na de code | naam, account, minuten, `with_2fa` | MC-03, MC-18 |
-| `totp_failed`, `totp_blocked` | Een foute code, of op slot | account, minuten | MC-15 |
-| `recovery_failed`, `recovery_blocked`, `recovery_used` | Inloggen met de herstelcode | account, minuten | MC-19 |
-| `forgot_failed`, `forgot_blocked`, `password_reset` | Wachtwoord vergeten | naam, account, minuten | MC-21 |
+| `account_created`, `register_taken` | Registreren: gelukt, naam bezet | naam | MC-09, MC-10 |
+| `login_failed`, `login_ok` | Inloggen met het wachtwoord, en na de code | account en naam, of `known: false`; `with_2fa` | MC-03, MC-18 |
+| `totp_failed` | Een foute code | account | MC-15 |
+| `recovery_failed`, `recovery_used` | Inloggen met de herstelcode | account | MC-19 |
+| `forgot_failed`, `password_reset` | Wachtwoord vergeten | account en naam, of `known: false` | MC-21 |
 | `recovery_code_new`, `twofa_enabled`, `twofa_reset` | Tweestapsverificatie aan, opnieuw, nieuwe herstelcode | account | MC-20 |
-| `reauth_failed`, `reauth_blocked`, `password_changed`, `account_deleted` | Het huidige wachtwoord bij wijzigen of verwijderen | account, minuten | MC-12, MC-13 |
+| `reauth_failed`, `password_changed`, `account_deleted` | Het huidige wachtwoord bij wijzigen of verwijderen | account | MC-12, MC-13 |
+| `lockout_started` | Een teller gaat op slot: registreren, wachtwoord, code, herstelcode of herauthenticatie | soort teller, minuten | MC-03, MC-10, MC-15, MC-18, MC-19 |
 | `logout`, `session_rejected` | Uitloggen, of een cookie met een oude sessieversie | account | MC-04 |
 | `csrf_refused` | Een POST zonder het juiste token | de route | MC-05 |
 | `note_limit`, `note_unreadable` | 25 notities bereikt; een notitie die niet ontsleutelt | account, notitie | MC-10, MC-08, MC-23 |
@@ -50,7 +54,9 @@ De details staan in de entries (MC-28, MIT-31; A-11, C-05 en F-05 in de architec
 | Elke soort komt echt voor | De test haalt alle soorten uit de code en zoekt ze in de log van een volledige run | T-93 |
 | Wanneer, waar, wie, wat | Tijd, adres, account en soort in elke regel, zoals de OWASP Logging Cheat Sheet vraagt | T-93 |
 | Geen geheimen in de log | De test zoekt de testwachtwoorden, TOTP-geheimen en herstelcodes in de log: geen enkele | T-94 |
-| Geen valse regels | JSON escapet regeleindes; een ongeldige naam wordt niet gelogd | T-94 |
+| Geen valse regels | JSON escapet regeleindes; een naam zonder account wordt niet gelogd | T-94 |
+| Geen wachtwoord via het naamveld | Een naam alleen als het account bestaat | T-100 |
+| Een script vult de log niet | Eén regel per blokkade, niet per geweigerde poging | T-101 |
 
 ## Persoonsgegevens
 
@@ -75,7 +81,8 @@ Een IP-adres en een gebruikersnaam zijn persoonsgegevens (A-11). Daarom:
 - **stderr, geen bestand.** Een bestand in de container is weg met de container, en op Azure leest Container Apps stderr. Zo is lokaal gelijk aan Azure.
 - **JSON, niet vrije tekst.** Elk veld is apart te zoeken, en JSON escapet wat een aanvaller in een veld stopt.
 - **Op de plekken waar de app al beslist.** Geen aparte laag die raadt wat er gebeurde; de route die weigert, logt ook waarom.
-- **Een naam alleen als hij geldig is.** Zo zie je bij een aanval op een bestaande naam wel wie het doelwit was, maar komt rommel er niet in.
+- **Een naam alleen als het account bestaat.** Zo zie je bij een aanval wie het doelwit was. Eerst gold de naamregel, maar een wachtwoord als `Zomervakantie2026` voldoet daar ook aan; dat liet de audit van 18-10-2026 zien.
+- **Een blokkade één keer loggen.** Elke geweigerde poging loggen gaf een script de kans de log te vullen: lokaal roteert de echte aanval er dan uit, op Azure loopt de rekening op. Het begin van de blokkade is het signaal; hoe vaak het daarna nog geprobeerd werd, zie je niet.
 - **Geen sessie-ID.** OWASP raadt af de sessie zelf te loggen. De sessiecookie van Flask is bovendien geen ID maar de hele sessie, en die komt er nooit in.
 
 ## Screenshots
@@ -85,6 +92,8 @@ Voor het verslag, lokaal in `screenshots/Week 6 Logging/` (niet in de repo).
 | Onderdeel | Voor | Na | Code |
 |---|---|---|---|
 | Security-events | `week6_voor_logging_1_geen_spoor` | `week6_na_logging_1_json_per_gebeurtenis` | `week6_code_logging_1_events` |
+| Wachtwoord in het naamveld | `week6_voor_logging_2_wachtwoord_in_log` | `week6_na_logging_2_alleen_bestaande_namen` | `week6_code_logging_1_events` |
+| Een regel per blokkade | `week6_voor_logging_3_regel_per_poging` | `week6_na_logging_3_een_regel_per_blokkade` | `week6_code_logging_1_events` |
 
 ## Bronnen
 
