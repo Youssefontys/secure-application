@@ -12,7 +12,7 @@
   <main>
     {# Eén plek voor meldingen: een foutmelding die de route meegeeft, en
        meldingen die een vorige pagina met flash() heeft klaargezet. #}
-    {% if error %}<p class="error">{{ error }}</p>{% endif %}
+    {% if error %}<p role="alert" tabindex="-1" class="error">{{ error }}</p>{% endif %}
     {% for message in get_flashed_messages() %}
       <p class="notice">{{ message }}</p>
     {% endfor %}

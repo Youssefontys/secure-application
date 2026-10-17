@@ -283,6 +283,12 @@ button:hover, .button:hover {
 
 /* Uit zolang het formulier niet voldoet (forms.js). Geen hover, geen klik. */
 button:disabled { opacity: 0.45; pointer-events: none; }
+/* Een knop die nog niet mag, zoals Verder bij de herstelcode zolang het vinkje uit staat. */
+.button[aria-disabled="true"] { opacity: 0.45; pointer-events: none; }
+/* Een vinkje naast zijn tekst, niet erboven. */
+label.check { display: flex; align-items: center; gap: 0.6rem; }
+label.check input { width: auto; margin: 0; }
+.recovery-actions { margin: 0.9rem 0 0.4rem; }
 
 button.secondary, .button.secondary {
   border-color: var(--border);

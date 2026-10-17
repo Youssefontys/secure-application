@@ -14,12 +14,19 @@
 
   <div class="card">
     <p>Telefoon kwijt? Log in met je wachtwoord en deze herstelcode. Wachtwoord vergeten? Stel een nieuw in met deze herstelcode en de code uit je app.</p>
-    <span class="secret">{{ code }}</span>
+    <span id="recovery-code" class="secret">{{ code }}</span>
+    {# Kopiëren, downloaden en het vinkje werken met JavaScript; zonder blijven de code en Verder, en dat werkt ook. #}
+    <div class="note-actions recovery-actions" data-js hidden>
+      <button type="button" class="secondary" id="recovery-copy">Kopiëren</button>
+      <button type="button" class="secondary" id="recovery-download">Downloaden</button>
+    </div>
+    <p class="hint" id="recovery-status" aria-live="polite"></p>
     <ul class="steps">
       <li>Je ziet hem maar één keer. Bewaar hem apart van je telefoon, bijvoorbeeld in een wachtwoordmanager of op papier.</li>
       <li>Hij werkt één keer. Gebruik je hem omdat je telefoon kwijt is, dan stel je daarna tweestapsverificatie opnieuw in.</li>
       {% if not first %}<li>Je vorige herstelcode werkt niet meer.</li>{% endif %}
     </ul>
-    <a class="button" href="{{ url_for('auth.login') if reset else url_for('account.index') }}">Ik heb hem bewaard</a>
+    <label class="check" data-js hidden><input type="checkbox" id="recovery-saved"> Ik heb hem bewaard, apart van mijn telefoon</label>
+    <a class="button" id="recovery-done" href="{{ url_for('auth.login') if reset else url_for('account.index') }}">Verder</a>
   </div>
 {% endblock %}
