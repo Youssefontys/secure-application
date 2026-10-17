@@ -1,0 +1,20 @@
+# Dependabot opent zelf een pull request bij een nieuwe versie van een pakket of image (MIT-33, MC-11 stap 1 en 3).
+# Alles staat vast (MIT-03), dus zonder dit komen ook beveiligingspatches nooit vanzelf binnen. Geen pipeline nodig.
+version: 2
+updates:
+  - package-ecosystem: pip
+    directory: /app
+    schedule:
+      interval: weekly
+  - package-ecosystem: docker
+    directory: /app
+    schedule:
+      interval: weekly
+  - package-ecosystem: docker-compose
+    directory: /
+    schedule:
+      interval: weekly
+  - package-ecosystem: terraform
+    directory: /terraform
+    schedule:
+      interval: weekly
