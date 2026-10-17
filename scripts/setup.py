@@ -1,4 +1,4 @@
-# Rolt de app uit: lokaal met Docker Compose, of op Azure (de Terraform-code volgt).
+# Rolt de app uit: lokaal met Docker Compose, of op Azure (Terraform in terraform/, nog niet uitgerold).
 # Gebruik: python scripts/setup.py [lokaal|azure]
 
 import secrets
@@ -40,8 +40,9 @@ def local():
 
 
 def azure():
-    print("Azure is nog niet klaar: de Terraform-code voor de database, Key Vault en de app volgt.")
-    print("Het script voor de Terraform-state staat al in scripts/azuresetup_v2.py.")
+    print("Azure is nog niet klaar om uit te rollen. De Terraform-code staat in terraform/,")
+    print("maar eerst moeten de app als gewone gebruiker met gunicorn draaien (MC-14), CSRF erin (MC-05),")
+    print("en de pipeline de image publiceren. De state: scripts/azuresetup_v2.py.")
     sys.exit(1)
 
 
