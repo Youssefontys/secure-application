@@ -132,7 +132,12 @@ def azure():
         variables.append(f"throttle_pair_exempt_users={hack['THROTTLE_PAIR_EXEMPT_USERS']}")
     print("\nAzure rolt nog niet automatisch uit. De stappen:")
     print("  1. Eenmalig de Terraform-state:  python scripts/azuresetup_v2.py")
-    print(f"  2. De image:                     docker build -t {image} app  en  docker push {image}")
+    # GitHub Packages accepteert alleen een token (classic); docker vraagt erom, dus het komt niet in de shellgeschiedenis.
+    print("  2. De image:                     docker login ghcr.io -u youssefontys  (wachtwoord: token (classic) met write:packages)")
+    print(f"                                   docker build -t {image} app  en  docker push {image}")
+    # Een nieuw pakket is privé, en Terraform geeft Container Apps geen inlog voor ghcr.io: dan start de app niet.
+    print("     Eenmalig na de eerste push:   het pakket openbaar maken (Package settings > Change visibility > Public).")
+    print("                                   Daarna kan het niet meer privé; de repo is al openbaar en de image heeft geen geheimen.")
     print("  3. Terraform:                    terraform -chdir=terraform init -backend-config=../backend.conf")
     print("                                   terraform -chdir=terraform apply " + " ".join(f"-var {v}" for v in variables))
     print("  4. Het schema, eenmalig:         het commando uit de output schema_job_command")
