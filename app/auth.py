@@ -56,12 +56,9 @@ def start_session(user_id, version):
     session["session_version"] = version
 
 
-# Hoogt de sessieversie op: andere sessies vervallen, de huidige krijgt de nieuwe versie.
-def end_other_sessions(user_id):
-    row = query(
-        "UPDATE users SET session_version = session_version + 1 WHERE id = %s RETURNING session_version",
-        (user_id,), one=True,
-    )
+# Na een UPDATE die ook session_version ophoogt: andere sessies vervallen, de huidige krijgt de nieuwe versie.
+# Eén statement, dus nooit een nieuw wachtwoord of nieuwe 2FA terwijl oude sessies blijven werken (MIT-09).
+def keep_this_session(row):
     session["session_version"] = row.session_version
 
 
