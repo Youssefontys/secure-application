@@ -96,10 +96,10 @@ Per gegeven waar het staat en waar het hoort:
 | Gebruikersnamen (A-04) | Leesbaar | Nodig om op te zoeken bij het inloggen |
 | Aantal notities en hun tijden | Leesbaar | Nodig om te sorteren; geen inhoud |
 | Sessiecookie (A-03) | Ondertekend, niet versleuteld: de inhoud (`user_id`, sessieversie) is leesbaar voor wie de cookie heeft | Bewust: er staat niets geheims in |
-| Verkeer tussen browser en app (F-01, F-02) | HTTP zonder TLS, lokaal | TLS bij Azure: de hosting (App Service of Container Apps, nog te kiezen) zet TLS ervoor, met `HTTPS_ONLY` |
-| Verbinding tussen app en database (F-03) | Zonder TLS, lokaal | `sslmode=require` op Azure |
-| Databasebestanden en volume (C-04, F-04) | Geen schijfversleuteling lokaal | Op Azure versleutelt de dienst de opslag; te controleren bij de Azure-stap |
-| Geheimen in `.env` (A-05, A-06, A-09) | Leesbaar op de ontwikkelmachine en in de omgeving van de container | Key Vault, bij de Azure-aanvulling |
+| Verkeer tussen browser en app (F-01, F-02) | HTTP zonder TLS, lokaal | Op Azure zet Container Apps TLS 1.2 of 1.3 ervoor en stuurt HTTP door naar HTTPS; daarbij `HTTPS_ONLY` (`terraform/app.tf`) |
+| Verbinding tussen app en database (F-03) | Zonder TLS, lokaal | Op Azure TLS 1.3 met `sslmode=verify-full`, en de database alleen in een privé-netwerk (`terraform/database.tf`) |
+| Databasebestanden en volume (C-04, F-04) | Geen schijfversleuteling lokaal | Op Azure versleutelt de dienst alle data, logs en backups op schijf, met een sleutel van Azure. Een eigen sleutel (CMK) kan alleen bij het aanmaken van de server |
+| Geheimen in `.env` (A-05, A-06, A-09) | Leesbaar op de ontwikkelmachine en in de omgeving van de container | Key Vault (`terraform/keyvault.tf`) |
 
 ## Wat het niet oplost
 
@@ -162,12 +162,23 @@ Wat nog mist:
 
 ## Later: key management op Azure
 
-Dit onderdeel wordt verder uitgewerkt bij de Azure-aanvulling:
+De Terraform-code staat in `terraform/`, maar is nog niet uitgerold. Eerst moeten MC-05 (CSRF) en MC-14 (de ontwikkelserver als root) dicht. Voor key management:
 
-- **De sleutel uit Key Vault**, met alleen de managed identity van de app als lezer. App Service en Container Apps kunnen de omgevingsvariabele daaruit vullen, dus de code blijft gelijk. Met soft delete en purge protection raakt de sleutel niet per ongeluk kwijt, en daarmee de notities niet.
+- **De geheimen komen nergens in Terraform terecht.** Terraform maakt ze als ephemeral waarde: de gegevenssleutel en de sessiesleutel elk 32 willekeurige bytes, het databasewachtwoord 40 tekens. Die stuurt Terraform write-only naar Key Vault, dus ze staan niet in het plan en niet in de state. Het databasewachtwoord leest Terraform terug uit Key Vault, zodat vault en database altijd hetzelfde hebben, ook als een eerste uitrol halverwege stopt.
+- **Alleen de app leest ze**, met een eigen managed identity die de rol Key Vault Secrets User heeft. Container Apps zet de waarden als omgevingsvariabele, dus de code blijft gelijk. Wie Terraform draait, mag geheimen schrijven (Key Vault Secrets Officer), niet de vault beheren.
+- **Kwijtraken kan niet zomaar.** Purge protection en 90 dagen bewaartijd na verwijderen. Belangrijk, want sleutel kwijt is notities kwijt.
+- **Een nieuwe sleutel.** Het databasewachtwoord en de sessiesleutel veranderen als `secret_version` omhoog gaat. De gegevenssleutel staat vast op versie 1, tot `v2:` gebouwd is.
 - **Eventueel envelope-versleuteling:** een tweede sleutel (KEK) in Key Vault die `DATA_ENCRYPTION_KEY` (de DEK) versleutelt. Volgens OWASP werkt dat alleen als de KEK apart van de DEK staat; de versleutelde DEK mag dan bij de data.
-- **Een nieuwe sleutel** via `v2:`, naast `v1:`.
 - **De opslag van de Terraform-state** wordt al versleuteld met een eigen sleutel (RSA 4096) in Key Vault, door `scripts/azuresetup_v2.py`. Dat is key management voor de infrastructuur.
+
+Trivy 0.75.0 vond op 17-10-2026 zeven punten in `terraform/`, met per punt een besluit:
+
+| Punt | Ernst | Besluit |
+|---|---|---|
+| AZU-0013: Key Vault blokkeert het netwerk niet standaard | CRITICAL | Bewust nog open. Lezen kan alleen met een Entra-token en een rol. Een firewall vraagt een vast adres voor wie Terraform draait, en eerst een test of Container Apps de geheimen dan nog ophaalt. Bij de eerste uitrol |
+| AZU-0017: geheimen zonder vervaldatum (3 keer) | LOW | Bewust. Zonder automatische rotatie zet een vervaldatum de app op een dag stil, en de gegevenssleutel mag niet vervallen |
+| AZU-0019, AZU-0024: verbindingen en checkpoints niet gelogd | MEDIUM | Bij Logging en monitoring, samen met waar de logs naartoe gaan |
+| AZU-0021: verbindingen niet begrensd | MEDIUM | Bij Logging en monitoring; de app heeft zelf poginglimieten (MIT-10) |
 
 ## Vergelijking met BOK-SECENGINEER
 
