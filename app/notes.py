@@ -3,7 +3,6 @@
 from flask import Blueprint, abort, g, redirect, render_template, request, url_for
 
 import encryption
-from auth import login_required
 from db import query
 
 bp = Blueprint("notes", __name__)
@@ -16,7 +15,6 @@ UNREADABLE = "(niet te lezen)"
 
 
 @bp.route("/", methods=["GET", "POST"])
-@login_required
 def index():
     if request.method == "POST":
         title, body, error = read_note_form()
@@ -72,7 +70,6 @@ def own_note(note_id):
 
 
 @bp.route("/notes/<int:note_id>/edit", methods=["GET", "POST"])
-@login_required
 def edit_note(note_id):
     note = own_note(note_id)
     if request.method != "POST":
@@ -89,7 +86,6 @@ def edit_note(note_id):
 
 
 @bp.route("/notes/<int:note_id>/delete", methods=["POST"])
-@login_required
 def delete_note(note_id):
     # Alleen de eigen notitie; andermans notitie geeft 404, net als bij aanpassen (MIT-15).
     if query("DELETE FROM notes WHERE id = %s AND user_id = %s RETURNING id", (note_id, g.user.id), one=True) is None:

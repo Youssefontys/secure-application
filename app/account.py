@@ -9,14 +9,13 @@ import encryption
 import passwords
 import throttle
 import totp
-from auth import check_code, end_other_sessions, login_required, new_recovery_code
+from auth import check_code, end_other_sessions, new_recovery_code
 from db import query
 
 bp = Blueprint("account", __name__, url_prefix="/account")
 
 
 @bp.route("")
-@login_required
 def index():
     return render_account()
 
@@ -41,7 +40,6 @@ def no_store(response):
 
 
 @bp.route("/2fa", methods=["GET", "POST"])
-@login_required
 def setup_2fa():
     if g.user.totp_enabled:
         return redirect(url_for("account.index"))
@@ -73,7 +71,6 @@ def setup_2fa():
 
 
 @bp.route("/2fa/recovery", methods=["POST"])
-@login_required
 def new_recovery():
     # Vraagt een code uit de app: met alleen de sessie krijg je geen herstelcode (AU-06).
     error = check_code(g.user.id)
@@ -83,7 +80,6 @@ def new_recovery():
 
 
 @bp.route("/2fa/qr.svg")
-@login_required
 def qr_2fa():
     # Alleen zolang het instellen loopt; daarna is het geheim niet meer op te vragen.
     user = query("SELECT username, totp_secret FROM users WHERE id = %s AND NOT totp_enabled", (g.user.id,), one=True)
@@ -97,7 +93,6 @@ def qr_2fa():
 
 # Opnieuw instellen voor een nieuwe telefoon; daarna kan alleen het instellen nog (MIT-12).
 @bp.route("/2fa/reset", methods=["POST"])
-@login_required
 def reset_2fa():
     # Vraagt een code: met alleen de sessie haal je de tweede factor niet weg (AU-06).
     error = check_code(g.user.id)
@@ -126,7 +121,6 @@ def refuse_without_password():
 
 
 @bp.route("/password", methods=["POST"])
-@login_required
 def change_password():
     password = request.form.get("password", "")
     error = passwords.password_problem(password, request.form.get("password_repeat", ""))
@@ -144,7 +138,6 @@ def change_password():
 
 
 @bp.route("/delete", methods=["POST"])
-@login_required
 def delete_account():
     refused = refuse_without_password()
     if refused:

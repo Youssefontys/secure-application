@@ -25,6 +25,8 @@ PENDING_MAX_SECONDS = 300
 CodeError = namedtuple("CodeError", "message minutes")
 # Zonder tweestapsverificatie kom je alleen hier (MIT-12).
 SETUP_ENDPOINTS = {"account.setup_2fa", "account.qr_2fa"}
+# De enige routes zonder login; elke andere route is standaard dicht (MIT-24).
+PUBLIC_ENDPOINTS = {"auth.register", "auth.login", "auth.login_code", "auth.login_recover", "auth.forgot_password", "auth.logout", "static"}
 # Eén melding voor elke fout bij wachtwoord vergeten, ook voor een onbekende naam (MC-21).
 # 3 tot 20 tekens: letters, cijfers en _ (MIT-22). Bij inloggen telt een andere naam als onbekend.
 USERNAME = re.compile(r"[A-Za-z0-9_]{3,20}")
@@ -63,16 +65,17 @@ def end_other_sessions(user_id):
     session["session_version"] = row.session_version
 
 
-# Alleen ingelogd (AU-02) en met tweestapsverificatie; anders alleen het instellen (MIT-12).
-def login_required(view):
-    @wraps(view)
-    def wrapper(*args, **kwargs):
-        if g.user is None:
-            return redirect(url_for("auth.login"))
-        if not g.user.totp_enabled and request.endpoint not in SETUP_ENDPOINTS:
-            return redirect(url_for("account.setup_2fa"))
-        return view(*args, **kwargs)
-    return wrapper
+# Standaard dicht (MIT-24): ingelogd (AU-02) en met tweestapsverificatie, anders alleen het instellen (MIT-12).
+# Een nieuwe route is zo nooit per ongeluk open; alleen PUBLIC_ENDPOINTS mag zonder login. Na load_user.
+@bp.before_app_request
+def require_login():
+    if request.endpoint in PUBLIC_ENDPOINTS or request.endpoint is None:
+        return None
+    if g.user is None:
+        return redirect(url_for("auth.login"))
+    if not g.user.totp_enabled and request.endpoint not in SETUP_ENDPOINTS:
+        return redirect(url_for("account.setup_2fa"))
+    return None
 
 
 # Wie al is ingelogd, hoeft niet opnieuw in te loggen of te registreren.
