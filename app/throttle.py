@@ -43,6 +43,11 @@ def password_limits(username, remote_addr):
 
 # Het IP-adres van de client; bij IPv6 het /64-netwerk, want één aansluiting krijgt er 2^64.
 def client_ip(remote_addr):
+    # Azure zet soms de poort achter het adres in X-Forwarded-For (203.0.113.9:54321, [2001:db8::1]:54321).
+    if remote_addr.startswith("["):
+        remote_addr = remote_addr[1:].partition("]")[0]
+    elif remote_addr.count(":") == 1:
+        remote_addr = remote_addr.partition(":")[0]
     ip = ipaddress.ip_address(remote_addr)
     # Een IPv4-adres achter een IPv6-socket (::ffff:a.b.c.d) telt als dat adres, niet als ::/64.
     if ip.version == 6 and ip.ipv4_mapped:
