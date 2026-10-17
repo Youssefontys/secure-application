@@ -19,4 +19,5 @@ EXPOSE 5000
 
 # Gunicorn in plaats van de ontwikkelserver van Flask, die zelf zegt niet voor
 # productie te zijn (MC-14). Twee workers passen bij 0,25 vCPU op Container Apps.
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "2", "app:app"]
+# Zonder besturingssocket: die gebruiken we niet, en app heeft bewust geen homemap.
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "2", "--no-control-socket", "app:app"]
