@@ -77,7 +77,7 @@ HTTP_MESSAGES = {404: "Deze pagina bestaat niet.", 405: "Dat kan hier niet.", 41
 @app.errorhandler(HTTPException)
 def http_error(error):
     response = error.get_response()
-    response.set_data(render_template("error.html", message=HTTP_MESSAGES.get(error.code, "Dat lukte niet.")))
+    response.set_data(render_template("error.html", code=error.code, message=HTTP_MESSAGES.get(error.code, "Dat lukte niet.")))
     return response
 
 
@@ -86,7 +86,7 @@ def http_error(error):
 @app.errorhandler(Exception)
 def unexpected_error(error):
     app.logger.exception("Onverwachte fout bij %s %r", request.method, request.path)
-    return render_template("error.html", message="Er ging iets mis. Probeer het later opnieuw."), 500
+    return render_template("error.html", code=500, message="Er ging iets mis. Probeer het later opnieuw."), 500
 
 
 @app.template_filter("date")

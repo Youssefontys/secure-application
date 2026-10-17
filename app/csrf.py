@@ -24,5 +24,5 @@ def check():
     if request.method == "POST":
         sent = request.form.get("csrf_token", "")
         if not hmac.compare_digest(sent.encode(), expected.encode()):
-            return render_template("error.html", message=REFUSED), 400
+            return render_template("error.html", code=400, message=REFUSED), 400
     return None

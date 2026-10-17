@@ -1,12 +1,77 @@
 {% extends "base.html" %}
 {% block title %}Dat lukte niet{% endblock %}
 
-{# Eén korte melding; de details staan alleen in de log (MIT-25). #}
+{# Eén korte melding; de details staan alleen in de log (MIT-25). De robot is
+   een inline SVG zonder style-attributen: de opmaak staat in style.css (CSP). #}
 {% block content %}
-  <h1>Dat lukte niet</h1>
+  <div class="robot-page">
+    <svg class="robot" viewBox="0 -40 400 420" role="img" aria-labelledby="robot-title">
+      <title id="robot-title">Een robot met kruisjes als ogen: hij heeft het begeven</title>
+      <defs>
+        <filter id="robot-glow" x="-60%" y="-60%" width="220%" height="220%">
+          <feGaussianBlur stdDeviation="3" result="b"/>
+          <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+      </defs>
 
-  <div class="card">
-    <p>{{ message }}</p>
-    <p class="hint"><a href="{{ url_for('notes.index') }}">Terug naar het begin</a></p>
+      <ellipse class="shadow" cx="200" cy="362" rx="160" ry="13"/>
+
+      <!-- benen, uitgezakt -->
+      <path class="limb-edge" d="M164 292 L102 346"/>
+      <path class="limb-edge" d="M236 292 L298 346"/>
+      <path class="limb" d="M164 292 L102 346"/>
+      <path class="limb" d="M236 292 L298 346"/>
+      <rect class="foot" x="60" y="338" width="58" height="22" rx="10"/>
+      <rect class="foot" x="282" y="338" width="58" height="22" rx="10"/>
+
+      <!-- armen, slap naar beneden -->
+      <path class="limb-edge" d="M126 210 C 90 232, 82 274, 78 312"/>
+      <path class="limb-edge" d="M274 210 C 310 232, 318 274, 322 312"/>
+      <path class="limb" d="M126 210 C 90 232, 82 274, 78 312"/>
+      <path class="limb" d="M274 210 C 310 232, 318 274, 322 312"/>
+      <circle class="hand" cx="78" cy="318" r="13"/>
+      <circle class="hand" cx="322" cy="318" r="13"/>
+
+      <!-- romp, met een hartslag die plat is -->
+      <rect class="shell" x="118" y="190" width="164" height="114" rx="20"/>
+      <rect class="screen" x="140" y="206" width="120" height="48" rx="8"/>
+      <path class="flatline" d="M150 232 H172 l5 -9 l6 17 l5 -8 H250" pathLength="100"/>
+      <text class="code" x="200" y="290" text-anchor="middle">{{ code or "" }}</text>
+
+      <rect class="shell-dark" x="182" y="168" width="36" height="26" rx="5"/>
+
+      <!-- hoofd, scheef gezakt -->
+      <g transform="translate(6 10) rotate(-17 200 120)">
+        <path class="antenna" d="M200 60 C 200 34, 216 26, 240 32"/>
+        <circle class="bulb" cx="244" cy="33" r="8" filter="url(#robot-glow)"/>
+        <g class="spark">
+          <path d="M256 22 l8 -6 M258 36 l10 2 M250 14 l2 -9"/>
+        </g>
+        <g class="smoke">
+          <circle cx="248" cy="16" r="7"/>
+          <circle cx="242" cy="12" r="9"/>
+          <circle cx="252" cy="10" r="6"/>
+        </g>
+
+        <circle class="bolt" cx="106" cy="120" r="11"/>
+        <circle class="bolt" cx="294" cy="120" r="11"/>
+        <rect class="shell" x="110" y="60" width="180" height="120" rx="26"/>
+        <rect class="visor" x="128" y="82" width="144" height="64" rx="16"/>
+        <path class="crack" d="M132 64 l14 13 l-7 9 l13 12"/>
+
+        <g class="eye-x" filter="url(#robot-glow)">
+          <path d="M155 101 l26 26 M181 101 l-26 26"/>
+          <path d="M219 101 l26 26 M245 101 l-26 26"/>
+        </g>
+        <path class="mouth" d="M168 162 l8 -6 l8 6 l8 -6 l8 6 l8 -6 l8 6 l8 -6"/>
+      </g>
+    </svg>
+
+    <h1>Dat lukte niet</h1>
+
+    <div class="card">
+      <p>{{ message }}</p>
+      <p class="hint"><a href="{{ url_for('notes.index') }}">Terug naar het begin</a></p>
+    </div>
   </div>
 {% endblock %}
