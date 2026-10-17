@@ -574,16 +574,15 @@ body.alerted .ticker { color: var(--danger); }
 .robot .antenna { fill: none; stroke: var(--muted); stroke-width: 4; stroke-linecap: round; }
 .robot .bulb { fill: var(--danger); animation: flicker 3.4s linear infinite; }
 .robot .spark path { fill: none; stroke: var(--danger); stroke-width: 2; stroke-linecap: round; opacity: 0; animation: spark 3.4s linear infinite; }
-/* Eén laatste slag, dan plat: de lijn tekent zich steeds opnieuw van links naar rechts. */
-.robot .flatline {
+/* Eén laatste slag, dan plat; een fel stukje loopt erover, zoals op een monitor. */
+.robot .flatline, .robot .scan {
   fill: none;
   stroke: var(--danger);
-  stroke-width: 3;
   stroke-linecap: round;
   stroke-linejoin: round;
-  stroke-dasharray: 100;
-  animation: sweep 2.6s linear infinite;
 }
+.robot .flatline { stroke-width: 3; opacity: 0.55; }
+.robot .scan { stroke-width: 4; stroke-dasharray: 8 92; animation: sweep 2.6s linear infinite; }
 .robot .code { fill: var(--muted); font: 700 30px ui-monospace, Consolas, monospace; letter-spacing: 0.18em; }
 .robot .smoke circle {
   fill: var(--muted);
@@ -606,7 +605,7 @@ body.alerted .ticker { color: var(--danger); }
 }
 @keyframes sweep {
   from { stroke-dashoffset: 100; }
-  70%, to { stroke-dashoffset: 0; }
+  to { stroke-dashoffset: 0; }
 }
 @keyframes smoke {
   0% { opacity: 0; transform: translateY(0) scale(0.6); }
@@ -615,7 +614,7 @@ body.alerted .ticker { color: var(--danger); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .robot .bulb, .robot .spark path, .robot .flatline, .robot .smoke circle { animation: none; }
+  .robot .bulb, .robot .spark path, .robot .smoke circle { animation: none; }
   .robot .smoke circle { opacity: 0.2; }
-  .robot .flatline { stroke-dasharray: none; }
+  .robot .scan { display: none; }
 }
