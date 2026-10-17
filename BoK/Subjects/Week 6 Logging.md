@@ -18,7 +18,7 @@ De details staan in de entries (MC-28, MIT-31; A-11, C-05 en F-05 in de architec
 | Soorten gebeurtenissen | Alleen onverwachte fouten (MIT-25) | 21 soorten, op elke plek waar de app beslist |
 | Een wachtwoord per ongeluk in het naamveld | Stond leesbaar in de log, want het voldeed aan de naamregel | Niet in de log: een naam alleen als het account bestaat |
 | 40 pogingen tijdens een blokkade | 41 regels, één per geweigerde poging | Eén regel per blokkade (`lockout_started`) |
-| Een naam met een regeleinde | Kwam niet in de log, want er werd niets gelogd | Komt er nog steeds niet in: alleen een geldige naam, en JSON escapet stuurtekens |
+| Een naam met een regeleinde | Kwam niet in de log, want er werd niets gelogd | Komt er nog steeds niet in: alleen de naam van een bestaand account, en JSON escapet stuurtekens |
 
 ## Hoe het werkt
 
