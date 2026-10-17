@@ -103,8 +103,9 @@ def reset_2fa():
     return redirect(url_for("account.setup_2fa"))
 
 
-# Het huidige wachtwoord opnieuw vragen, met een limiet per account (MIT-16): None als het klopt.
-def refuse_without_password():
+# Het huidige wachtwoord én een code uit de app opnieuw vragen (MIT-16): wie alleen de sessie of alleen het
+# wachtwoord heeft, kan het wachtwoord niet wijzigen en het account niet verwijderen. None als beide kloppen.
+def refuse_without_both_factors():
     reauth_limit = throttle.limit("reauth_account", g.user.id)
     if minutes := throttle.attempt(reauth_limit):
         events.event("reauth_blocked", minutes=minutes)
@@ -113,6 +114,9 @@ def refuse_without_password():
         events.event("reauth_failed")
         return render_account("Je huidige wachtwoord klopt niet.", 400)
     throttle.succeeded(reauth_limit)
+    # Daarna de tweede factor, met de blokkade en het eenmalige gebruik van de codestap (MIT-06, MIT-07).
+    if error := check_code(g.user.id):
+        return render_account(error.message, *throttle.refusal(error.minutes))
     return None
 
 
@@ -121,7 +125,7 @@ def change_password():
     password = request.form.get("password", "")
     if error := passwords.password_problem(password, request.form.get("password_repeat", "")):
         return render_account(error, 400)
-    if refused := refuse_without_password():
+    if refused := refuse_without_both_factors():
         return refused
 
     # Alle andere sessies vervallen, in dezelfde UPDATE als het nieuwe wachtwoord (MIT-09).
@@ -136,7 +140,7 @@ def change_password():
 
 @bp.route("/delete", methods=["POST"])
 def delete_account():
-    if refused := refuse_without_password():
+    if refused := refuse_without_both_factors():
         return refused
     # De notities gaan mee via ON DELETE CASCADE; andere sessies vervallen via load_user.
     events.event("account_deleted")

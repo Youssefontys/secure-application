@@ -47,6 +47,9 @@
     <label>Herhaal het nieuwe wachtwoord
       <input name="password_repeat" type="password" autocomplete="new-password" minlength="{{ PASSWORD_MIN }}" maxlength="{{ PASSWORD_MAX }}" required>
     </label>
+    <label>Code uit je app
+      <input name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required>
+    </label>
     <button type="submit">Wachtwoord opslaan</button>
   </form>
 
@@ -57,6 +60,9 @@
     <p class="hint">Je account en al je notities worden definitief verwijderd. Dit kan niet ongedaan worden gemaakt.</p>
     <label>Huidig wachtwoord
       <input name="current_password" type="password" autocomplete="current-password" required>
+    </label>
+    <label>Code uit je app
+      <input name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required>
     </label>
     <button type="submit" class="danger">Account verwijderen</button>
   </form>
