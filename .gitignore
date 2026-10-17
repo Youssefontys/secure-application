@@ -18,3 +18,10 @@ backend.*.conf
 
 # Uitvoer van de scanners (zie de profiles in compose.yaml).
 scan/
+
+# Terraform: providers, state en plannen horen niet in git; .terraform.lock.hcl wel (vaste hashes, MIT-03).
+terraform/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+crash.log

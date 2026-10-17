@@ -1,0 +1,54 @@
+# Bepaalt de namen en welk state-bestand (backend.<omgeving>.conf) hoort bij deze uitrol.
+variable "environment" {
+  type    = string
+  default = "dev"
+
+  validation {
+    condition     = contains(["dev", "test", "prod"], var.environment)
+    error_message = "Kies dev, test of prod."
+  }
+}
+
+variable "location" {
+  type    = string
+  default = "westeurope"
+}
+
+# De image van de app met een vaste tag of digest, nooit latest (MIT-03); de pipeline bouwt en pusht hem.
+variable "app_image" {
+  type = string
+}
+
+# Zelfde hoofdversie als lokaal in compose.yaml.
+variable "postgres_version" {
+  type    = string
+  default = "18"
+}
+
+# 0: de app slaapt als niemand hem gebruikt (geen kosten, maar de eerste aanvraag is traag). Hacking week: 1.
+variable "min_replicas" {
+  type    = number
+  default = 0
+}
+
+# Hackstand (MC-18): alleen tijdens de hacking week op hackweek.
+variable "throttle_ip_mode" {
+  type    = string
+  default = "strict"
+
+  validation {
+    condition     = contains(["strict", "hackweek"], var.throttle_ip_mode)
+    error_message = "Kies strict of hackweek."
+  }
+}
+
+variable "throttle_pair_exempt_users" {
+  type    = string
+  default = ""
+}
+
+# Ophogen maakt een nieuw databasewachtwoord en een nieuwe sessiesleutel; dat laatste logt iedereen uit.
+variable "secret_version" {
+  type    = number
+  default = 1
+}
