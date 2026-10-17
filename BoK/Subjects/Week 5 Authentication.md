@@ -41,7 +41,7 @@ De ene helft vangt geen fouten van de andere op. MC-02, andermans notitie openen
 | Correct algoritme | TOTP volgens RFC 6238 zonder dependency: geheim van 160 bits (RFC 4226 R6), 6 cijfers, 30 seconden, hoogstens één stap klokverschil (RFC 6238 5.2), vergelijken in constante tijd | Alle 16 testvectoren van RFC 6238 en RFC 4226 (T-35) |
 | Halve login opent niets | De sessie krijgt na het wachtwoord alleen `pending_user_id`; die vervalt na 5 minuten, en ook als de sessieversie intussen verandert | T-32, T-33, T-38 |
 | Elke code één keer | De laatst geaccepteerde tijdstap staat in de database. RFC 6238 5.2: de verifier MUST NOT accept the second attempt. De controle zit in dezelfde UPDATE die de stap opslaat | Twee gelijktijdige verzoeken met dezelfde code: één binnen (T-31) |
-| Raden begrensd | Tellers per sleutel in de database (`throttle.py`), niet in de sessie. Elke poging telt vóór de controle, dus ook gelijktijdige verzoeken blijven binnen de limiet. De sleutels zijn HMAC's, dus geen leesbare namen of IP-adressen. Een geslaagde login wist de accountteller; van die van het adres gaat alleen die ene poging af | T-12, T-30, T-39 tot T-43, T-58, T-60, T-61 |
+| Raden begrensd | Tellers per sleutel in de database (`throttle.py`), niet in de sessie. Elke poging telt vóór de controle, dus ook gelijktijdige verzoeken blijven binnen de limiet. De sleutels zijn HMAC's, dus geen leesbare namen of IP-adressen. Een geslaagde login wist de accountteller; van die van het adres gaat alleen die ene poging af | T-12, T-30, T-39 tot T-43, T-58, T-60, T-61, T-71, T-72 |
 | Oude sessies vervallen | Een `session_version` in de database en in de cookie; die moeten gelijk zijn | T-14, T-15, T-37 |
 | Herstelcode | 128 willekeurige bits; alleen de SHA-256 staat in de database. Werkt één keer, met de hash in de WHERE van de UPDATE; eigen blokkade; nieuwe code alleen met een code uit de app | T-44 tot T-49 |
 | Wachtwoord vergeten | Twee van de drie factoren: herstelcode en telefoon. Een foute herstelcode telt per adres en per naam per adres, en een onbekende naam krijgt hetzelfde antwoord. Pas na een juiste herstelcode geldt de blokkade van de codestap. Nieuw wachtwoord en verbruik van de code in één UPDATE; daarna niet automatisch ingelogd | T-52, T-54 tot T-57 |
@@ -56,17 +56,17 @@ De ene helft vangt geen fouten van de andere op. MC-02, andermans notitie openen
 
 - **Raden met het wachtwoord in handen (MC-15).** Met de verdubbelende blokkade zijn dat ongeveer 1.855 pogingen per jaar: 0,56% kans om een code te raden. Met de vaste blokkade van eerst was dat ongeveer 41%.
 - **Phishing in real time (MC-16).** Een nepsite die de code direct doorgeeft, komt binnen. Daartegen helpt alleen een factor die aan het domein gebonden is, zoals WebAuthn of passkeys.
-- **Het TOTP-geheim staat leesbaar in de database (MC-17).** Een databaselek levert wachtwoord en geheim samen. Versleuteling hoort bij database security.
+- **Het TOTP-geheim stond leesbaar in de database (MC-17).** Een databaselek leverde wachtwoord en geheim samen. Sinds Week 6 is het versleuteld (MIT-17), zie `Week 6 Encryption.md`.
 - **Een gestolen sessiecookie (MC-04)** werkt tot de gebruiker uitlogt of zijn gegevens wijzigt, en anders tot 31 dagen. De tweede factor helpt daar niet: de cookie is van na de code.
 - **Uitloggen logt alle apparaten uit.** Zonder sessies op de server bij te houden kan het niet preciezer.
-- **Buitensluiten (MC-18).** Op een gedeeld netwerk of achter een proxy delen gebruikers één IP-adres. Achter een proxy moet de app het echte clientadres krijgen, anders telt iedereen als één adres.
+- **Buitensluiten (MC-18).** Op een gedeeld netwerk delen gebruikers één IP-adres; de hackstand verkleint dat probleem, maar lost het niet op. Achter een proxy krijgt de app het echte clientadres via `ProxyFix` met `TRUSTED_PROXIES`, zonder de poort die Azure kan meesturen (T-72). Dat aantal moet op Azure gemeten worden: te laag en iedereen telt als het adres van de proxy, te hoog en een aanvaller kiest zelf zijn adres.
 - **Verspreid raden (MC-03).** Wie vanaf heel veel adressen raadt, wordt per account niet begrensd; dat is bewust, anders kan iedereen met een gebruikersnaam een account blokkeren. De tweede factor vangt dit op.
 - **De bewaarde herstelcode (MC-19, MC-21)** is zo veilig als de plek waar hij ligt; met het wachtwoord of met de telefoon erbij is het account over. De gebruiker merkt het pas bij het volgende inloggen, want er is geen e-mail.
 - **De eerste instelling (MC-20).** Wie het wachtwoord heeft van een account dat de tweede factor nog niet heeft ingesteld, kan zijn eigen app koppelen ("trust on first use"). Daartegen helpt een tweede kanaal, zoals een bevestigde e-mail.
 - **Wie het wachtwoord kent, komt ook door de herauthenticatie.** Die beschermt tegen iemand met alleen de sessie. Tegen iemand met het wachtwoord helpt de tweede factor bij het inloggen.
 - **CSRF (MC-05) voor notities en uitloggen.** Wachtwoord wijzigen en account verwijderen vragen nu het wachtwoord, en dat kent een andere site niet. Notities aanmaken, aanpassen en verwijderen en uitloggen kunnen nog wel via een andere site.
 - **Autorisatie in de database en in de cloud** komt later; zie "Authenticatie en autorisatie" hierboven.
-- **Wachtwoorden staan nog leesbaar opgeslagen (MC-01).** Dat hoort bij secure password storage (Argon2id).
+- **Wachtwoorden stonden leesbaar opgeslagen (MC-01).** Sinds Week 6 staat er alleen een Argon2id-hash (MIT-19), zie `Week 6 Encryption.md`.
 - **Geen blocklist (MC-03).** Een veelgebruikt wachtwoord van 12 tekens of meer wordt nog geaccepteerd. NIST eist een vergelijking met veelgebruikte en gelekte wachtwoorden; die is gepland, met een lijst in de repo in plaats van een externe dienst.
 
 ## Keuzes
@@ -86,7 +86,11 @@ De ene helft vangt geen fouten van de andere op. MC-02, andermans notitie openen
 - **404, geen 403, bij andermans notitie.** Een 403 verraadt dat de notitie bestaat, en de ids zijn opeenvolgende getallen. Het OWASP IDOR Prevention Cheat Sheet raadt aan om "bestaat niet" en "niet van jou" hetzelfde antwoord te geven.
 - **Herauthenticatie met het wachtwoord, niet met een code.** Het OWASP Authentication Cheat Sheet vraagt de huidige gegevens opnieuw voor het wijzigen van gevoelige accountgegevens, zoals het wachtwoord. Een code uit de app blijft voor het vervangen van de tweede factor zelf (AU-06).
 - **Een limiet per account voor de herauthenticatie.** Die stap is alleen met een sessie te bereiken, dus een buitenstaander kan het account er niet mee blokkeren. Zonder limiet kan iemand met een gestolen sessie het wachtwoord raden.
-- **Eén plek voor de controle van het huidige wachtwoord.** `passwords.is_current()`; bij Argon2 verandert alleen die functie, plus het inloggen.
+- **Eén plek voor de controle van het huidige wachtwoord.** `passwords.is_current()`. Daardoor veranderde bij Argon2id (Week 6) alleen `passwords.py`, plus de plekken die een wachtwoord opslaan.
+- **Een hackstand voor de hacking week, standaard uit.** Een klas zit achter één adres van school. Met 20 fouten per adres zet één scanner of een paar typfouten de hele klas 15 minuten of langer op slot.
+  - `THROTTLE_IP_MODE=hackweek` maakt dat 100 fouten per 15 minuten, met een vaste blokkade van 5 minuten zonder verdubbeling. Een scanner wordt nog afgeremd; de rest van de klas wacht hooguit 5 minuten.
+  - `THROTTLE_PAIR_EXEMPT_USERS=hackingweek` haalt het demoaccount uit de teller per naam per adres, zodat één klasgenoot het niet met 5 foute wachtwoorden voor iedereen op slot zet.
+  - De limiet per adres en die op de code blijven gelden, dus raden blijft begrensd. Een typfout in de stand laat de app niet starten, zodat er nooit stil een andere stand draait (T-71).
 
 ## Vergelijking met BOK-SECENGINEER
 
@@ -102,6 +106,7 @@ De oplossingen lijken nu veel meer op elkaar. Het grootste verschil dat overblij
 | Opnieuw instellen (nieuwe telefoon) | Niet mogelijk | Kan, met een code |
 | Geheim in de database | Versleuteld (pgcrypto) | Leesbaar (MC-17) |
 | Poginglimieten | Per account en per IP, oplopend; bij herstel telt een poging vóór de controle, bij inloggen en de code pas erna | Per account en per IP, oplopend; elke poging telt vóór de controle |
+| Hackstand | `strict`, `hackweek` en `observe` (alleen melden); het demoaccount uitgezonderd | `strict` en `hackweek`; het demoaccount uitgezonderd. Geen `observe`: die blokkeert nooit op IP, en er is nog geen logging om te melden |
 | Gelijktijdige verzoeken | Rijslot (`FOR UPDATE`) en een tweede controle | Voorwaarden in één UPDATE |
 | Halve login vervalt na | 10 minuten | 5 minuten, en bij een nieuwe sessieversie |
 | Oude sessies ongeldig | Sessieversie (`auth_version`) | Sessieversie (`session_version`) |
@@ -124,6 +129,7 @@ Voor het verslag, lokaal in `screenshots/Week 5 Authentication/` (niet in de rep
 | Tweede factor | `week5_voor_1` tot `_3` | `week5_na_1` tot `_9` | `week5_code_1_inloggen`, `week5_code_2_controle` |
 | Sessieversie | `week5_voor_sessie_1`, `_2` | `week5_na_sessie_1`, `_2` | `week5_code_3_sessieversie` |
 | Poginglimieten | `week5_voor_blokkade_1` | `week5_na_blokkade_1` tot `_3` | `week5_code_4_blokkade` |
+| Hackstand | geen (standaard uit) | geen; bewezen met T-71 | `week5_code_9_hackstand` |
 | Herstelcode | `week5_voor_herstel_1` | `week5_na_2_herstelcode_getoond`, `week5_na_herstel_1` tot `_4` | `week5_code_5_herstelcode` |
 | Verplicht | `week5_voor_verplicht_1`, `_2` | `week5_na_verplicht_1`, `_2` | `week5_code_6_verplicht` |
 | Wachtwoord vergeten en sterkte-eis | geen (basisonderdeel) | `week5_na_sterkte_1`, `week5_na_vergeten_1` tot `_4` | `week5_code_7_wachtwoord_vergeten` |
