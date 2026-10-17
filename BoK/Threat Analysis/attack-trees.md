@@ -20,7 +20,7 @@ Notities van een ander lezen of wijzigen
         OR  bekende kwetsbaarheid, niet bijgewerkt                         [open]
         OR  kwaadaardige nieuwe pakketversie                               [MIT-03]
         OR  kwetsbaarheid of andere image achter de tag                    [open]
-  OR  Script in een notitie laten uitvoeren (MC-07)                       [MIT-01]
+  OR  Script in een notitie laten uitvoeren (MC-07)                       [MIT-01, MIT-21]
   OR  Het hele account van het slachtoffer verwijderen (MC-13)            [MIT-16, deels]
         AND handelen als het slachtoffer (cookie van MC-04, of via MC-05)
         AND het wachtwoord kennen (MC-01, MC-03)
@@ -57,7 +57,8 @@ Account overnemen
         OR  meelezen op het netwerk (geen TLS)                             [open]
         OR  kopieren van een gedeelde browser                              [open, MIT-09 na uitloggen]
         OR  zelf ondertekenen met de sessiesleutel                         [open]
-  OR  Via een andere site handelen met de cookie van het slachtoffer (MC-05) [open]
+  OR  Via een andere site handelen met de cookie (MC-05)                   [MIT-20]
+  OR  Laten klikken in een onzichtbaar frame (MC-24)                       [MIT-21]
   OR  Het wachtwoord zelf wijzigen (MC-12)                                 [MIT-16, deels]
         AND handelen als het slachtoffer (cookie van MC-04, of via MC-05)
         AND het huidige wachtwoord kennen (MC-01, MC-03)
@@ -70,10 +71,10 @@ Account overnemen
 Dienst onbruikbaar
   OR  Zeer grote of veel verzoeken sturen (MC-10)
         OR  te lange titel of notitie opslaan                              [MIT-04]
-        OR  groot verzoek, dat eerst helemaal wordt ingelezen              [open]
+        OR  groot verzoek, dat eerst helemaal wordt ingelezen              [MIT-22]
         OR  veel accounts (elk een Argon2id-hash) of notities aanmaken     [open]
   OR  Alle notities wissen via MC-02                                       [open]
   OR  De database weggooien na overname van de app (MC-08)                 [open]
-  OR  De ontwikkelserver van Flask overbelasten (MC-14)                    [open]
+  OR  De ontwikkelserver van Flask overbelasten (MC-14)                    [MIT-26]
   OR  Een gebruiker buitensluiten met de blokkade (MC-18)                  [open]
 ```

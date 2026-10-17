@@ -141,10 +141,10 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
   - AND 1. De gebruiker is ingelogd en bezoekt de site van de aanvaller
   - AND 2. Die site stuurt een formulier naar `/`, `/notes/<id>/delete`, `/account/password`, `/account/delete` of `/logout`. Tweestapsverificatie opnieuw instellen (`/account/2fa/reset`) of een nieuwe herstelcode maken (`/account/2fa/recovery`) lukt zo niet, want daarvoor is een code nodig die de andere site niet heeft. Sinds MIT-16 geldt hetzelfde voor `/account/password` en `/account/delete`: die vragen het huidige wachtwoord
   - AND 3. De browser stuurt de cookie mee
-- Mitigaties: MIT-16 voor wachtwoord wijzigen en account verwijderen (stap 2). Verder geen (geen CSRF-token; `SameSite` is niet ingesteld, dus het gedrag hangt van de browser af)
-- Restrisico: notities aanmaken, aanpassen en verwijderen en uitloggen zijn nog aanroepbaar vanaf een andere site
-- Status: open
-- Sinds: baseline
+- Mitigaties: MIT-20 (stap 2: elke POST vraagt het CSRF-token van de sessie, en dat kent de andere site niet). MIT-23 (stap 3: de cookie heeft `SameSite=Lax`, dus de browser stuurt hem niet mee met een formulier van een andere site). MIT-16 voor wachtwoord wijzigen en account verwijderen
+- Restrisico: een script dat toch op de eigen pagina draait (MC-07) kan het token lezen; daarom de tweede laag van MIT-21. Een andere poort op hetzelfde adres telt voor de browser als dezelfde site, dus daar helpt `SameSite` niet, het token wel (T-73)
+- Status: gebouwd
+- Sinds: baseline; dicht sinds 5bd55c5
 
 ### MC-06 SQL-injectie
 - Aanvallersdoel: de database lezen of wijzigen via invoer
@@ -167,8 +167,8 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 - Stappen:
   - AND 1. Een script-tag opslaan in een notitie, of in de gebruikersnaam (die ziet alleen de gebruiker zelf, in de begroeting en op de profielpagina)
   - AND 2. Een slachtoffer laat die notitie renderen
-- Mitigaties: MIT-01 (stap 2)
-- Restrisico: geen tweede laag. Zonder Content-Security-Policy voert de browser een script uit zodra iemand `|safe` of een andere uitzondering toevoegt
+- Mitigaties: MIT-01 (stap 2). MIT-21 (stap 2: de CSP staat geen inline script toe, dus ook een script dat erdoor glipt, voert de browser niet uit). MIT-22 (stap 1: een gebruikersnaam kan geen HTML meer bevatten)
+- Restrisico: een script uit een eigen bestand mag wel; wie daar iets in krijgt, heeft de server al. De CSP is een tweede laag, geen vervanging van het escapen
 - Status: gebouwd
 - Sinds: baseline
 
@@ -207,8 +207,8 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
   - OR  1. Zeer grote formulieren sturen. Titel en notitie hebben een lengtegrens (MIT-04), maar het verzoek wordt eerst helemaal ingelezen: er is geen `MAX_CONTENT_LENGTH`, en de standaard `MAX_FORM_MEMORY_SIZE` van Flask (500 kB) hield een gewoon formulier van 5 MB niet tegen (T-21). Gebruikersnaam en wachtwoord hebben geen lengtegrens
   - OR  2. Onbeperkt veel accounts aanmaken
   - OR  3. Onbeperkt veel notities aanmaken en tonen
-- Mitigaties: MIT-04 (stap 1, alleen voor titel en notitie), nog geen (stap 2 en 3, en de grootte van het verzoek zelf)
-- Restrisico: elk verzoek wordt helemaal ingelezen, het aantal accounts en notities is onbeperkt, en een gebruikersnaam kan elke lengte hebben. Sinds MIT-19 kost elke registratie, login en wachtwoordwijziging 19 MiB en een Argon2id-berekening; inloggen is begrensd (MIT-10), registreren niet, dus veel registraties tegelijk kunnen geheugen en rekentijd opmaken
+- Mitigaties: MIT-22 (stap 1: een verzoek boven 16 KiB krijgt 413 voordat het is ingelezen, en een gebruikersnaam is hoogstens 20 tekens). MIT-04 (titel en notitie). Nog geen (stap 2 en 3)
+- Restrisico: het aantal accounts en notities is onbeperkt. Sinds MIT-19 kost elke registratie, login en wachtwoordwijziging 19 MiB en een Argon2id-berekening; inloggen is begrensd (MIT-10), registreren niet, dus veel registraties tegelijk kunnen geheugen en rekentijd opmaken
 - Status: open
 - Sinds: baseline
 
@@ -265,10 +265,10 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 - Stappen:
   - OR  1. Na een overname draait de aanvaller als root in de container: hij kan de code van de app aanpassen en gereedschap installeren, en een uitbraak uit de container begint met rootrechten
   - OR  2. De ontwikkelserver van Flask belasten; Flask waarschuwt bij het starten zelf dat die niet voor productie bedoeld is
-- Mitigaties: geen
-- Restrisico: een overname van de app is meteen een overname van de hele container
-- Status: open
-- Sinds: baseline
+- Mitigaties: MIT-26 (stap 1: de app draait als de gewone gebruiker `app` en mag de code niet aanpassen; stap 2: Gunicorn met twee workers in plaats van de ontwikkelserver)
+- Restrisico: wie de app overneemt, kan nog alles wat de app mag, zoals de geheimen in de omgeving lezen (MC-22) en de database gebruiken (MC-08). Het bestandssysteem van de container is niet alleen-lezen
+- Status: gebouwd
+- Sinds: baseline; dicht sinds 13a2eb4
 
 ### MC-15 De code van de tweede stap raden
 - Aanvallersdoel: inloggen als een gebruiker met tweestapsverificatie
@@ -320,7 +320,9 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 - Stappen:
   - OR  1. Vanaf het adres van het slachtoffer 5 foute wachtwoorden voor zijn naam invullen, of 20 voor willekeurige namen
   - OR  2. Met het wachtwoord 5 foute codes invullen: de codestap van het account gaat op slot, oplopend tot 24 uur
-- Mitigaties: in het ontwerp van MIT-10: de wachtwoordstap blokkeert nooit een account over alle adressen, alleen per adres. Wie een naam kent maar niet op het netwerk van het slachtoffer zit, kan hem niet buitensluiten. Voor de hacking week, met een klas achter één adres van school, de hackstand: `THROTTLE_IP_MODE=hackweek` (100 per adres en een vaste blokkade van 5 minuten) en `THROTTLE_PAIR_EXEMPT_USERS` voor het demoaccount (T-71). Achter een proxy het echte clientadres via `ProxyFix` met `TRUSTED_PROXIES` (3a7c5ae), zonder de poort die Azure kan meesturen (T-72)
+  - OR  3. HEAD-verzoeken sturen: tot 7fbc42e telde elke HEAD op een formulierroute als foute poging, zonder formulier in te vullen (T-78)
+  - OR  4. Een verkeerde `TRUSTED_PROXIES` (zoals -1 of 2) uitbuiten: dan kiest de aanvaller zelf het adres waarop geteld wordt (T-79)
+- Mitigaties: MIT-22 (stap 3: alleen een POST telt). MIT-23 (stap 4: alleen 0 of 1, anders start de app niet). In het ontwerp van MIT-10: de wachtwoordstap blokkeert nooit een account over alle adressen, alleen per adres. Wie een naam kent maar niet op het netwerk van het slachtoffer zit, kan hem niet buitensluiten. Voor de hacking week, met een klas achter één adres van school, de hackstand: `THROTTLE_IP_MODE=hackweek` (100 per adres en een vaste blokkade van 5 minuten) en `THROTTLE_PAIR_EXEMPT_USERS` voor het demoaccount (T-71). Achter een proxy het echte clientadres via `ProxyFix` met `TRUSTED_PROXIES` (3a7c5ae), zonder de poort die Azure kan meesturen (T-72)
 - Restrisico: op een gedeeld netwerk delen gebruikers één adres; de hackstand verkleint dat, maar lost het niet op. `TRUSTED_PROXIES` moet bij de uitrol gemeten worden: te laag en iedereen deelt het adres van de proxy, te hoog en een aanvaller kiest zelf zijn adres. In de hackstand mag vanaf één adres meer geraden worden en heeft het demoaccount geen teller per naam, dus de stand hoort alleen aan tijdens de hacking week. Stap 2 kan alleen wie het wachtwoord al heeft
 - Status: open
 - Sinds: 484eca3
@@ -405,6 +407,46 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 - Status: gebouwd
 - Sinds: baseline; versleuteld sinds b2b60e1
 
+### MC-24 De app in een onzichtbaar frame laten klikken (clickjacking)
+- Aanvallersdoel: de gebruiker op een knop in de app laten klikken zonder dat hij het ziet, bijvoorbeeld account verwijderen of uitloggen
+- Aanvaller: de eigenaar van een andere website die de gebruiker bezoekt
+- Assets / onderdelen: A-02, A-03, C-01, C-02, F-02
+- Gerelateerde use case: UC-03, UC-05
+- Stappen:
+  - AND 1. De gebruiker is ingelogd en bezoekt de site van de aanvaller
+  - AND 2. Die site laadt de app in een frame, maakt het onzichtbaar en legt er een eigen knop onder
+  - AND 3. De gebruiker klikt op wat hij denkt dat de knop van de andere site is
+- Mitigaties: MIT-21 (stap 2: `frame-ancestors 'none'` en `X-Frame-Options: DENY`, dus de browser laadt de app niet in een frame)
+- Restrisico: een heel oude browser die geen van beide headers kent
+- Status: gebouwd
+- Sinds: baseline; dicht sinds 2587a60
+
+### MC-25 Een route bereiken die vergeten is af te schermen
+- Aanvallersdoel: zonder login bij een functie komen die een ontwikkelaar per ongeluk open liet
+- Aanvaller: iedere bezoeker
+- Assets / onderdelen: A-02, A-04, C-02, AU-02
+- Gerelateerde use case: UC-03 tot UC-06
+- Stappen:
+  - AND 1. Er komt een nieuwe route bij zonder de controle op de login; tot 6d9f255 moest elke route zelf `@login_required` hebben
+  - AND 2. De aanvaller vindt die route en opent hem zonder in te loggen
+- Mitigaties: MIT-24 (stap 1: elke route is standaard dicht; alleen een vaste lijst mag zonder login)
+- Restrisico: wie een route aan de publieke lijst toevoegt, maakt hem bewust open; de regressietest controleert die lijst (T-80)
+- Status: gebouwd
+- Sinds: baseline; dicht sinds 6d9f255
+
+### MC-26 Een fout uitlokken om informatie te krijgen of de log te vervalsen
+- Aanvallersdoel: interne details zien (code, paden, de database) of valse regels in de log zetten om sporen te wissen
+- Aanvaller: iedere bezoeker
+- Assets / onderdelen: C-02, C-03, F-02
+- Gerelateerde use case: alle
+- Stappen:
+  - OR  1. Een fout veroorzaken (vreemde invoer, of een moment dat de database weg is) en de foutpagina lezen
+  - OR  2. Een regeleinde in de URL zetten, zodat een logregel met dat pad als twee regels in de log komt
+- Mitigaties: MIT-25 (stap 1: een korte melding zonder details; de debugmodus staat sinds de baseline uit. Stap 2: het pad gaat als repr de log in, dus een regeleinde wordt `\n`)
+- Restrisico: er is nog geen logging van security-events; dat komt bij Logging en monitoring
+- Status: gebouwd
+- Sinds: baseline; veilig falen sinds b362061
+
 ## Mitigaties
 
 ### MIT-01 Automatisch escapen in Jinja
@@ -437,7 +479,7 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 
 ### MIT-05 Tweede factor bij inloggen (TOTP)
 - Houdt tegen: MC-03 stap 1 en 2, en een gelekt wachtwoord uit MC-01; sinds MIT-12 voor elk account. Maakt MC-12 kleiner
-- Wat: na het juiste wachtwoord krijgt de sessie alleen een `pending_user_id`. Daarmee opent geen enkele route, want `login_required` en `load_user` kijken naar `user_id`. Pas na een geldige code op `/login/2fa` wordt de sessie gewist en `user_id` gezet. De halve login vervalt na 5 minuten. TOTP volgens RFC 6238: een geheim van 160 bits (RFC 4226 R6), 6 cijfers, 30 seconden, één stap klokverschil (RFC 6238, 5.2), vergeleken in constante tijd. Alleen de cijfers 0-9 tellen; een code met andere cijfers, zoals Arabisch-Indische, is gewoon fout (T-59). De berekening is zonder dependency geschreven en met de hand tegen alle testvectoren van RFC 6238 en RFC 4226 gecontroleerd (T-35). Aanzetten gebeurt pas na een eerste geldige code. Opnieuw instellen vraagt ook een code (AU-06), zodat wie alleen de sessie heeft de tweede factor niet kan vervangen
+- Wat: na het juiste wachtwoord krijgt de sessie alleen een `pending_user_id`. Daarmee opent geen enkele route, want `require_login` en `load_user` kijken naar `user_id`. Pas na een geldige code op `/login/2fa` wordt de sessie gewist en `user_id` gezet. De halve login vervalt na 5 minuten. TOTP volgens RFC 6238: een geheim van 160 bits (RFC 4226 R6), 6 cijfers, 30 seconden, één stap klokverschil (RFC 6238, 5.2), vergeleken in constante tijd. Alleen de cijfers 0-9 tellen; een code met andere cijfers, zoals Arabisch-Indische, is gewoon fout (T-59). De berekening is zonder dependency geschreven en met de hand tegen alle testvectoren van RFC 6238 en RFC 4226 gecontroleerd (T-35). Aanzetten gebeurt pas na een eerste geldige code. Opnieuw instellen vraagt ook een code (AU-06), zodat wie alleen de sessie heeft de tweede factor niet kan vervangen
 - Waar: `login()`, `login_code()` en `check_code()` in `app/auth.py`; `app/totp.py`
 - Status: gebouwd
 - Sinds: 96626e2; alleen 0-9 sinds ce12d31
@@ -486,8 +528,8 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 
 ### MIT-12 Tweestapsverificatie verplicht
 - Houdt tegen: MC-03 stap 1 en 2 voor alle accounts, niet alleen voor wie het zelf aanzet; beperkt het venster van MC-20
-- Wat: `login_required` laat een ingelogde gebruiker zonder tweestapsverificatie alleen het instellen afmaken (`/account/2fa` en de QR-code); elke andere pagina stuurt daarheen. Dat geldt voor een nieuw account na het eerste wachtwoord, en na het gebruik van een herstelcode. De instelpagina maakt zelf een geheim aan en biedt uitloggen in plaats van annuleren. Uitzetten bestaat niet meer: alleen opnieuw instellen voor een nieuwe telefoon, met een code (AU-06), waarna de app meteen naar het instellen stuurt
-- Waar: `login_required()` en `login()` in `app/auth.py`; `setup_2fa()` en `reset_2fa()` in `app/account.py`
+- Wat: `require_login` laat een ingelogde gebruiker zonder tweestapsverificatie alleen het instellen afmaken (`/account/2fa` en de QR-code); elke andere pagina stuurt daarheen. Dat geldt voor een nieuw account na het eerste wachtwoord, en na het gebruik van een herstelcode. De instelpagina maakt zelf een geheim aan en biedt uitloggen in plaats van annuleren. Uitzetten bestaat niet meer: alleen opnieuw instellen voor een nieuwe telefoon, met een code (AU-06), waarna de app meteen naar het instellen stuurt
+- Waar: `require_login()` en `login()` in `app/auth.py`; `setup_2fa()` en `reset_2fa()` in `app/account.py`
 - Status: gebouwd
 - Sinds: 42ab429
 
@@ -539,3 +581,52 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 - Waar: `app/passwords.py`; `register()`, `login()` en `forgot_password()` in `app/auth.py`; `change_password()` in `app/account.py`
 - Status: gebouwd
 - Sinds: 9e6e365
+
+### MIT-20 CSRF-token per sessie
+- Houdt tegen: MC-05 stap 2
+- Wat: elke sessie krijgt een willekeurig token van 32 bytes (`secrets.token_urlsafe`), en elk formulier stuurt het mee in een verborgen veld. Een POST zonder het juiste token krijgt 400, met de vergelijking in constante tijd (`hmac.compare_digest`), zoals het OWASP CSRF Prevention Cheat Sheet aanraadt. Een token per sessie, niet per verzoek: OWASP noemt beide, en per verzoek geeft fouten met de terugknop. De controle draait vóór het laden van de gebruiker, zodat een verlopen sessie gewoon naar de inlogpagina gaat. `SameSite=Lax` op de cookie (MIT-23) is volgens OWASP een extra laag, geen vervanging
+- Waar: `app/csrf.py`; het veld in alle 14 formulieren in `app/web/templates/`
+- Status: gebouwd
+- Sinds: 5bd55c5
+
+### MIT-21 Beveiligingsheaders
+- Houdt tegen: MC-07 stap 2 (tweede laag), MC-24 stap 2
+- Wat: op elk antwoord, ook op foutpagina's: `Content-Security-Policy: default-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'`, `X-Frame-Options: DENY` voor oudere browsers, `X-Content-Type-Options: nosniff` en `Referrer-Policy: same-origin`. De app had al geen inline script of style, dus de CSP kan streng; op de belangrijkste pagina's gaf de browser geen enkele overtreding (T-75). `Strict-Transport-Security` alleen als de app op HTTPS draait, anders zou de browser het lokaal verkeerd onthouden
+- Waar: `security_headers()` in `app/app.py`
+- Status: gebouwd
+- Sinds: 2587a60
+
+### MIT-22 Invoercontrole
+- Houdt tegen: MC-10 stap 1, MC-07 stap 1 (gebruikersnaam), MC-18 stap 3
+- Wat: een gebruikersnaam is 3 tot 20 letters, cijfers of `_`, gecontroleerd met `fullmatch` op een allowlist, zoals het OWASP Input Validation Cheat Sheet aanraadt. Bij registreren een melding; bij inloggen en wachtwoord vergeten telt een andere naam als onbekend, met hetzelfde antwoord. De browser controleert hetzelfde met `pattern` en `maxlength`, maar dat is alleen gemak: de server beslist. Een verzoek boven 16 KiB (`MAX_CONTENT_LENGTH`) krijgt 413 voordat het is ingelezen. Alleen een POST voert een formulieractie uit; HEAD en GET tonen alleen de pagina
+- Waar: `USERNAME` en `register()`, `login()`, `forgot_password()` in `app/auth.py`; `MAX_CONTENT_LENGTH` in `app/app.py`
+- Status: gebouwd
+- Sinds: 7fbc42e (alleen POST); 61221ed (naam en grootte)
+
+### MIT-23 Configuratie controleren en veilige standaarden
+- Houdt tegen: MC-18 stap 4; MC-04 en MC-05 (de cookie)
+- Wat: configuratie is ook invoer. Bij het starten moeten `TRUSTED_PROXIES` 0 of 1 zijn en `HTTPS_ONLY` 0 of 1, `FLASK_SECRET_KEY` minstens 32 tekens, `DATA_ENCRYPTION_KEY` 256 bits en `THROTTLE_IP_MODE` een bekende stand; anders start de app niet. Standaard veilig: zonder `HTTPS_ONLY` gaat de cookie alleen over HTTPS, en alleen `compose.yaml` zet dat lokaal uit. De cookie heeft altijd `HttpOnly` en `SameSite=Lax`
+- Waar: `setting()` en de configuratie in `app/app.py`; `compose.yaml`
+- Status: gebouwd
+- Sinds: 172f43d
+
+### MIT-24 Standaard dicht
+- Houdt tegen: MC-25 stap 1
+- Wat: één hook vraagt voor elke route een login met tweestapsverificatie; alleen een vaste lijst (`PUBLIC_ENDPOINTS`: inloggen, registreren, de code- en herstelroutes, wachtwoord vergeten, uitloggen en de statische bestanden) mag zonder. Dat vervangt de tien losse `@login_required`. De regressietest haalt alle routes uit de app zelf en controleert dat elke andere route een anonieme bezoeker naar `/login` stuurt (T-80)
+- Waar: `require_login()` en `PUBLIC_ENDPOINTS` in `app/auth.py`
+- Status: gebouwd
+- Sinds: 6d9f255
+
+### MIT-25 Veilig falen
+- Houdt tegen: MC-26 stap 1 en 2
+- Wat: een HTTP-fout (404, 405, 413) krijgt de eigen foutpagina met een korte melding; status en headers, zoals `Allow` bij 405, blijven. Een onverwachte fout geeft 500 met "Er ging iets mis", en de fout zelf gaat met traceback naar de log (stderr, lokaal en op Azure hetzelfde). Het pad gaat als repr de log in, zodat een regeleinde in de URL `\n` wordt en geen valse regel maakt (log injection, OWASP Logging Cheat Sheet)
+- Waar: `http_error()` en `unexpected_error()` in `app/app.py`; `app/web/templates/error.html`
+- Status: gebouwd
+- Sinds: b362061
+
+### MIT-26 Gunicorn als gewone gebruiker
+- Houdt tegen: MC-14 stap 1 en 2
+- Wat: de image maakt een systeemgebruiker `app` zonder shell en draait daaronder. De code is van root, dus de app kan hem lezen maar niet aanpassen. Gunicorn met twee workers vervangt de ontwikkelserver van Flask, die zelf waarschuwt niet voor productie te zijn. CIS Benchmarks raden voor webservers ook aan om niet als root te draaien
+- Waar: `app/Dockerfile`; `gunicorn` in `app/requirements.txt`
+- Status: gebouwd
+- Sinds: 13a2eb4

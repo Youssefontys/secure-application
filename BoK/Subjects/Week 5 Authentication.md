@@ -10,7 +10,7 @@ Systeemauthenticatie is in deze stap niet veranderd: de app logt bij de database
 
 Dit BoK-onderwerp heeft twee helften, en deze tekst houdt ze uit elkaar:
 
-- **Authenticatie** stelt vast wie je bent: het wachtwoord, de code uit de app, de herstelcode, en daarna bij elk verzoek de sessie (AU-01 tot AU-08). In de code: `login()`, `login_code()`, `check_code()`, `load_user()` en `login_required`.
+- **Authenticatie** stelt vast wie je bent: het wachtwoord, de code uit de app, de herstelcode, en daarna bij elk verzoek de sessie (AU-01 tot AU-08). In de code: `login()`, `login_code()`, `check_code()`, `load_user()` en `require_login()` (sinds Week 7 één hook voor alle routes, MIT-24).
 - **Autorisatie** stelt vast wat je mag, als vaststaat wie je bent: alleen je eigen notities en je eigen account (AZ-01 tot AZ-09). In de code: de `user_id` uit de sessie in de WHERE, zoals in `own_note()`.
 - **Herauthenticatie** zit ertussen. Voor een gevoelige actie, zoals wachtwoord wijzigen of het account verwijderen, bewijs je opnieuw wie je bent (AU-04), en pas daarna staat de autorisatie de actie toe (AZ-06, AZ-07).
 
@@ -46,7 +46,7 @@ De ene helft vangt geen fouten van de andere op. MC-02, andermans notitie openen
 | Herstelcode | 128 willekeurige bits; alleen de SHA-256 staat in de database. Werkt één keer, met de hash in de WHERE van de UPDATE; eigen blokkade; nieuwe code alleen met een code uit de app | T-44 tot T-49 |
 | Wachtwoord vergeten | Twee van de drie factoren: herstelcode en telefoon. Een foute herstelcode telt per adres en per naam per adres, en een onbekende naam krijgt hetzelfde antwoord. Pas na een juiste herstelcode geldt de blokkade van de codestap. Nieuw wachtwoord en verbruik van de code in één UPDATE; daarna niet automatisch ingelogd | T-52, T-54 tot T-57 |
 | Sterkte-eis | 12 tot 64 tekens bij registreren, wijzigen en wachtwoord vergeten, zonder samenstellingsregels (NIST SP 800-63B-4) | T-13, T-53 |
-| Verplicht | `login_required` laat een gebruiker zonder tweede factor alleen het instellen afmaken | T-50 |
+| Verplicht | `require_login` laat een gebruiker zonder tweede factor alleen het instellen afmaken | T-50 |
 | Geheim beschermd | QR-code en sleutel alleen tijdens het instellen, daarna 404; `Cache-Control: no-store` op alle pagina's met het geheim of de herstelcode | T-36, T-49 |
 | Niet buitensluiten, niet weghalen | Aanzetten pas na een eerste geldige code. Opnieuw instellen en een nieuwe herstelcode vragen een code (AU-06), dus wie alleen de sessie heeft, kan de tweede factor niet vervangen | T-28, T-45 |
 | Alleen je eigen notities | Elke query op één notitie heeft `user_id` uit de sessie in de WHERE: `own_note()` bij openen en aanpassen, en de DELETE zelf. "Bestaat niet" en "niet van jou" geven allebei 404 | T-11 |
