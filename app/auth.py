@@ -12,6 +12,7 @@ import psycopg
 from flask import Blueprint, flash, g, redirect, render_template, request, session, url_for
 
 import encryption
+import events
 import passwords
 import throttle
 import totp
@@ -33,6 +34,11 @@ USERNAME = re.compile(r"[A-Za-z0-9_]{3,20}")
 FORGOT_WRONG = "Gebruikersnaam, herstelcode of code klopt niet."
 
 
+# Een getypte naam alleen in de log als hij aan USERNAME voldoet; anders zet een aanvaller er van alles in (MIT-31).
+def logged_name(username):
+    return username if USERNAME.fullmatch(username) else None
+
+
 # Zet de ingelogde gebruiker in g.user, maar alleen als de sessieversie klopt (MIT-09).
 @bp.before_app_request
 def load_user():
@@ -43,6 +49,7 @@ def load_user():
     user = query("SELECT id, username, session_version, totp_enabled FROM users WHERE id = %s", (user_id,), one=True)
     # Versie lager dan in de database: een oude cookie of een kopie, dus niet meer geldig.
     if user is None or user.session_version != session.get("session_version"):
+        events.event("session_rejected", user_id=user_id)
         session.clear()
         flash("Je sessie is niet meer geldig. Log opnieuw in.")
         return
@@ -101,13 +108,17 @@ def register():
         return render_template("auth.html", error=error), 400
     # Pas vlak voor het hashen tellen: alleen een registratie die echt rekent, telt mee (MIT-30, MC-10).
     if minutes := throttle.attempt(throttle.limit("register_ip", throttle.client_ip(request.remote_addr))):
+        events.event("register_blocked", minutes=minutes)
         error = f"Te veel nieuwe accounts vanaf dit adres. Probeer het over {minutes} minuten opnieuw."
         return render_template("auth.html", error=error), *throttle.refusal(minutes)
 
     try:
-        query("INSERT INTO users (username, password_hash) VALUES (%s, %s)", (username, passwords.hash_password(password)))
+        row = query("INSERT INTO users (username, password_hash) VALUES (%s, %s) RETURNING id",
+                    (username, passwords.hash_password(password)), one=True)
     except psycopg.errors.UniqueViolation:
+        events.event("register_taken", username=username)
         return render_template("auth.html", error="Die gebruikersnaam is al in gebruik."), 409
+    events.event("account_created", user_id=row.id, username=username)
     flash("Je account is aangemaakt. Je kunt nu inloggen.")
     return redirect(url_for("auth.login"))
 
@@ -124,11 +135,13 @@ def login():
     # Tellen per adres en per naam per adres (MIT-10), ook voor onbekende namen: verraadt niets.
     limits = throttle.password_limits(username, request.remote_addr)
     if minutes := throttle.attempt(*limits):
+        events.event("login_blocked", username=logged_name(username), minutes=minutes)
         return render_template("auth.html", error=throttle.message(minutes)), *throttle.refusal(minutes)
     row = USERNAME.fullmatch(username) and query(
         "SELECT id, password_hash, totp_enabled, session_version FROM users WHERE username = %s", (username,), one=True,
     )
     if not passwords.matches(row and row.password_hash, password):
+        events.event("login_failed", username=logged_name(username), user_id=row.id if row else None)
         return render_template("auth.html", error="Onjuiste gebruikersnaam of wachtwoord."), 400
     throttle.succeeded(*limits)
     passwords.rehash_if_needed(row.id, row.password_hash, password)
@@ -142,6 +155,7 @@ def login():
         return redirect(url_for("auth.login_code"))
     # Nog geen tweestapsverificatie: na het wachtwoord eerst instellen (MIT-12).
     start_session(row.id, row.session_version)
+    events.event("login_ok", user_id=row.id, with_2fa=False)
     return redirect(url_for("account.setup_2fa"))
 
 
@@ -176,6 +190,7 @@ def login_code():
         return render_template("login_code.html", error=error.message), *throttle.refusal(error.minutes)
     # Pas nu ingelogd; start_session gooit de halve login helemaal weg.
     start_session(user_id, session["pending_version"])
+    events.event("login_ok", user_id=user_id, with_2fa=True)
     return redirect(url_for("notes.index"))
 
 
@@ -209,10 +224,12 @@ def login_recover():
 
     recovery_limit = throttle.limit("recovery_account", user_id)
     if minutes := throttle.attempt(recovery_limit):
+        events.event("recovery_blocked", user_id=user_id, minutes=minutes)
         return render_template("login_recover.html", error=throttle.message(minutes)), *throttle.refusal(minutes)
     given = hash_recovery_code(request.form.get("code", ""))
     stored = query("SELECT recovery_hash FROM users WHERE id = %s", (user_id,), one=True)
     if not (stored and stored.recovery_hash and hmac.compare_digest(given, stored.recovery_hash)):
+        events.event("recovery_failed", user_id=user_id)
         return render_template("login_recover.html", error="Onjuiste herstelcode."), 400
     # Werkt één keer: 2FA uit, sessies ongeldig; de hash in de WHERE laat één verzoek winnen.
     row = query(
@@ -224,6 +241,7 @@ def login_recover():
         return render_template("login_recover.html", error="Onjuiste herstelcode."), 400
     throttle.succeeded(recovery_limit)
     start_session(user_id, row.session_version)
+    events.event("recovery_used", user_id=user_id)
     flash("Je herstelcode is gebruikt. Stel tweestapsverificatie opnieuw in met je nieuwe telefoon.")
     return redirect(url_for("account.setup_2fa"))
 
@@ -242,12 +260,14 @@ def forgot_password():
     # Bereikbaar zonder wachtwoord, dus dezelfde tellers als bij inloggen: per adres en per naam per adres.
     limits = throttle.password_limits(username, request.remote_addr)
     if minutes := throttle.attempt(*limits):
+        events.event("forgot_blocked", username=logged_name(username), minutes=minutes)
         return render_template("login_forgot.html", error=throttle.message(minutes)), *throttle.refusal(minutes)
     user = USERNAME.fullmatch(username) and query(
         "SELECT id, recovery_hash FROM users WHERE username = %s AND totp_enabled", (username,), one=True,
     )
     given = hash_recovery_code(request.form.get("recovery_code", ""))
     if not (user and user.recovery_hash and hmac.compare_digest(given, user.recovery_hash)):
+        events.event("forgot_failed", username=logged_name(username), user_id=user.id if user else None)
         return render_template("login_forgot.html", error=FORGOT_WRONG), 400
     throttle.succeeded(*limits)
     # De herstelcode klopt; pas nu telt een foute code per account, met de blokkade van de codestap (MIT-06).
@@ -264,6 +284,7 @@ def forgot_password():
     if row is None:
         return render_template("login_forgot.html", error=FORGOT_WRONG), 400
     session.clear()
+    events.event("password_reset", user_id=user.id)
     # Niet automatisch ingelogd; wel meteen de nieuwe herstelcode, anders is er geen meer.
     return render_template("recovery_code.html", code=new_code, first=False, reset=True)
 
@@ -273,6 +294,7 @@ def logout():
     # Versie omhoog: ook een gekopieerde cookie vervalt (MC-04), op alle apparaten.
     if g.user is not None:
         query("UPDATE users SET session_version = session_version + 1 WHERE id = %s", (g.user.id,))
+        events.event("logout")
     session.clear()
     return redirect(url_for("auth.login"))
 
@@ -287,6 +309,7 @@ def check_code(user_id):
         return CodeError("Er is geen tweestapsverificatie ingesteld.", 0)
     # Op slot: dan wordt ook de juiste code geweigerd (MIT-06).
     if minutes := throttle.attempt(code_limit):
+        events.event("totp_blocked", user_id=user_id, minutes=minutes)
         return CodeError(throttle.message(minutes), minutes)
     step = totp.matching_step(secret, request.form.get("code", ""))
     # Eenmalig gebruik (MIT-07) en blokkade in één UPDATE: van twee verzoeken wint er één.
@@ -299,4 +322,5 @@ def check_code(user_id):
         throttle.succeeded(code_limit)
         return None
     # Fout, of al eens gebruikt: de poging is al geteld.
+    events.event("totp_failed", user_id=user_id)
     return CodeError("Onjuiste of al gebruikte code.", 0)

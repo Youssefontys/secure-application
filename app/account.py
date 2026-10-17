@@ -6,6 +6,7 @@ import segno
 from flask import Blueprint, Response, abort, flash, g, redirect, render_template, request, session, url_for
 
 import encryption
+import events
 import passwords
 import throttle
 import totp
@@ -60,6 +61,7 @@ def setup_2fa():
         " WHERE id = %s RETURNING session_version",
         (g.user.id,), one=True,
     ))
+    events.event("twofa_enabled")
     # De herstelcode staat alleen in dit ene antwoord, nergens later terug te zien (MIT-11).
     return render_template("recovery_code.html", code=new_recovery_code(g.user.id), first=True)
 
@@ -69,6 +71,7 @@ def new_recovery():
     # Vraagt een code uit de app: met alleen de sessie krijg je geen herstelcode (AU-06).
     if error := check_code(g.user.id):
         return render_account(error.message, *throttle.refusal(error.minutes))
+    events.event("recovery_code_new")
     return render_template("recovery_code.html", code=new_recovery_code(g.user.id), first=False)
 
 
@@ -95,6 +98,7 @@ def reset_2fa():
         " session_version = session_version + 1 WHERE id = %s RETURNING session_version",
         (g.user.id,), one=True,
     ))
+    events.event("twofa_reset")
     flash("Stel tweestapsverificatie opnieuw in met je nieuwe telefoon.")
     return redirect(url_for("account.setup_2fa"))
 
@@ -103,8 +107,10 @@ def reset_2fa():
 def refuse_without_password():
     reauth_limit = throttle.limit("reauth_account", g.user.id)
     if minutes := throttle.attempt(reauth_limit):
+        events.event("reauth_blocked", minutes=minutes)
         return render_account(throttle.message(minutes), *throttle.refusal(minutes))
     if not passwords.is_current(g.user.id, request.form.get("current_password", "")):
+        events.event("reauth_failed")
         return render_account("Je huidige wachtwoord klopt niet.", 400)
     throttle.succeeded(reauth_limit)
     return None
@@ -123,6 +129,7 @@ def change_password():
         "UPDATE users SET password_hash = %s, session_version = session_version + 1 WHERE id = %s RETURNING session_version",
         (passwords.hash_password(password), g.user.id), one=True,
     ))
+    events.event("password_changed")
     flash("Je wachtwoord is gewijzigd.")
     return redirect(url_for("account.index"))
 
@@ -132,6 +139,7 @@ def delete_account():
     if refused := refuse_without_password():
         return refused
     # De notities gaan mee via ON DELETE CASCADE; andere sessies vervallen via load_user.
+    events.event("account_deleted")
     query("DELETE FROM users WHERE id = %s", (g.user.id,))
     session.clear()
     flash("Je account en je notities zijn verwijderd.")

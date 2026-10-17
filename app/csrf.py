@@ -5,6 +5,8 @@ import secrets
 
 from flask import render_template, request, session
 
+import events
+
 # Wat de bezoeker ziet als het token ontbreekt of niet klopt.
 REFUSED = "Dit formulier kwam niet van deze site, of de pagina was te oud. Laad de pagina opnieuw en probeer het nog eens."
 
@@ -24,5 +26,6 @@ def check():
     if request.method == "POST":
         sent = request.form.get("csrf_token", "")
         if not hmac.compare_digest(sent.encode(), expected.encode()):
+            events.event("csrf_refused", endpoint=request.endpoint)
             return render_template("error.html", code=400, message=REFUSED), 400
     return None

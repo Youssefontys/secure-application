@@ -3,6 +3,7 @@
 from flask import Blueprint, abort, g, redirect, render_template, request, url_for
 
 import encryption
+import events
 from db import query
 
 bp = Blueprint("notes", __name__)
@@ -29,6 +30,7 @@ def index():
             " WHERE (SELECT count(*) FROM notes WHERE user_id = %s) < %s RETURNING id",
             (g.user.id, *sealed(title, body), g.user.id, NOTES_MAX), one=True,
         ) is None:
+            events.event("note_limit")
             error = f"Je hebt het maximum van {NOTES_MAX} notities bereikt. Verwijder er eerst een."
             return render_template("notes.html", notes=fetch_notes(), error=error, title=title, body=body), 400
         return redirect(url_for("notes.index"))
@@ -65,15 +67,17 @@ def sealed(title, body):
 
 # Ontsleuteld voor de pagina; wat niet ontsleutelt, telt niet als tekst van de gebruiker.
 def readable(note):
-    return note._replace(
-        title=encryption.decrypt(note.title, "note_title", g.user.id) or UNREADABLE,
-        body=encryption.decrypt(note.body, "note_body", g.user.id) or UNREADABLE,
-    )
+    title = encryption.decrypt(note.title, "note_title", g.user.id)
+    body = encryption.decrypt(note.body, "note_body", g.user.id)
+    # Gewijzigd of verplaatst in de database: een spoor van iemand met schrijfrechten (MC-08, MC-23).
+    if title is None or body is None:
+        events.event("note_unreadable", note_id=note.id)
+    return note._replace(title=title or UNREADABLE, body=body or UNREADABLE)
 
 
 # De notitie van de ingelogde gebruiker, anders 404: ook andermans notitie lijkt niet te bestaan (MIT-15).
 def own_note(note_id):
-    note = query("SELECT title, body FROM notes WHERE id = %s AND user_id = %s", (note_id, g.user.id), one=True)
+    note = query("SELECT id, title, body FROM notes WHERE id = %s AND user_id = %s", (note_id, g.user.id), one=True)
     if note is None:
         abort(404)
     return readable(note)
