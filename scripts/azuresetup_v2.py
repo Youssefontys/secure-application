@@ -1,4 +1,4 @@
-# Zet eenmalig de opslag voor de Terraform-state op Azure op, plus de koppeling met GitHub Actions (OIDC).
+# Zet eenmalig de opslag voor de Terraform-state op Azure op, en de ID's van die opslag in GitHub.
 # - De opslag is versleuteld met een eigen sleutel (RSA 4096) in Key Vault, met purge protection.
 # - Gescheiden rollen: wie dit draait beheert de sleutel; de identiteit van de opslag mag hem alleen gebruiken.
 # - Geen shell: elk commando is een lijst van argumenten. Op Windows is az een .cmd-bestand en leest cmd.exe
@@ -129,7 +129,6 @@ for _ in range(12):
     if mi_principal_id:
         break
     time.sleep(5)
-mi_client_id = az("identity", "show", "--name", mi_name, "--resource-group", rg, "--query", "clientId", "-o", "tsv")
 uami_id = f"/subscriptions/{sub_id}/resourceGroups/{rg}/providers/Microsoft.ManagedIdentity/userAssignedIdentities/{mi_name}"
 
 # B. Key Vault met gescheiden rollen: jij beheert de sleutel, de identiteit mag hem alleen gebruiken.
@@ -166,9 +165,10 @@ print(f"⏳ {PROPAGATION_WAIT}s wachten op CMK & RBAC propagatie...")
 time.sleep(PROPAGATION_WAIT)
 az_retry("storage", "container", "create", "--name", container, "--account-name", sa_name, "--auth-mode", "login", "-o", "none")
 
-# E. GitHub: geen geheimen, alleen ID's en namen voor OIDC en de backend.
+# E. GitHub: geen geheimen, alleen ID's en namen voor de backend. AZURE_CLIENT_ID komt bij de CI-stap, van een eigen
+# identiteit met een federated credential (OIDC); niet die van de opslag, want die mag de sleutel van de state gebruiken.
 print("\n--- GitHub Integratie ---")
-values = {"AZURE_CLIENT_ID": mi_client_id, "AZURE_SUBSCRIPTION_ID": sub_id, "AZURE_TENANT_ID": tenant_id,
+values = {"AZURE_SUBSCRIPTION_ID": sub_id, "AZURE_TENANT_ID": tenant_id,
           "BACKEND_RG_NAME": rg, "BACKEND_STORAGE_ACCOUNT": sa_name, "BACKEND_CONTAINER_NAME": container}
 if gh_ready() and ask_user("GitHub Secrets automatisch instellen? (j/n)", "j").lower() == "j":
     repo = ask_user("Volledige GitHub repo (bijv. user/repo)", pattern=r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+")
