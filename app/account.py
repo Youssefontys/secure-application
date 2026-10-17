@@ -68,9 +68,9 @@ def setup_2fa():
 
 @bp.route("/2fa/recovery", methods=["POST"])
 def new_recovery():
-    # Vraagt een code uit de app: met alleen de sessie krijg je geen herstelcode (AU-06).
-    if error := check_code(g.user.id):
-        return render_account(error.message, *throttle.refusal(error.minutes))
+    # Wachtwoord én code: met de sessie en één code is een herstelcode de helft van een nieuw wachtwoord (AU-06).
+    if refused := refuse_without_both_factors():
+        return refused
     events.event("recovery_code_new")
     return render_template("recovery_code.html", code=new_recovery_code(g.user.id), first=False)
 
@@ -90,9 +90,10 @@ def qr_2fa():
 # Opnieuw instellen voor een nieuwe telefoon; daarna kan alleen het instellen nog (MIT-12).
 @bp.route("/2fa/reset", methods=["POST"])
 def reset_2fa():
-    # Vraagt een code: met alleen de sessie haal je de tweede factor niet weg (AU-06).
-    if error := check_code(g.user.id):
-        return render_account(error.message, *throttle.refusal(error.minutes))
+    # Wachtwoord én code: anders koppelt wie de sessie en één code heeft zijn eigen telefoon, en via wachtwoord
+    # vergeten daarna een eigen wachtwoord (AU-06, MC-29).
+    if refused := refuse_without_both_factors():
+        return refused
     keep_this_session(query(
         "UPDATE users SET totp_secret = NULL, totp_enabled = false, totp_last_step = NULL, recovery_hash = NULL,"
         " session_version = session_version + 1 WHERE id = %s RETURNING session_version",

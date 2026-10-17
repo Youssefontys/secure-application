@@ -18,20 +18,26 @@
 
   <section class="card">
     <h2>Tweestapsverificatie</h2>
-    <p class="hint">Staat aan, en is verplicht. Inloggen vraagt naast je wachtwoord een code uit je authenticator-app.</p>
+    <p class="hint">Staat aan, en is verplicht. Inloggen vraagt naast je wachtwoord een code uit je authenticator-app. Een nieuwe herstelcode of een nieuwe telefoon vraagt ook allebei.</p>
     <form method="post" action="{{ url_for('account.new_recovery') }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <label>Code uit je app, voor een nieuwe herstelcode
+      <label>Huidig wachtwoord
+        <input name="current_password" type="password" autocomplete="current-password" required>
+      </label>
+      <label>Code uit je app
         <input name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required>
       </label>
       <button type="submit" class="secondary">Nieuwe herstelcode</button>
     </form>
     <form method="post" action="{{ url_for('account.reset_2fa') }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <label>Code uit je app, om opnieuw in te stellen (nieuwe telefoon)
+      <label>Huidig wachtwoord
+        <input name="current_password" type="password" autocomplete="current-password" required>
+      </label>
+      <label>Code uit je app
         <input name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required>
       </label>
-      <button type="submit" class="secondary">Opnieuw instellen</button>
+      <button type="submit" class="secondary">Opnieuw instellen (nieuwe telefoon)</button>
     </form>
   </section>
 
