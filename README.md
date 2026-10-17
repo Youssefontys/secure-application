@@ -16,6 +16,7 @@ Every feature that is added has an entry in `BoK/`: the use case, the misuse cas
 - `BoK/Threat Analysis/` - use cases, misuse cases, mitigations, attack trees and the tests that go with them
 - `BoK/Subjects/` - per BoK subject (week) what was built, why it is safe and what it does not solve
 - `compose.yaml` - app and database for local use, with scanner profiles in comments
+- `.github/dependabot.yml` - weekly update proposals for the pinned packages, images and Terraform providers
 - `scripts/` - `setup.py` to deploy (locally now, Azure follows), and `azuresetup_v2.py`, the one-time Terraform state bootstrap imported from BOK-SECENGINEER
 - `terraform/` - Azure: Container Apps, PostgreSQL B1ms in a private network and Key Vault; secrets stay out of the Terraform state. Not deployed yet
 
@@ -51,8 +52,9 @@ The baseline plus the first security features, each with an entry in `BoK/Threat
 - the TOTP secret and the notes encrypted with AES-256-GCM, with the key outside the database (MIT-17, MIT-18), and passwords hashed with Argon2id (MIT-19); see `BoK/Subjects/Week 6 Encryption.md`
 - a hackstand for the hacking week, off by default (MIT-10)
 - a CSRF token on every form, strict security headers, input and configuration checks, every route closed by default, safe failure, gunicorn as an unprivileged user, and an own database role that can only read and write the app's tables (MIT-20 to MIT-27); see `BoK/Subjects/Week 7 Application Security.md`
+- taken from BOK-SECENGINEER and an audit: no page in the browser cache, sessions of at most 8 hours, a limit on registrations and notes, every security event as a JSON line in the log, an owner-only `.env`, and Dependabot (MIT-28 to MIT-33); see `BoK/Subjects/Week 6 Logging.md`
 
-Still open: security events are not logged yet, the database role can still change every row the app can (MC-08), and the data key is read from `.env` until Key Vault on Azure (MC-22). Not deployed yet.
+Still open: nobody is alerted and the log is not kept on Azure yet (MC-28), the database role can still change every row the app can (MC-08), and the data key is read from `.env` until Key Vault on Azure (MC-22). Not deployed yet.
 
 ## License
 
