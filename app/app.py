@@ -5,7 +5,8 @@ import os
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-from flask import Flask, render_template
+from flask import Flask, render_template, request
+from werkzeug.exceptions import HTTPException
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 import account
@@ -68,10 +69,24 @@ def security_headers(response):
     return response
 
 
-# Te groot: 413 met een korte melding, zonder dat de app het verzoek leest (MIT-22).
-@app.errorhandler(413)
-def too_large(error):
-    return render_template("error.html", message="Dit verzoek is te groot."), 413
+# Korte meldingen voor de fouten die een bezoeker kan veroorzaken; 413 komt voordat het verzoek is ingelezen (MIT-22).
+HTTP_MESSAGES = {404: "Deze pagina bestaat niet.", 405: "Dat kan hier niet.", 413: "Dit verzoek is te groot."}
+
+
+# Status en headers (zoals Allow bij 405) blijven; alleen de pagina wordt de eigen foutpagina.
+@app.errorhandler(HTTPException)
+def http_error(error):
+    response = error.get_response()
+    response.set_data(render_template("error.html", message=HTTP_MESSAGES.get(error.code, "Dat lukte niet.")))
+    return response
+
+
+# Veilig falen (MIT-25): de bezoeker ziet geen details, de log wel. %r, zodat een regeleinde
+# in de URL geen valse logregel maakt (log injection).
+@app.errorhandler(Exception)
+def unexpected_error(error):
+    app.logger.exception("Onverwachte fout bij %s %r", request.method, request.path)
+    return render_template("error.html", message="Er ging iets mis. Probeer het later opnieuw."), 500
 
 
 @app.template_filter("date")
