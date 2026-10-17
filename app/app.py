@@ -2,7 +2,7 @@
 # Zwakke plekken staan als misuse case in de BoK; in de code staat het MC-nummer erbij.
 
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from flask import Flask, render_template, request
@@ -39,6 +39,9 @@ if setting("TRUSTED_PROXIES", "0", ("0", "1")) == "1":
 app.config["SESSION_COOKIE_SECURE"] = setting("HTTPS_ONLY", "1", ("0", "1")) == "1"
 # Niet meesturen met een formulier van een andere site (MC-05); het CSRF-token is de tweede laag.
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+# Flask weigert een cookie waarvan de handtekening ouder is; zonder deze regel 31 dagen (MIT-29, MC-04).
+# De app schrijft de cookie vooral bij het inloggen, dus dit is ongeveer 8 uur na de login.
+app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(hours=8)
 # Het grootste formulier is een notitie van 250 tekens; meer wordt geweigerd voordat het is ingelezen (MC-10).
 app.config["MAX_CONTENT_LENGTH"] = 16 * 1024
 
