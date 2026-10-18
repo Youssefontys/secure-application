@@ -87,12 +87,13 @@ def gh_ready():
 # De uitrol zelf.
 print("\n🛡️  Azure Terraform Bootstrap\n")
 
-# 1. Inloggen en de subscription; de ID's pas daarna lezen, ook de tenant van een andere subscription.
+# 1. Ingelogd en de subscription; de ID's pas daarna lezen, ook de tenant van een andere subscription.
+# Zelf az login starten kan hier niet: az() vangt de uitvoer af, en dan wacht de keuze van de subscription onzichtbaar.
 name = az("account", "show", "--query", "name", "-o", "tsv", ignore_error=True)
 if not name:
-    print("⚠️ Inloggen...")
-    az("login", "-o", "none")
-    name = az("account", "show", "--query", "name", "-o", "tsv")
+    sys.exit("❌ Niet ingelogd bij Azure. Eerst: az login\n"
+             "   Zegt dat \"Authentication failed against tenant <ID>\" met AADSTS50076, dan eist die tenant MFA:\n"
+             "   az login --tenant <ID>\n🛑 Daarna dit script opnieuw.")
 print(f"✅ Context: {name}")
 if ask_user("Andere subscription? (j/n)", "n").lower() == "j":
     az("account", "set", "--subscription", ask_user("Subscription ID", pattern=GUID))

@@ -23,6 +23,13 @@ NEEDS = {
 }
 # Zonder terminal geen vragen: dan gelden de standaardwaarden.
 INTERACTIVE = sys.stdin.isatty()
+# Eist een tenant MFA, dan slaat az login hem over (AADSTS50076) en is er geen subscription; --tenant vraagt er wel om.
+AZ_LOGIN_HELP = """Niet ingelogd bij Azure, of geen subscription gevonden. Eerst inloggen:
+  az login
+Zegt az login "Authentication failed against tenant <ID>" met AADSTS50076, dan eist die tenant MFA.
+Log dan in bij die tenant, en keur de tweede stap goed in je authenticator-app:
+  az login --tenant <ID>
+Daarna opnieuw: python scripts/setup.py azure"""
 
 
 # Een vraag met een standaardwaarde; alleen een antwoord dat helemaal op pattern past (allowlist, MIT-22).
@@ -123,6 +130,11 @@ def local():
 # Nog niet automatisch: eerst de image en de koppeling met GitHub (OIDC). Wel de juiste stappen, met deze keuzes.
 def azure():
     check_tools("azure")
+    # Stap 1 kan niets zonder login; dan eerst uitleggen hoe, ook bij een tenant die MFA eist.
+    account = subprocess.run([shutil.which("az"), "account", "show", "--query", "name", "-o", "tsv"], capture_output=True, text=True)
+    if account.returncode != 0:
+        sys.exit(AZ_LOGIN_HELP)
+    print(f"Ingelogd bij Azure, subscription: {account.stdout.strip()}")
     hack = hackstand() if INTERACTIVE else {"THROTTLE_IP_MODE": None, "THROTTLE_PAIR_EXEMPT_USERS": None}
     image = "ghcr.io/youssefontys/secure-application:<tag>"
     variables = [f"app_image={image}"]
