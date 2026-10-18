@@ -11,6 +11,7 @@ Notities van een ander lezen of wijzigen
   OR  Via een eigen account andermans notitie-id invullen (MC-02)        [MIT-15]
         AND eigen account aanmaken en inloggen
         AND notitie-id raden (opeenvolgende getallen)
+  OR  Zonder login een functie bereiken die open is gelaten (MC-25)      [MIT-24]
   OR  De database direct lezen (MC-23, MC-08)                             [MIT-18, deels]
         AND de database lezen                                              [open]
               OR  een query met de rechten van de app (lezen mag die nog, MC-08)
@@ -18,7 +19,7 @@ Notities van een ander lezen of wijzigen
         AND de gegevenssleutel hebben (MC-22)                              [open]
   OR  Eigen code laten uitrollen, die de sleutel dan heeft (MC-30)          [MIT-34, deels]
   OR  De app overnemen, die de sleutel heeft (MC-11)
-        OR  bekende kwetsbaarheid, niet bijgewerkt                         [MIT-33, deels]
+        OR  bekende kwetsbaarheid, niet bijgewerkt                         [MIT-33, MIT-35, deels]
         OR  kwaadaardige nieuwe pakketversie                               [MIT-03]
         OR  kwetsbaarheid of andere image achter de tag                    [MIT-03, MIT-33]
   OR  Script in een notitie laten uitvoeren (MC-07)                       [MIT-01, MIT-21]
@@ -59,7 +60,7 @@ Account overnemen
         AND het wachtwoord kennen
         AND het account heeft op dat moment geen tweestapsverificatie
   OR  De sessiecookie hebben (MC-04)
-        OR  meelezen op het netwerk (geen TLS)                             [open]
+        OR  meelezen op het netwerk (lokaal geen TLS)                      [lokaal open; op Azure MIT-21, MIT-23]
         OR  kopieren van een gedeelde browser                              [MIT-09 na uitloggen, MIT-29 na 8 uur]
         OR  zelf ondertekenen met de sessiesleutel                         [open]
   OR  Via een andere site handelen met de cookie (MC-05)                   [MIT-20]
@@ -97,4 +98,5 @@ Onopgemerkt aanvallen (MC-28)                                              [MIT-
   AND een van de andere aanvallen proberen (raden, CSRF, rijen wijzigen, massaal aanmaken)
   AND OR  niemand kijkt live mee                                           [MIT-37, bij een blokkade]
       OR  de log wissen, met beheer over de host of de container            [lokaal open; op Azure MIT-31]
+      OR  valse regels in de log zetten om een spoor te verbergen (MC-26)   [MIT-25]
 ```
