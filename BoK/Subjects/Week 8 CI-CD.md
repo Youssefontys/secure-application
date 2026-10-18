@@ -97,7 +97,7 @@ Gemeten en opgezocht na de eerste uitrol, om te zien of een andere regio sneller
 3. Eerst deelvraag 1 van het onderzoek: welk formaat en welke tool, waar de SBoM gemaakt wordt, wie hem leest, en hoe een merge wordt tegengehouden. Tot die beantwoord is, blijft de pipeline zo kaal als nu, zodat de screenshots laten zien wat het onderzoek veranderde.
 4. Daaruit: een workflow bij elke pull request die de image bouwt, start en test, de SBoM maakt en scant, en niets publiceert, als verplichte check. Dat zijn ook de tests in de pipeline.
 5. SAST (statische code-analyse), als workflow-bestand, zodat het meegaat met een kopie van de repo.
-6. Uitrollen vanuit GitHub (CD), alleen de image, met een akkoord per uitrol. Niet nodig voor het onderzoek: een image met een bekend lek komt nu al niet op ghcr.io, en `deployment.py azure` rolt alleen een gepubliceerde image uit.
+6. Uitrollen vanuit GitHub (CD), alleen de image, en alleen als er voor Azure is gekozen. `deployment.py azure` maakt dan een identiteit voor GitHub (OIDC, zonder secret) en zet drie repository-variabelen met de ID's; de deploy-job draait alleen als die variabelen er zijn, na het publiceren. In een fork of kopie zonder Azure wordt de job dus overgeslagen en mislukt hij niet. `deployment.py undo` haalt identiteit en variabelen weer weg. Niet nodig voor het onderzoek: een image met een bekend lek komt nu al niet op ghcr.io, en `deployment.py azure` rolt alleen een gepubliceerde image uit.
 
 ## Screenshots
 
