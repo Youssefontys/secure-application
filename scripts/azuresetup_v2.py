@@ -33,6 +33,18 @@ def as_args(*args):
     return [shutil.which(args[0]) or args[0], *args[1:]]
 
 
+# Stoppen met de melding, met witregels eromheen zodat hij opvalt.
+def stop(message):
+    sys.exit(f"\n❌ {message}\n\n🛑 Stoppen.\n")
+
+
+# De fout van az één keer: de regels Code, Message en Target herhalen meestal de eerste regel.
+def az_error(stderr):
+    lines = [line for line in stderr.strip().splitlines() if not line.startswith("WARNING:")] or [""]
+    first = lines[0].removeprefix("ERROR: ")
+    return "\n".join([first, *(line for line in lines[1:] if not ((value := line.partition(": ")[2]) and value in first))])
+
+
 # Voert az uit en geeft de uitvoer; bij een fout stoppen, of None met ignore_error.
 def az(*args, ignore_error=False):
     result = subprocess.run(as_args("az", *args), capture_output=True, text=True)
@@ -40,25 +52,25 @@ def az(*args, ignore_error=False):
         return result.stdout.strip()
     if ignore_error:
         return None
-    sys.exit(f"\n❌ FOUT: {result.stderr.strip()}\n🛑 Stoppen.")
+    stop(f"FOUT: {az_error(result.stderr)}")
 
 
-# Zoals az, maar opnieuw proberen zolang Azure nog bezig is; "bestaat al" telt als gelukt.
+# Zoals az, maar opnieuw proberen zolang Azure nog bezig is; "bestaat al" telt als gelukt. Alleen een nieuwe poging meldt zich.
 def az_retry(*args, tries=10, delay=10):
     for attempt in range(1, tries + 1):
-        print(f"   ⏳ az {' '.join(args[:2])}... (poging {attempt})")
         result = subprocess.run(as_args("az", *args), capture_output=True, text=True)
         err = result.stderr.strip()
         if result.returncode == 0 or any(x in err for x in IGNORABLE):
             return result.stdout.strip()
         if attempt == tries or not any(x in err for x in RETRYABLE):
-            sys.exit(f"❌ FATAL: {err}\n🛑 Stoppen.")
-        print(f"    ⚠️ Tijdelijke Azure-fout. Wachten {delay}s...")
+            stop(f"FOUT: {az_error(err)}")
+        print(f"   ⏳ Azure is nog bezig; over {delay}s poging {attempt + 1} van {tries}...")
         time.sleep(delay)
         delay += 5
 
 
 def assign(role, assignee, scope):
+    print(f"   🔑 {role}")
     az_retry("role", "assignment", "create", "--role", role, "--assignee", assignee, "--scope", scope, "-o", "none")
 
 
@@ -95,9 +107,9 @@ print("\n🛡️  Azure Terraform Bootstrap\n")
 # Zelf az login starten kan hier niet: az() vangt de uitvoer af, en dan wacht de keuze van de subscription onzichtbaar.
 name = az("account", "show", "--query", "name", "-o", "tsv", ignore_error=True)
 if not name:
-    sys.exit("❌ Niet ingelogd bij Azure. Eerst: az login\n"
-             "   Zegt dat \"Authentication failed against tenant <ID>\" met AADSTS50076, dan eist die tenant MFA:\n"
-             "   az login --tenant <ID>\n🛑 Daarna dit script opnieuw.")
+    stop("Niet ingelogd bij Azure. Eerst: az login\n"
+         "   Zegt dat \"Authentication failed against tenant <ID>\" met AADSTS50076, dan eist die tenant MFA:\n"
+         "   az login --tenant <ID>\n   Daarna dit script opnieuw.")
 print(f"✅ Context: {name}")
 if ask_user("Andere subscription? (j/n)", "n").lower() == "j":
     az("account", "set", "--subscription", ask_user("Subscription ID", pattern=GUID))
@@ -106,11 +118,13 @@ tenant_id = az("account", "show", "--query", "tenantId", "-o", "tsv")
 me = az("ad", "signed-in-user", "show", "--query", "id", "-o", "tsv")
 
 # 2. Providers
-print("\n⚙️  Providers check...")
+print("\n⚙️  Providers registreren...")
 for namespace in ("Microsoft.Storage", "Microsoft.KeyVault", "Microsoft.ManagedIdentity"):
     az_retry("provider", "register", "--namespace", namespace, "--wait", "-o", "none", tries=2)
+    print(f"   ✅ {namespace}")
 
 # 3. Invoer; met vier cijfers erachter blijft de naam van de opslag binnen de 3 tot 24 tekens van Azure.
+print()
 rg = ask_user("Resource Group naam", DEFAULT_RG_NAME, pattern=r"[A-Za-z0-9_.-]{0,89}[A-Za-z0-9_-]")
 # Doorstrepen met een combinerend streepje per letter: werkt in elke terminal die UTF-8 toont, zonder kleurcodes.
 closed = "".join(char + "̶" for char in CLOSED_LOCATION)
