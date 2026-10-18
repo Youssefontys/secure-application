@@ -147,7 +147,7 @@ resource "azurerm_role_assignment" "schema_secrets" {
   principal_id         = azurerm_user_assigned_identity.schema.principal_id
 }
 
-# Laadt db/schema.sql in de lege database en zet het wachtwoord van notities_app; handmatig starten (zie outputs).
+# Laadt db/schema.sql in de lege database en zet het wachtwoord van notities_app; Terraform start hem zelf (hieronder).
 # Opnieuw starten mag: het schema alleen als de tabellen er nog niet zijn, het wachtwoord elke keer.
 # De app-image, want die heeft psycopg en de rootcertificaten; postgres:18 heeft geen CA-bundel.
 resource "azurerm_container_app_job" "schema" {
@@ -157,9 +157,10 @@ resource "azurerm_container_app_job" "schema" {
   container_app_environment_id = azurerm_container_app_environment.main.id
   workload_profile_name        = "Consumption"
   replica_timeout_in_seconds   = 300
-  replica_retry_limit          = 0
-  tags                         = local.tags
-  depends_on                   = [azurerm_role_assignment.schema_secrets]
+  # Herhaalbaar, dus bij een tijdelijke fout (rechten nog niet overal bekend) gewoon nog eens.
+  replica_retry_limit = 2
+  tags                = local.tags
+  depends_on          = [azurerm_role_assignment.schema_secrets]
 
   manual_trigger_config {
     parallelism              = 1
@@ -219,5 +220,23 @@ resource "azurerm_container_app_job" "schema" {
         value = file("${path.module}/../db/schema.sql")
       }
     }
+  }
+}
+
+# Wanneer de job moet draaien: na de eerste apply, en opnieuw bij een ander schema of een nieuw wachtwoord van notities_app.
+resource "terraform_data" "schema_inputs" {
+  input = [filesha256("${path.module}/../db/schema.sql"), var.secret_version]
+}
+
+# De job starten; azurerm kan dat niet, azapi doet dezelfde aanroep als az containerapp job start. De start wacht niet
+# tot de job klaar is: de eerste minuut na een nieuwe database kan inloggen nog mislukken.
+resource "azapi_resource_action" "schema_start" {
+  type        = "Microsoft.App/jobs@2025-07-01"
+  resource_id = azurerm_container_app_job.schema.id
+  action      = "start"
+  method      = "POST"
+
+  lifecycle {
+    replace_triggered_by = [terraform_data.schema_inputs]
   }
 }
