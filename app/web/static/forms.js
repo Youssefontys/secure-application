@@ -1,17 +1,17 @@
 "use strict";
 
-// Gedrag van formulieren, op één plek. Dit is gebruiksgemak en geen
-// beveiliging: de server controleert alles zelf, en een formulier dat van
-// buiten wordt verstuurd, komt nooit langs dit script.
+// Form behaviour, in one place. This is convenience, not security: the
+// server checks everything itself, and a form sent from elsewhere never
+// passes through this script.
 
-// data-confirm: eerst om bevestiging vragen, zoals bij verwijderen.
+// data-confirm: ask for confirmation first, as when deleting.
 document.addEventListener("submit", (event) => {
   const message = event.target.dataset.confirm;
   if (message && !window.confirm(message)) event.preventDefault();
 });
 
-// data-validate: de verzendknop staat uit zolang een veld niet voldoet aan
-// required of maxlength.
+// data-validate: the submit button stays off while a field does not meet
+// required or maxlength.
 for (const form of document.querySelectorAll("form[data-validate]")) {
   const button = form.querySelector('button[type="submit"]');
   const update = () => { button.disabled = !form.checkValidity(); };
@@ -19,11 +19,11 @@ for (const form of document.querySelectorAll("form[data-validate]")) {
   update();
 }
 
-// Een foutmelding krijgt de focus, zodat een schermlezer hem meteen voorleest (tabindex="-1" in base.html).
+// An error message gets the focus, so a screen reader reads it out at once (tabindex="-1" in base.html).
 document.querySelector(".error")?.focus();
 
-// Herstelcode (MIT-11): kopiëren, downloaden, en Verder pas na het vinkje. Zonder JavaScript blijven
-// de code en Verder over, en dat werkt dan gewoon.
+// Recovery code (MIT-11): copy, download, and Continue only after the checkbox. Without JavaScript the
+// code and Continue remain, and that works just as well.
 const recoveryCode = document.getElementById("recovery-code");
 if (recoveryCode) {
   const code = recoveryCode.textContent.trim();

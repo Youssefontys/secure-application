@@ -1,6 +1,6 @@
-/* Eén stylesheet, geen framework en geen CDN. Dat houdt het aantal
-   dependencies laag en maakt de strikte Content-Security-Policy mogelijk
-   (MIT-21): geen externe bronnen, geen inline styles. */
+/* One stylesheet, no framework and no CDN. That keeps the number of
+   dependencies low and makes the strict Content-Security-Policy possible
+   (MIT-21): no external sources, no inline styles. */
 
 :root {
   --bg: #080c12;
@@ -14,12 +14,12 @@
   --danger: #ff6b6b;
   --radius: 10px;
 
-  /* Worden door cyber.js gevuld met de muispositie (0..1). De 0.5 hier is
-     de neutrale stand als er nog geen beweging is geweest. */
+  /* Filled by cyber.js with the mouse position (0..1). The 0.5 here is
+     the neutral position before any movement. */
   --mx: 0.5;
   --my: 0.5;
 
-  /* Breder dan 1700px groeit de scene mee: anders snijdt de SVG (slice) de capuchon eraf. */
+  /* Wider than 1700px the scene grows along: otherwise the SVG (slice) cuts off the hood. */
   --scene-height: max(16rem, 15vw);
 }
 
@@ -37,8 +37,8 @@ body {
   overflow-x: hidden;
 }
 
-/* Twee lagen achtergrond: een raster dat meebeweegt met de muis, en een
-   gloed die de cursor volgt. */
+/* Two background layers: a grid that moves with the mouse, and a glow
+   that follows the cursor. */
 body::before {
   content: "";
   position: fixed;
@@ -67,15 +67,15 @@ body::after {
   transition: background 120ms linear;
 }
 
-/* Inlog- en registratiepagina's: inhoud verticaal gecentreerd in de ruimte
-   boven de scene, in plaats van bovenaan geplakt met een gat eronder. */
+/* Login and registration pages: content centred vertically in the space
+   above the scene, instead of stuck to the top with a gap below. */
 body.auth {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  /* align-items en niet "margin: 0 auto" op main: een automatische marge in
-     de dwarsrichting laat een flex-item naar zijn inhoud krimpen, waardoor
-     het formulier veel te smal wordt. */
+  /* align-items and not "margin: 0 auto" on main: an automatic margin on
+     the cross axis shrinks a flex item to its content, which makes the
+     form far too narrow. */
   align-items: center;
   min-height: 100vh;
   padding-top: 2rem;
@@ -83,9 +83,9 @@ body.auth {
 
 body.auth main { width: 100%; }
 
-/* Na het inloggen een rustiger beeld: andere accentkleur, stil raster en
-   geen gloed die de muis volgt. Je bent binnen, dus de pagina hoeft niet
-   meer te imponeren. */
+/* After logging in a calmer look: another accent colour, a still grid and
+   no glow following the mouse. You are in, so the page no longer needs
+   to impress. */
 body.app {
   --accent: #48dd7a;
   --accent-2: #7cc6ff;
@@ -187,8 +187,8 @@ header.bar > div { flex: 1; min-width: 0; }
 .profile-details dd { margin: 0.25rem 0 1rem; overflow-wrap: anywhere; }
 .profile-details dd:last-child { margin-bottom: 0; }
 
-/* Instellen van tweestapsverificatie: de QR-code op wit, zodat elke camera
-   hem leest, en de sleutel in monospace om over te typen. */
+/* Setting up two-step verification: the QR code on white, so every camera
+   reads it, and the key in monospace to type over. */
 .steps { margin: 0 0 1.2rem; padding-left: 1.2rem; }
 .steps li { margin-bottom: 0.5rem; }
 .qr { display: block; margin: 0 0 1.2rem; padding: 0.4rem; border-radius: 8px; background: #fff; }
@@ -228,7 +228,7 @@ a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
   box-shadow: 0 0 0 1px rgba(53, 224, 192, 0.04), 0 18px 40px -28px #000;
 }
 
-/* Meer formulieren in één kaart, zoals bij tweestapsverificatie op het profiel. */
+/* Several forms in one card, as for two-step verification on the profile. */
 .card form + form { margin-top: 1.5rem; }
 
 label {
@@ -284,11 +284,11 @@ button:hover, .button:hover {
   box-shadow: 0 0 18px -4px rgba(53, 224, 192, 0.5);
 }
 
-/* Uit zolang het formulier niet voldoet (forms.js). Geen hover, geen klik. */
+/* Off while the form is not valid (forms.js). No hover, no click. */
 button:disabled { opacity: 0.45; pointer-events: none; }
-/* Een knop die nog niet mag, zoals Verder bij de herstelcode zolang het vinkje uit staat. */
+/* A button that is not allowed yet, like Continue at the recovery code while the box is unchecked. */
 .button[aria-disabled="true"] { opacity: 0.45; pointer-events: none; }
-/* Een vinkje naast zijn tekst, niet erboven. */
+/* A checkbox next to its text, not above it. */
 label.check { display: flex; align-items: center; gap: 0.6rem; }
 label.check input { width: auto; margin: 0; }
 .recovery-actions { margin: 0.9rem 0 0.4rem; }
@@ -325,8 +325,8 @@ button:focus-visible, .button:focus-visible {
   gap: 0.6rem;
 }
 
-/* Meldingen: rood voor een fout, de accentkleur voor een bevestiging. De
-   achtergrond is dezelfde kleur, licht, zodat hij meekleurt met de pagina. */
+/* Messages: red for an error, the accent colour for a confirmation. The
+   background is the same colour, light, so it follows the page. */
 .error, .notice {
   --tone: var(--accent);
   margin: 0 0 1rem;
@@ -379,7 +379,7 @@ a { color: var(--accent-2); }
   width: 100%;
   height: var(--scene-height);
   z-index: 0;
-  /* Nooit klikken afpakken van het formulier. */
+  /* Never take clicks away from the form. */
   pointer-events: none;
   transform: translate3d(calc((var(--mx) - 0.5) * 18px), 0, 0);
   transition: transform 220ms ease-out;
@@ -414,8 +414,8 @@ a { color: var(--accent-2); }
   50% { opacity: 0.8; }
 }
 
-/* De blik volgt de cursor. transform-box zorgt dat de verplaatsing wordt
-   gerekend vanaf de groep zelf en niet vanaf de oorsprong van de hele SVG. */
+/* The gaze follows the cursor. transform-box makes the movement count
+   from the group itself, not from the origin of the whole SVG. */
 .gaze {
   transform-box: fill-box;
   transform-origin: center;
@@ -424,8 +424,8 @@ a { color: var(--accent-2); }
   transition: transform 90ms linear;
 }
 
-/* Het hoofd schuift een fractie mee, zodat het volgen niet alleen in de
-   ogen zit maar de hele figuur je lijkt op te merken. */
+/* The head moves a fraction too, so the following is not only in the
+   eyes but the whole figure seems to notice you. */
 .hacker .hood,
 .hacker .face,
 .hacker .brim {
@@ -462,13 +462,13 @@ a { color: var(--accent-2); }
   font-size: 0.76rem;
   color: var(--muted);
   white-space: nowrap;
-  /* Leesbaar houden waar de tekst over het toetsenbord van de figuur valt. */
+  /* Keep it readable where the text falls over the figure's keyboard. */
   text-shadow: 0 0 10px var(--bg), 0 0 5px var(--bg), 0 0 2px var(--bg);
 }
 
 .ticker .prompt { color: var(--accent); }
 
-/* Reactie op een klik buiten de invoervelden. */
+/* Reaction to a click outside the input fields. */
 body.alerted .hacker .eyes ellipse {
   fill: var(--danger);
   animation: none;
@@ -496,11 +496,10 @@ body.alerted .ticker { color: var(--danger); }
   to { transform: scale(9); opacity: 0; }
 }
 
-/* ------------------------------------------------- na inloggen (app-modus) */
+/* ---------------------------------------------- after logging in (app mode) */
 
-/* Het aanmaakformulier is inklapbaar, zodat je bij veel notities niet elke
-   keer langs een uitgeklapt formulier scrollt. Staat open zolang er nog
-   geen notities zijn. */
+/* The new note form folds away, so with many notes you do not scroll past
+   an open form every time. It is open while there are no notes yet. */
 .composer summary {
   cursor: pointer;
   font-family: ui-monospace, Consolas, monospace;
@@ -523,14 +522,14 @@ body.alerted .ticker { color: var(--danger); }
   color: var(--muted);
 }
 
-/* Twee kolommen zodra er ruimte voor is: korte notities vullen anders een
-   hele regel met lege ruimte. */
+/* Two columns as soon as there is room: short notes would otherwise fill
+   a whole row with empty space. */
 .notes-grid {
   display: grid;
   gap: 1rem;
   grid-template-columns: 1fr;
-  /* Kaarten houden hun eigen hoogte in plaats van mee te rekken met de
-     langste notitie op dezelfde rij. */
+  /* Cards keep their own height instead of stretching to the longest
+     note in the same row. */
   align-items: start;
 }
 
@@ -543,8 +542,8 @@ body.alerted .ticker { color: var(--danger); }
   .notes-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
-/* Wie beweging heeft uitgezet in het besturingssysteem krijgt een stil
-   uiterlijk: zelfde vormgeving, geen animatie en geen parallax. */
+/* Whoever turned off motion in the operating system gets a still look:
+   the same design, no animation and no parallax. */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation: none !important;
@@ -558,8 +557,8 @@ body.alerted .ticker { color: var(--danger); }
   .ticker { font-size: 0.68rem; }
 }
 
-/* Foutpagina (MIT-25): een robot die het heeft begeven. Alle opmaak hier, niets
-   inline, zodat de CSP streng blijft. */
+/* Error page (MIT-25): a robot that has broken down. All styling here, nothing
+   inline, so the CSP stays strict. */
 .robot-page { text-align: center; }
 .robot-page .card { text-align: left; }
 .robot {
@@ -582,7 +581,7 @@ body.alerted .ticker { color: var(--danger); }
 .robot .antenna { fill: none; stroke: var(--muted); stroke-width: 4; stroke-linecap: round; }
 .robot .bulb { fill: var(--danger); animation: flicker 3.4s linear infinite; }
 .robot .spark path { fill: none; stroke: var(--danger); stroke-width: 2; stroke-linecap: round; opacity: 0; animation: spark 3.4s linear infinite; }
-/* Eén laatste slag, dan plat; een fel stukje loopt erover, zoals op een monitor. */
+/* One last beat, then flat; a bright stretch runs over it, like on a monitor. */
 .robot .flatline, .robot .scan {
   fill: none;
   stroke: var(--danger);
@@ -602,7 +601,7 @@ body.alerted .ticker { color: var(--danger); }
 .robot .smoke circle:nth-child(2) { animation-delay: 1.5s; }
 .robot .smoke circle:nth-child(3) { animation-delay: 3s; }
 
-/* Het lampje hapert, en bij elke hapering een vonk. */
+/* The bulb flickers, and every flicker gives a spark. */
 @keyframes flicker {
   0%, 7%, 13%, 58%, 66%, 100% { opacity: 0.9; }
   8%, 12%, 59%, 61%, 65% { opacity: 0.12; }

@@ -1,7 +1,7 @@
 "use strict";
 
-// Decoratie op de inlog- en registratiepagina's: de figuur volgt de muis en reageert op een klik.
-// Een eigen bestand en geen inline script, zodat de CSP (MIT-21) zonder 'unsafe-inline' kan.
+// Decoration on the login and registration pages: the figure follows the mouse and reacts to a click.
+// A file of its own and no inline script, so the CSP (MIT-21) works without 'unsafe-inline'.
 if (document.querySelector(".scene")) {
   const root = document.documentElement;
   const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -16,7 +16,7 @@ if (document.querySelector(".scene")) {
   let index = 0;
   let timer = null;
 
-  // De muispositie als 0..1 in CSS-variabelen; de verplaatsing zelf doet CSS.
+  // The mouse position as 0..1 in CSS variables; CSS does the movement itself.
   if (!reduced) {
     window.addEventListener("pointermove", (event) => {
       root.style.setProperty("--mx", (event.clientX / window.innerWidth).toFixed(3));
@@ -24,7 +24,7 @@ if (document.querySelector(".scene")) {
     }, { passive: true });
   }
 
-  // Een klik buiten de invoervelden: de figuur kijkt op en de regel onderin verandert.
+  // A click outside the input fields: the figure looks up and the line at the bottom changes.
   document.addEventListener("click", (event) => {
     if (event.target.closest("input, textarea, button, a, label, select")) return;
     document.body.classList.add("alerted");
@@ -32,7 +32,7 @@ if (document.querySelector(".scene")) {
     timer = window.setTimeout(() => document.body.classList.remove("alerted"), 1400);
     if (ticker) ticker.textContent = lines[index++ % lines.length];
     if (reduced) return;
-    // Een korte puls op de plek van de klik; de positie via CSSOM en niet via een style-attribuut (CSP).
+    // A short pulse where the click was; the position through the CSSOM, not a style attribute (CSP).
     const ripple = document.createElement("span");
     ripple.className = "ripple";
     ripple.style.setProperty("--x", `${event.clientX}px`);
