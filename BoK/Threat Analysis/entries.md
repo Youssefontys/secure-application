@@ -769,7 +769,7 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 - Houdt tegen: MC-11 stap 1 en 3
 - Wat: `.github/dependabot.yml` laat GitHub elke week een pull request openen als er een nieuwe versie is van een pip-pakket, de base-image in de Dockerfile, de image in `compose.yaml`, een Terraform-provider of een GitHub Action (die sinds 19a34dd). Alles staat vast (MIT-03), dus zonder dit komen ook patches niet vanzelf binnen. Er is geen pipeline voor nodig; in de BoK hoort het bij CI/CD (Week 8). Of Dependabot ook de `@sha256`-digest bijwerkt, staat niet in de documentatie van GitHub (gelezen op 17-10-2026); dat blijkt bij de eerste pull request (T-97)
 - Waar: `.github/dependabot.yml`
-- Status: gebouwd; bewezen voor de Terraform-providers (T-97), nog niet voor een digest van een image
+- Status: bewezen (T-97; gemeten op 2026-10-18)
 - Sinds: 19999a9
 
 ### MIT-34 De image-pipeline met minimale rechten
