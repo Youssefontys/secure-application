@@ -15,7 +15,7 @@ Every feature that is added has an entry in `BoK/`: the use case, the misuse cas
 - `BoK/Architecture/` - components, data flows, trust boundaries and the authentication and authorization points
 - `BoK/Threat Analysis/` - use cases, misuse cases, mitigations, attack trees and the tests that go with them
 - `BoK/Subjects/` - per BoK subject (week) what was built, why it is safe and what it does not solve
-- `compose.yaml` - app and database for local use, with scanner profiles in comments
+- `compose.yaml` - app and database for local use, with a ZAP profile in comments for later
 - `.github/dependabot.yml` - weekly update proposals for the pinned packages, images, Terraform providers and GitHub Actions
 - `.github/workflows/image.yml` - builds the image on every push to `main` and publishes it to ghcr.io, tagged with the commit
 - `scripts/` - `setup.py` to deploy, locally or to Azure, and `azuresetup_v2.py`, the one-time Terraform state bootstrap that `setup.py` starts when it is missing
@@ -24,7 +24,7 @@ Every feature that is added has an entry in `BoK/`: the use case, the misuse cas
 ## Requirements
 
 - **Locally:** Docker with Compose v2, and Python 3 for `scripts/setup.py`.
-- **Azure:** an Azure subscription in which you may create resources and role assignments, the Azure CLI, Terraform 1.11 or newer, Python 3 and Git. No Docker and no GitHub token: GitHub Actions builds the image on every push to `main`. The GitHub CLI (`gh`) is optional, for the pipeline secrets.
+- **Azure:** an Azure subscription in which you may create resources and role assignments, the Azure CLI, Terraform 1.11 or newer, Python 3 and Git. No Docker and no GitHub token: GitHub Actions builds the image on every push to `main`.
 - **Signed in to Azure** before `python scripts/setup.py azure`: run `az login`. If it says `Authentication failed against tenant <ID>` with `AADSTS50076`, that tenant requires MFA and `az login` skipped it; run `az login --tenant <ID>` and approve the second step in your authenticator app. On Windows the sign-in opens in a small Windows window (Web Account Manager) instead of the browser; that is the default since Azure CLI 2.61.0.
 
 `setup.py` checks these first and names what is missing.
@@ -55,9 +55,9 @@ The baseline plus the first security features, each with an entry in `BoK/Threat
 - a hackstand for the hacking week, off by default (MIT-10)
 - a CSRF token on every form, strict security headers, input and configuration checks, every route closed by default, safe failure, gunicorn as an unprivileged user, and an own database role that can only read and write the app's tables (MIT-20 to MIT-27); see `BoK/Subjects/Week 7 Application Security.md`
 - taken from BOK-SECENGINEER and an audit: no page in the browser cache, sessions of at most 8 hours, a limit on registrations and notes, every security event as a JSON line in the log, an owner-only `.env`, and Dependabot (MIT-28 to MIT-33); see `BoK/Subjects/Week 6 Logging.md`
-- the image built, scanned for known vulnerabilities and published by GitHub Actions with only the rights it needs, and no own token (MIT-34, MIT-35); see `BoK/Subjects/Week 8 CI-CD.md`
+- the image built, its SBoM made and scanned for known vulnerabilities, and published by GitHub Actions with only the rights it needs and no own token (MIT-34 to MIT-36), and a mail when a lockout starts on Azure (MIT-37); see `BoK/Subjects/Week 8 CI-CD.md`
 
-On Azure the log is kept for 30 days in Log Analytics (MIT-31). Still open: nobody is alerted (MC-28), the database role can still change every row the app can (MC-08), the running app holds the data key, locally from `.env` and on Azure from Key Vault (MC-22), and the pipeline does not test yet (MC-30). Deployed to Azure on 18 October 2026.
+On Azure the log is kept for 30 days in Log Analytics (MIT-31). Still open: only a lockout sends a mail (MC-28), the database role can still change every row the app can (MC-08), the running app holds the data key, locally from `.env` and on Azure from Key Vault (MC-22), and the pipeline does not test yet (MC-30). Deployed to Azure on 18 October 2026.
 
 ## License
 
