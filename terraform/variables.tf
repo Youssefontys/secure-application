@@ -33,6 +33,16 @@ variable "throttle_ip_mode" {
   }
 }
 
+# Waar de alert bij een blokkade heen gaat (alerts.tf); setup.py vult het adres van az login in. Niet in de repo: die is openbaar.
+variable "alert_email" {
+  type = string
+
+  validation {
+    condition     = can(regex("^[^@[:space:]]+@[^@[:space:]]+[.][A-Za-z]{2,}$", var.alert_email))
+    error_message = "Geef een e-mailadres, zoals naam@voorbeeld.nl."
+  }
+}
+
 variable "throttle_pair_exempt_users" {
   type    = string
   default = ""

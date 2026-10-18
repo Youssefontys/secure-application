@@ -40,6 +40,8 @@ AZ_LOGIN_HELP = """Eerst even inloggen bij Azure: je bent nog niet ingelogd, of 
    tweede stap (MFA). Log dan in bij die tenant, en keur het goed in je authenticator-app:
    az login --tenant <ID>
    Daarna opnieuw: python scripts/setup.py azure"""
+# Een e-mailadres, als allowlist (MIT-22); dezelfde regel als de validatie van alert_email in terraform/variables.tf.
+EMAIL = r"[^@\s]+@[^@\s]+\.[A-Za-z]{2,}"
 
 
 # Stoppen met de melding, met witregels eromheen zodat hij opvalt; zelfde vorm als azuresetup_v2.py.
@@ -185,10 +187,12 @@ def terraform(*args):
 def azure():
     check_tools("azure")
     # Zonder login kan er niets; dan eerst uitleggen hoe, ook bij een tenant die MFA eist.
-    account = subprocess.run([shutil.which("az"), "account", "show", "--query", "name", "-o", "tsv"], capture_output=True, text=True)
+    account = subprocess.run([shutil.which("az"), "account", "show", "--query", "[name, user.name]", "-o", "tsv"],
+                             capture_output=True, text=True)
     if account.returncode != 0:
         stop(AZ_LOGIN_HELP, icon="🔐")
-    print(f"\n☁️  Ingelogd bij Azure, subscription: {account.stdout.strip()}")
+    subscription, login = (account.stdout.splitlines() + ["", ""])[:2]
+    print(f"\n☁️  Ingelogd bij Azure, subscription: {subscription}")
 
     # Kip en ei: Terraform moet zijn state ergens kwijt voordat het iets maakt; die opslag zet een script eenmalig neer.
     if (REPO / "backend.conf").exists():
@@ -213,7 +217,14 @@ def azure():
     print("   ✅ Staat klaar, en Container Apps mag hem ophalen")
 
     hack = hackstand() if INTERACTIVE else {"THROTTLE_IP_MODE": None, "THROTTLE_PAIR_EXEMPT_USERS": None}
-    variables = [f"app_image={image}"]
+    # De mail bij een blokkade (alerts.tf): standaard het adres waarmee je bij az bent ingelogd. Niet in de repo, die is openbaar.
+    email = login if re.fullmatch(EMAIL, login) else ""
+    if INTERACTIVE:
+        print("\n📧 Bij een blokkade stuurt Azure binnen een paar minuten een mail.")
+        email = ask("Naar welk adres?", email or "-", EMAIL)
+    if not re.fullmatch(EMAIL, email):
+        stop("Geen e-mailadres voor de alert; draai dit script in een terminal en vul er een in.", icon="📧")
+    variables = [f"app_image={image}", f"alert_email={email}"]
     if hack["THROTTLE_IP_MODE"]:
         variables += ["throttle_ip_mode=hackweek", "min_replicas=1"]
     if hack["THROTTLE_PAIR_EXEMPT_USERS"]:

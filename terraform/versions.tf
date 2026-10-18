@@ -28,7 +28,7 @@ terraform {
 # De subscription komt uit ARM_SUBSCRIPTION_ID of az login; niets daarvan staat in de repo.
 provider "azurerm" {
   # Niet standaard geregistreerd op een nieuwe subscription; welke azurerm zelf registreert, zegt het schema niet.
-  resource_providers_to_register = ["Microsoft.App", "Microsoft.DBforPostgreSQL", "Microsoft.OperationalInsights"]
+  resource_providers_to_register = ["Microsoft.App", "Microsoft.DBforPostgreSQL", "Microsoft.Insights", "Microsoft.OperationalInsights"]
 
   features {
     key_vault {
