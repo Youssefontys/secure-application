@@ -77,12 +77,12 @@ De details staan in de entries (MC-04, MC-05, MC-07, MC-08, MC-10, MC-11, MC-14,
 - **Gewone gebruiker (MIT-26).** De image maakt de systeemgebruiker `app` zonder shell en draait daaronder, met Gunicorn en twee workers. De code is van root, dus de app kan hem lezen maar niet aanpassen.
 - **Databaserol (MIT-27).**
   - `db/schema.sql` maakt de rol `notities_app`, geen superuser en nergens eigenaar van. Hij krijgt `SELECT`, `INSERT`, `UPDATE` en `DELETE` op de drie tabellen en `USAGE` op de twee sequences: precies wat de app doet.
-  - Lokaal zet `db/app-password.sh` het wachtwoord bij de eerste start van een leeg volume. Het komt uit `APP_DB_PASSWORD` in `.env`, dat `scripts/setup.py` aanmaakt. De app krijgt alleen dat wachtwoord.
+  - Lokaal zet `db/app-password.sh` het wachtwoord bij de eerste start van een leeg volume. Het komt uit `APP_DB_PASSWORD` in `.env`, dat `scripts/deployment.py` aanmaakt. De app krijgt alleen dat wachtwoord.
   - Op Azure staat het wachtwoord van de eigenaar in een eigen Key Vault. Alleen de schema-job leest die, met een eigen identiteit. De job maakt het schema in een lege database en zet bij elke start het wachtwoord van de app-rol, en Terraform start hem zelf, ook na een nieuw wachtwoord (`secret_version`). Op Azure gemeten: de app heeft geen rol op de vault van de eigenaar (T-86).
 - **Geen cache (MIT-28).** Elk antwoord behalve CSS en scripts krijgt `Cache-Control: no-store`, zoals de OWASP Session Management Cheat Sheet aanraadt. Na uitloggen vraagt Terug de pagina opnieuw op, en dan stuurt de app naar de inlogpagina.
 - **Sessieduur (MIT-29).** `PERMANENT_SESSION_LIFETIME` is 8 uur. Flask controleert bij elk verzoek hoe oud de handtekening van de cookie is, ook bij een cookie die alleen voor de browsersessie geldt; dat staat in de broncode van Flask 3.1.3. Zonder deze regel was het 31 dagen.
 - **Limieten (MIT-30).** Elke registratie telt per adres, met de tellers van de poginglimieten: 10 per uur, in de hackstand 60. De teller staat vlak voor het hashen, dus alleen een registratie die echt rekent, telt. Een notitie wordt geteld en toegevoegd in één statement, tot 25 per account.
-- **`.env` (MIT-32).** `setup.py` zet het bestand op 0600 voordat het iets schrijft, en zet een bestaand bestand ook recht.
+- **`.env` (MIT-32).** `deployment.py` zet het bestand op 0600 voordat het iets schrijft, en zet een bestaand bestand ook recht.
 - **Dependabot (MIT-33).** `.github/dependabot.yml` controleert elke week pip, de Dockerfile, `compose.yaml`, Terraform en de GitHub Actions. In de BoK hoort het bij CI/CD (Week 8), maar er is geen pipeline voor nodig.
 - **Eén UPDATE (MIT-09).** Een nieuw wachtwoord of een 2FA-wijziging hoogt in hetzelfde statement de sessieversie op. Valt de verbinding weg, dan is het allebei of niets.
 
@@ -154,7 +154,7 @@ Bewust niet: rechten per rij (row-level security), een audit-log in de database 
 - **Dependabot stelt alleen voor.** Iemand moet de pull request bekijken en samenvoegen. Of hij ook de digests van de images bijwerkt, laat de eerste pull request zien (T-97).
 - **De app-rol mag nog alles wat de app mag (MC-08).** Na een overname kan een aanvaller alle rijen lezen, wijzigen en wissen, bijvoorbeeld tweestapsverificatie uitzetten. Notities en geheimen blijven wel versleuteld.
 - **Lokaal staan beide databasewachtwoorden in `.env`.** Wie de ontwikkelmachine heeft, heeft ze allebei. De scheiding helpt tegen een overname van de app, niet tegen een overname van de machine.
-- **Een bestaand volume krijgt de rol niet.** `db/schema.sql` draait alleen in een leeg volume. Wie de stack al had: `docker compose down -v` (wist de lokale data) en daarna `python scripts/setup.py`.
+- **Een bestaand volume krijgt de rol niet.** `db/schema.sql` draait alleen in een leeg volume. Wie de stack al had: `docker compose down -v` (wist de lokale data) en daarna `python scripts/deployment.py`.
 - **De CSP staat scripts uit eigen bestanden toe.** Wie daar iets in krijgt, heeft de server al.
 - **`TRUSTED_PROXIES` controleert alleen onzin.** Het juiste getal is kennis over de uitrol: Terraform zet 1 voor Container Apps.
 - **Het bestandssysteem van de container is niet alleen-lezen.** De code is wel beschermd, maar bijvoorbeeld `/tmp` niet.

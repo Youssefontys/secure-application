@@ -147,7 +147,7 @@ Waar de geheimen nu staan, wie ze kan lezen en hoe ze gemaakt worden:
 | `POSTGRES_PASSWORD` (A-06) | Wachtwoord waarmee de app inlogt op de database | `.env`, omgeving van app en database | 256 willekeurige bits |
 
 - **Nooit in git.** `.env` en `backend.conf` staan in `.gitignore` (tot 31d93f9 `backend.*.conf`, één per omgeving); in de repo zit alleen `.env.example`, zonder waarden. Op 17-10-2026 is de hele geschiedenis doorzocht: geen sleutelwaarde, en nooit een `.env` of backend-bestand gecommit.
-- **Zelf gemaakt, nooit getoond.** `python scripts/setup.py lokaal` vult een ontbrekende of lege sleutel aan met 256 bits uit de module `secrets` van Python, en noemt alleen de naam. Een bestaande sleutel blijft staan.
+- **Zelf gemaakt, nooit getoond.** `python scripts/deployment.py lokaal` vult een ontbrekende of lege sleutel aan met 256 bits uit de module `secrets` van Python, en noemt alleen de naam. Een bestaande sleutel blijft staan.
 - **Niet leeg starten.** Compose start niet als een van de vier leeg is (`${...:?}`). De app start niet met een `DATA_ENCRYPTION_KEY` die geen 256 bits is.
 - **Eén doel per sleutel, op één na.** De gegevenssleutel staat los van de rest. `FLASK_SECRET_KEY` heeft twee taken. Een nieuwe sessiesleutel maakt daardoor ook alle tellers van de poginglimieten ongeldig (A-05).
 - **De Azure-scripts zetten niets in GitHub.** Tot a9b2a23 kon `azuresetup_v2.py` ID's als GitHub-secret zetten, via stdin aan `gh`; geen workflow las ze, dus dat stuk is weg. Uitrollen vanuit GitHub krijgt later een eigen identiteit met een federated credential (OIDC), niet die van de opslag; tot b733d12 zette het script juist die in GitHub.

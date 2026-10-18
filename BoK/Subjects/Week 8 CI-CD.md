@@ -20,7 +20,7 @@ De details staan in de entries (MC-30, MC-11, MIT-34 tot MIT-36; C-06, A-12, A-1
 | De tag | Zelf kiezen | De commit, en de inhoud van `app/` (de tree-hash van git), nooit `latest` |
 | Weten wat er in de image zit | Nergens vastgelegd | Een CycloneDX-SBoM van elke image, 90 dagen bij de run |
 | Bekende lekken in de image | Niemand keek; er zaten vier keer HIGH in, in pip | Trivy vóór het publiceren; 0, want pip gaat na het installeren uit de image |
-| Uitrollen | Vijf stappen van de routekaart in `setup.py` | `python scripts/setup.py azure`: het zoekt de image bij je laatste commit en draait Terraform |
+| Uitrollen | Vijf stappen van de routekaart in `setup.py` | `python scripts/deployment.py azure`: het zoekt de image bij je laatste commit en draait Terraform |
 
 ## Hoe het werkt
 
@@ -28,8 +28,8 @@ De details staan in de entries (MC-30, MC-11, MIT-34 tot MIT-36; C-06, A-12, A-1
 - **Rechten:** standaard geen (`permissions: {}`); de job krijgt alleen `contents: read` en `packages: write`.
 - **Bouwen en pushen** met de gewone `docker`-opdrachten, zonder actions van derden. Het token gaat via stdin naar `docker login`.
 - **De SBoM:** Trivy 0.75.0, vast op versie en digest, leest de image als tar-bestand en maakt er een CycloneDX-SBoM van: alleen de lijst, zonder lekken of VEX. jq zet de naam en tag van de image als hoofdonderdeel. De SBoM gaat als artifact bij de run, ook als de scan daarna een lek vindt.
-- **De scan:** tussen de SBoM en het pushen. Trivy scant de SBoM, niet de image zelf. Een lek van HIGH of CRITICAL waarvoor een oplossing is, stopt de job: dan komt er geen nieuwe image op ghcr.io, en kan `setup.py azure` hem ook niet uitrollen.
-- **Twee tags:** de commit-hash, en `app-` met de tree-hash van `app/`. `setup.py azure` rekent die tweede zelf uit met `git rev-parse HEAD:app`, en kijkt anoniem bij ghcr.io of de image er is en openbaar is, zoals Container Apps hem ophaalt. Een commit die alleen Terraform of de BoK verandert, heeft zo geen nieuwe build nodig.
+- **De scan:** tussen de SBoM en het pushen. Trivy scant de SBoM, niet de image zelf. Een lek van HIGH of CRITICAL waarvoor een oplossing is, stopt de job: dan komt er geen nieuwe image op ghcr.io, en kan `deployment.py azure` hem ook niet uitrollen.
+- **Twee tags:** de commit-hash, en `app-` met de tree-hash van `app/`. `deployment.py azure` rekent die tweede zelf uit met `git rev-parse HEAD:app`, en kijkt anoniem bij ghcr.io of de image er is en openbaar is, zoals Container Apps hem ophaalt. Een commit die alleen Terraform of de BoK verandert, heeft zo geen nieuwe build nodig.
 - **Dependabot** houdt `actions/checkout` bij, net als de pakketten en de images (MIT-33).
 
 ## Waarom het veilig is
@@ -45,7 +45,7 @@ De details staan in de entries (MC-30, MC-11, MIT-34 tot MIT-36; C-06, A-12, A-1
 
 ## Wat het niet oplost
 
-- **Wie naar `main` kan pushen, bepaalt de image,** en kan hem met `setup.py azure` uitrollen. Je GitHub-account, met tweestapsverificatie, is dus de sleutel.
+- **Wie naar `main` kan pushen, bepaalt de image,** en kan hem met `deployment.py azure` uitrollen. Je GitHub-account, met tweestapsverificatie, is dus de sleutel.
 - **Nog geen tests.** Een image die stuk is, wordt gewoon gepubliceerd.
 - **De scan ziet niet alles.** Een lek zonder oplossing houdt de image niet tegen, een lek dat pas later bekend wordt, ziet de scan pas bij de volgende push, en een draaiende image wordt niet opnieuw gescand.
 - **Niet ondertekend.** Of een image echt uit deze workflow komt, is niet na te gaan.
