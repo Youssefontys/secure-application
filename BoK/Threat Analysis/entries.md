@@ -506,7 +506,7 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
   - OR  4. Een lang geldig token met `write:packages` stelen en daarmee een image onder dezelfde naam publiceren
   - OR  5. Met een overgenomen GitHub-account naar `main` pushen
 - Mitigaties: MIT-34 (stap 1 tot 4: het token van de run mag alleen `contents: read` en `packages: write`, checkout staat vast op een commit, geen trigger op een pull request, en er is geen eigen token meer; T-103). MIT-33 (stap 2: Dependabot stelt een nieuwe versie van de action voor)
-- Restrisico: stap 5 blijft: wie naar `main` kan pushen, publiceert een image en kan hem uitrollen. De image wordt sinds 29e42cc gescand op bekende lekken (MIT-35), maar niet ondertekend, en er is nog geen SBoM; dat zijn volgende stappen in de pipeline (Week 8). Het pakket is openbaar, maar er staan geen geheimen in en de code is ook openbaar
+- Restrisico: stap 5 blijft: wie naar `main` kan pushen, publiceert een image en kan hem uitrollen. De image wordt sinds 29e42cc gescand op bekende lekken (MIT-35), en heeft sinds 1d6f21a een SBoM (MIT-36), maar is niet ondertekend; dat is een volgende stap in de pipeline (Week 8). Het pakket is openbaar, maar er staan geen geheimen in en de code is ook openbaar
 - Status: open
 - Sinds: 19a34dd
 
