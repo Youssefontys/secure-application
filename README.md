@@ -19,7 +19,7 @@ Every feature that is added has an entry in `BoK/`: the use case, the misuse cas
 - `.github/dependabot.yml` - weekly update proposals for the pinned packages, images, Terraform providers and GitHub Actions
 - `.github/workflows/image.yml` - builds the image on every push to `main` and publishes it to ghcr.io, tagged with the commit
 - `scripts/` - `setup.py` to deploy, locally or to Azure, and `azuresetup_v2.py`, the one-time Terraform state bootstrap that `setup.py` starts when it is missing
-- `terraform/` - Azure: Container Apps, PostgreSQL B1ms in a private network and Key Vault; secrets stay out of the Terraform state. Not deployed yet
+- `terraform/` - Azure: Container Apps, PostgreSQL B1ms in a private network and Key Vault; secrets stay out of the Terraform state. Deployed on 18 October 2026 in France Central
 
 ## Requirements
 
@@ -55,8 +55,9 @@ The baseline plus the first security features, each with an entry in `BoK/Threat
 - a hackstand for the hacking week, off by default (MIT-10)
 - a CSRF token on every form, strict security headers, input and configuration checks, every route closed by default, safe failure, gunicorn as an unprivileged user, and an own database role that can only read and write the app's tables (MIT-20 to MIT-27); see `BoK/Subjects/Week 7 Application Security.md`
 - taken from BOK-SECENGINEER and an audit: no page in the browser cache, sessions of at most 8 hours, a limit on registrations and notes, every security event as a JSON line in the log, an owner-only `.env`, and Dependabot (MIT-28 to MIT-33); see `BoK/Subjects/Week 6 Logging.md`
+- the image built and published by GitHub Actions with only the rights it needs, and no own token (MIT-34); see `BoK/Subjects/Week 8 CI-CD.md`
 
-On Azure the log is kept for 30 days in Log Analytics (MIT-31). Still open: nobody is alerted (MC-28), the database role can still change every row the app can (MC-08), and the data key is read from `.env` until Key Vault on Azure (MC-22). Not deployed yet.
+On Azure the log is kept for 30 days in Log Analytics (MIT-31). Still open: nobody is alerted (MC-28), the database role can still change every row the app can (MC-08), the running app holds the data key, locally from `.env` and on Azure from Key Vault (MC-22), and the pipeline does not scan or test yet (MC-30). Deployed to Azure on 18 October 2026.
 
 ## License
 
