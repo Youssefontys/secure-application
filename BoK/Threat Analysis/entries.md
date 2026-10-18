@@ -224,8 +224,8 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
   - OR  2. Een kwaadaardige nieuwe versie van een pakket komt bij de volgende build vanzelf mee
   - OR  3. Een kwetsbaarheid in de base images (`python:3.15-slim`, `postgres:18`), bijvoorbeeld in de Debian-systeembibliotheken
   - OR  4. Een image-tag wijst bij een volgende build naar een andere image dan eerder (tags zijn niet vast)
-- Mitigaties: MIT-03 (stap 2, en stap 4 sinds 7bfd435). MIT-33 (stap 1 en 3: Dependabot stelt elke week nieuwe versies voor)
-- Restrisico: Dependabot stelt alleen voor; iemand moet de pull request bekijken en samenvoegen. Of hij ook de digests van de images bijwerkt, moet de eerste pull request laten zien (T-97). Minder pakketten helpt wel: sinds 29d201d doet `cryptography` ook Argon2id, en zijn `argon2-cffi` en `argon2-cffi-bindings` weg
+- Mitigaties: MIT-03 (stap 2, en stap 4 sinds 7bfd435). MIT-33 (stap 1 en 3: Dependabot stelt elke week nieuwe versies voor). MIT-35 (stap 1 en 3: de pipeline publiceert geen image met een bekend lek van HIGH of CRITICAL waarvoor een oplossing is; T-105)
+- Restrisico: een lek zonder oplossing houdt de image niet tegen, en een lek dat pas na de build bekend wordt, ziet de scan pas bij de volgende push; een draaiende image wordt niet opnieuw gescand. Dependabot stelt alleen voor; iemand moet de pull request bekijken en samenvoegen. Of hij ook de digests van de images bijwerkt, moet de eerste pull request laten zien (T-97). Minder pakketten helpt wel: sinds 29d201d doet `cryptography` ook Argon2id, en zijn `argon2-cffi` en `argon2-cffi-bindings` weg
 - Status: open
 - Sinds: baseline
 
@@ -506,7 +506,7 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
   - OR  4. Een lang geldig token met `write:packages` stelen en daarmee een image onder dezelfde naam publiceren
   - OR  5. Met een overgenomen GitHub-account naar `main` pushen
 - Mitigaties: MIT-34 (stap 1 tot 4: het token van de run mag alleen `contents: read` en `packages: write`, checkout staat vast op een commit, geen trigger op een pull request, en er is geen eigen token meer; T-103). MIT-33 (stap 2: Dependabot stelt een nieuwe versie van de action voor)
-- Restrisico: stap 5 blijft: wie naar `main` kan pushen, publiceert een image en kan hem uitrollen. De image is nog niet gescand of ondertekend; dat zijn de volgende stappen in de pipeline (Week 8). Het pakket is openbaar, maar er staan geen geheimen in en de code is ook openbaar
+- Restrisico: stap 5 blijft: wie naar `main` kan pushen, publiceert een image en kan hem uitrollen. De image wordt sinds 29e42cc gescand op bekende lekken (MIT-35), maar niet ondertekend, en er is nog geen SBoM; dat zijn volgende stappen in de pipeline (Week 8). Het pakket is openbaar, maar er staan geen geheimen in en de code is ook openbaar
 - Status: open
 - Sinds: 19a34dd
 
@@ -749,3 +749,10 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 - Waar: `.github/workflows/image.yml`; het zoeken in `azure()` van `scripts/setup.py`
 - Status: gebouwd
 - Sinds: 19a34dd; tag op de inhoud van `app/` sinds 7d8f7b5
+
+### MIT-35 Een scan op bekende lekken vóór het publiceren
+- Houdt tegen: MC-11 stap 1 en 3
+- Wat: de workflow scant de gebouwde image met Trivy 0.75.0, vast op versie en digest, vóór het pushen. Een lek van HIGH of CRITICAL waarvoor al een oplossing is (`--ignore-unfixed`), stopt de job; dan staat er geen nieuwe image op ghcr.io, en kan `setup.py azure` hem ook niet uitrollen. De eerste scan vond vier keer HIGH, allemaal in de eigen kopieën van urllib3, msgpack en setuptools die pip meeneemt; sinds b31d334 gaat pip na het installeren uit de image, want de app en de schema-job gebruiken hem niet (T-105)
+- Waar: de stap Scannen op bekende lekken in `.github/workflows/image.yml`; `RUN` in `app/Dockerfile`
+- Status: gebouwd
+- Sinds: 29e42cc; pip uit de image sinds b31d334
