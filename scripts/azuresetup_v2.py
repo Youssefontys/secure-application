@@ -222,4 +222,4 @@ with open(BACKEND_CONF, "w", encoding="utf-8", newline="\n") as f:
 
 print(f"\n📝 backend.conf geschreven: {BACKEND_CONF}")
 print("\n🎉 Klaar! De deur voor Terraform staat open.")
-print("👉 Volgende stap: python scripts/setup.py azure, voor de rest van de routekaart.\n")
+print("👉 De rest doet python scripts/setup.py azure; als dat dit script startte, gaat het nu vanzelf verder.\n")
