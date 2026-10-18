@@ -10,3 +10,4 @@
 | F-06 | C-06 GitHub Actions | C-06 ghcr.io | De image (A-12), bij elke push naar `main` | HTTPS; inloggen met het token van de run, dat alleen `contents: read` en `packages: write` heeft (T-103) | B-04 | 19a34dd |
 | F-07 | C-06 ghcr.io | C-02 op Azure | De image, bij een nieuwe revisie | HTTPS, zonder inloggen: het pakket is openbaar | B-04 | 19a34dd |
 | F-08 | C-07 Key Vaults | C-02 en de schema-job op Azure | De geheimen A-05, A-06, A-09 en A-10, als omgevingsvariabele | HTTPS, met de managed identity van de container (Key Vault Secrets User) | B-02 | 75c9967 |
+| F-09 | C-05 Log | C-08 Alert, en per mail naar de beheerder (A-13) | Het aantal regels met `lockout_started` in de laatste 5 minuten; Azure stuurt een mail over de alert | Binnen Azure, met de identiteit van de regel; de mail gaat naar een mailbox buiten Azure | geen nieuwe grens | c4ce459 |
