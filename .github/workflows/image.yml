@@ -1,0 +1,39 @@
+# Bouwt bij elke push naar main de image en zet hem op ghcr.io, met het token van deze run: geen eigen token nodig.
+# Een pakket dat zo ontstaat, krijgt de zichtbaarheid van de repo; Container Apps haalt het dus zonder inloggen op.
+# De tag is de volledige commit-hash, nooit latest (MIT-03); setup.py azure zet de image van je laatste commit neer.
+name: Image
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Standaard geen rechten; de job krijgt alleen wat hij nodig heeft.
+permissions: {}
+
+jobs:
+  image:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      # Vast op een commit, niet op een tag die kan verschuiven (MIT-03); Dependabot houdt hem bij (MIT-33).
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # ghcr.io wil kleine letters; het label koppelt het pakket aan deze repo.
+      - name: Bouwen
+        run: |
+          image="ghcr.io/${GITHUB_REPOSITORY,,}:$GITHUB_SHA"
+          docker build --label "org.opencontainers.image.source=https://github.com/$GITHUB_REPOSITORY" -t "$image" app
+          echo "IMAGE=$image" >> "$GITHUB_ENV"
+
+      # Het token via stdin en een omgevingsvariabele, niet in de opdracht zelf.
+      - name: Pushen naar ghcr.io
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "$TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          docker push "$IMAGE"
