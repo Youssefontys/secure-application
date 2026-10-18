@@ -1,24 +1,24 @@
 {% extends "base.html" %}
-{% block title %}Code invullen{% endblock %}
+{% block title %}Enter your code{% endblock %}
 {% block body_class %}auth{% endblock %}
 {% block scene %}{% include "_scene.html" %}{% endblock %}
 
 {% block content %}
-  <h1>Code invullen</h1>
+  <h1>Enter your code</h1>
 
   <div class="card">
-    <p class="hint">Vul de code van 6 cijfers in die je authenticator-app nu toont.</p>
+    <p class="hint">Enter the 6-digit code your authenticator app shows now.</p>
     <form method="post">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <label>Code
         <input name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required autofocus>
       </label>
-      <button type="submit">Inloggen</button>
+      <button type="submit">Log in</button>
     </form>
   </div>
 
   <nav class="auth-links hint" aria-label="Accountopties">
-    <a href="{{ url_for('auth.login') }}">Opnieuw beginnen</a>
-    <a href="{{ url_for('auth.login_recover') }}">Telefoon kwijt? Gebruik je herstelcode</a>
+    <a href="{{ url_for('auth.login') }}">Start over</a>
+    <a href="{{ url_for('auth.login_recover') }}">Lost your phone? Use your recovery code</a>
   </nav>
 {% endblock %}

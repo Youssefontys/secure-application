@@ -7,11 +7,11 @@ if (document.querySelector(".scene")) {
   const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const ticker = document.querySelector("[data-ticker]");
   const lines = [
-    "poging geregistreerd ~ bron: lokale sessie",
-    "niets te zien hier, probeer het inlogveld",
-    "klik gelogd ~ 1 gebeurtenis in de wachtrij",
-    "scan afgeslagen ~ geen open poort gevonden",
-    "nette poging. volgende keer met een geldige code",
+    "attempt registered ~ source: local session",
+    "nothing to see here, try the login field",
+    "click logged ~ 1 event in the queue",
+    "scan refused ~ no open port found",
+    "nice try. next time with a valid code",
   ];
   let index = 0;
   let timer = null;

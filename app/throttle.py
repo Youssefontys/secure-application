@@ -69,8 +69,13 @@ def client_ip(remote_addr):
     return str(ipaddress.ip_network(f"{ip}/64", strict=False)) if ip.version == 6 else str(ip)
 
 
+# Met enkelvoud bij 1: de blokkade telt af tot de laatste minuut.
+def try_again(minutes):
+    return f"Try again in {minutes} minute{'' if minutes == 1 else 's'}."
+
+
 def message(minutes):
-    return f"Te veel foute pogingen. Probeer het over {minutes} minuten opnieuw."
+    return f"Too many failed attempts. {try_again(minutes)}"
 
 
 # Blokkade: 429 met Retry-After (RFC 6585); anders 400, want 401 eist WWW-Authenticate.

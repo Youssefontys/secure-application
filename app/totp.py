@@ -43,7 +43,7 @@ def matching_step(secret, code, now=None):
 
 
 # De otpauth://-link in de QR-code, in het Key Uri Format dat authenticator-apps lezen.
-def provisioning_uri(secret, username, issuer="Notities"):
+def provisioning_uri(secret, username, issuer="Notes"):
     label = quote(f"{issuer}:{username}")
     return (f"otpauth://totp/{label}?secret={secret}&issuer={quote(issuer)}"
             f"&algorithm=SHA1&digits={DIGITS}&period={STEP}")

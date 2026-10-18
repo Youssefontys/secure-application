@@ -77,14 +77,14 @@ def security_headers(response):
 
 
 # Korte meldingen voor de fouten die een bezoeker kan veroorzaken; 413 komt voordat het verzoek is ingelezen (MIT-22).
-HTTP_MESSAGES = {404: "Deze pagina bestaat niet.", 405: "Dat kan hier niet.", 413: "Dit verzoek is te groot."}
+HTTP_MESSAGES = {404: "This page does not exist.", 405: "That is not possible here.", 413: "This request is too large."}
 
 
 # Status en headers (zoals Allow bij 405) blijven; alleen de pagina wordt de eigen foutpagina.
 @app.errorhandler(HTTPException)
 def http_error(error):
     response = error.get_response()
-    response.set_data(render_template("error.html", code=error.code, message=HTTP_MESSAGES.get(error.code, "Dat lukte niet.")))
+    response.set_data(render_template("error.html", code=error.code, message=HTTP_MESSAGES.get(error.code, "That did not work.")))
     return response
 
 
@@ -93,7 +93,7 @@ def http_error(error):
 @app.errorhandler(Exception)
 def unexpected_error(error):
     app.logger.exception("Onverwachte fout bij %s %r", request.method, request.path)
-    return render_template("error.html", code=500, message="Er ging iets mis. Probeer het later opnieuw."), 500
+    return render_template("error.html", code=500, message="Something went wrong. Please try again later."), 500
 
 
 @app.template_filter("date")
@@ -101,7 +101,7 @@ def format_date(value, with_time=True):
     return value.strftime("%d-%m-%Y %H:%M" if with_time else "%d-%m-%Y")
 
 
-# Per blok van zes uur, naar de Nederlandse tijd: 0-6 nacht, 6-12 morgen, 12-18 middag, 18-24 avond.
+# Per blok van zes uur, naar de Nederlandse tijd; 's nachts Hello, want good night is een afscheid.
 @app.template_global()
 def greeting():
-    return ("Goedenacht", "Goedemorgen", "Goedemiddag", "Goedenavond")[datetime.now(ZoneInfo(TIMEZONE)).hour // 6]
+    return ("Hello", "Good morning", "Good afternoon", "Good evening")[datetime.now(ZoneInfo(TIMEZONE)).hour // 6]

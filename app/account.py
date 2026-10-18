@@ -100,7 +100,7 @@ def reset_2fa():
         (g.user.id,), one=True,
     ))
     events.event("twofa_reset")
-    flash("Stel tweestapsverificatie opnieuw in met je nieuwe telefoon.")
+    flash("Set up two-step verification again with your new phone.")
     return redirect(url_for("account.setup_2fa"))
 
 
@@ -112,7 +112,7 @@ def refuse_without_both_factors():
         return render_account(throttle.message(minutes), *throttle.refusal(minutes))
     if not passwords.is_current(g.user.id, request.form.get("current_password", "")):
         events.event("reauth_failed")
-        return render_account("Je huidige wachtwoord klopt niet.", 400)
+        return render_account("Your current password is incorrect.", 400)
     throttle.succeeded(reauth_limit)
     # Daarna de tweede factor, met de blokkade en het eenmalige gebruik van de codestap (MIT-06, MIT-07).
     if error := check_code(g.user.id):
@@ -134,7 +134,7 @@ def change_password():
         (passwords.hash_password(password), g.user.id), one=True,
     ))
     events.event("password_changed")
-    flash("Je wachtwoord is gewijzigd.")
+    flash("Your password has been changed.")
     return redirect(url_for("account.index"))
 
 
@@ -146,5 +146,5 @@ def delete_account():
     events.event("account_deleted")
     query("DELETE FROM users WHERE id = %s", (g.user.id,))
     session.clear()
-    flash("Je account en je notities zijn verwijderd.")
+    flash("Your account and your notes have been deleted.")
     return redirect(url_for("auth.login"))

@@ -8,7 +8,7 @@ from flask import render_template, request, session
 import events
 
 # Wat de bezoeker ziet als het token ontbreekt of niet klopt.
-REFUSED = "Dit formulier kwam niet van deze site, of de pagina was te oud. Laad de pagina opnieuw en probeer het nog eens."
+REFUSED = "This form did not come from this site, or the page was too old. Reload the page and try again."
 
 
 # Het token van deze sessie; de templates zetten het in elk formulier.

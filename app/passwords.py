@@ -28,9 +28,9 @@ _NO_ACCOUNT = hash_password("geen account")
 # De foutmelding als het nieuwe wachtwoord niet mag, anders None; repeat alleen waar het formulier herhaalt.
 def password_problem(password, repeat=None):
     if not PASSWORD_MIN <= len(password) <= PASSWORD_MAX:
-        return f"Kies een wachtwoord van {PASSWORD_MIN} tot {PASSWORD_MAX} tekens."
+        return f"Choose a password of {PASSWORD_MIN} to {PASSWORD_MAX} characters."
     if repeat is not None and password != repeat:
-        return "De twee wachtwoorden zijn niet gelijk."
+        return "The two passwords do not match."
     return None
 
 

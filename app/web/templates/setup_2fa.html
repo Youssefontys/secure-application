@@ -1,31 +1,31 @@
 {% extends "base.html" %}
-{% block title %}Tweestapsverificatie instellen{% endblock %}
+{% block title %}Set up two-step verification{% endblock %}
 
 {% block content %}
   <header class="bar">
-    <h1>Tweestapsverificatie instellen</h1>
+    <h1>Set up two-step verification</h1>
     <form method="post" action="{{ url_for('auth.logout') }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <button type="submit" class="secondary">Uitloggen</button>
+      <button type="submit" class="secondary">Log out</button>
     </form>
   </header>
 
   <div class="card">
-    <p>Tweestapsverificatie is verplicht. Stel hem in voordat je verdergaat; daarna vraagt inloggen naast je wachtwoord een code uit je app.</p>
+    <p>Two-step verification is required. Set it up before you continue; after that, logging in asks for your password and a code from your app.</p>
     <ol class="steps">
-      <li>Scan de QR-code met een authenticator-app, zoals Microsoft Authenticator, Google Authenticator of Aegis.</li>
-      <li>Lukt scannen niet, vul dan deze sleutel in de app in: <span class="secret">{{ secret }}</span></li>
-      <li>Vul hieronder de code van 6 cijfers in die de app nu toont. Pas daarna staat de tweede factor aan.</li>
+      <li>Scan the QR code with an authenticator app, such as Microsoft Authenticator, Google Authenticator or Aegis.</li>
+      <li>Scanning does not work? Then enter this key in the app: <span class="secret">{{ secret }}</span></li>
+      <li>Below, enter the 6-digit code the app shows now. Only then is the second factor on.</li>
     </ol>
     {# Het plaatje komt van een eigen route en staat niet inline, zodat de CSP
        (MIT-21) geen data:-plaatjes hoeft toe te staan. #}
-    <img class="qr" src="{{ url_for('account.qr_2fa') }}" alt="QR-code voor je authenticator-app" width="232" height="232">
+    <img class="qr" src="{{ url_for('account.qr_2fa') }}" alt="QR code for your authenticator app" width="232" height="232">
     <form method="post">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <label>Code uit je app
+      <label>Code from your app
         <input name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required autofocus>
       </label>
-      <button type="submit">Aanzetten</button>
+      <button type="submit">Turn on</button>
     </form>
   </div>
 {% endblock %}

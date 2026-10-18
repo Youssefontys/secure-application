@@ -1,12 +1,12 @@
 {% extends "base.html" %}
-{% block title %}Dat lukte niet{% endblock %}
+{% block title %}That did not work{% endblock %}
 
 {# Eén korte melding; de details staan alleen in de log (MIT-25). De robot is
    een inline SVG zonder style-attributen: de opmaak staat in style.css (CSP). #}
 {% block content %}
   <div class="robot-page">
     <svg class="robot" viewBox="0 -40 400 420" role="img" aria-labelledby="robot-title">
-      <title id="robot-title">Een robot met kruisjes als ogen: hij heeft het begeven</title>
+      <title id="robot-title">A robot with crosses for eyes: it has broken down</title>
       <defs>
         <filter id="robot-glow" x="-60%" y="-60%" width="220%" height="220%">
           <feGaussianBlur stdDeviation="3" result="b"/>
@@ -68,11 +68,11 @@
       </g>
     </svg>
 
-    <h1>Dat lukte niet</h1>
+    <h1>That did not work</h1>
 
     <div class="card">
       <p>{{ message }}</p>
-      <p class="hint"><a href="{{ url_for('notes.index') }}">Terug naar het begin</a></p>
+      <p class="hint"><a href="{{ url_for('notes.index') }}">Back to the start</a></p>
     </div>
   </div>
 {% endblock %}

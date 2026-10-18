@@ -14,7 +14,7 @@ BODY_MAX = 250
 # Hooguit zoveel notities per account, tegen een database die volloopt (MIT-30, MC-10).
 NOTES_MAX = 25
 # Wat er staat als een titel of inhoud niet ontsleutelt (gewijzigd, verplaatst of een andere sleutel).
-UNREADABLE = "(niet te lezen)"
+UNREADABLE = "(unreadable)"
 
 
 @bp.route("/", methods=["GET", "POST"])
@@ -31,7 +31,7 @@ def index():
             (g.user.id, *sealed(title, body), g.user.id, NOTES_MAX), one=True,
         ) is None:
             events.event("note_limit")
-            error = f"Je hebt het maximum van {NOTES_MAX} notities bereikt. Verwijder er eerst een."
+            error = f"You have reached the maximum of {NOTES_MAX} notes. Delete one first."
             return render_template("notes.html", notes=fetch_notes(), error=error, title=title, body=body), 400
         return redirect(url_for("notes.index"))
 
@@ -44,11 +44,11 @@ def read_note_form():
     body = request.form.get("body", "").strip()
     error = None
     if not title or not body:
-        error = "Vul een titel en een notitie in."
+        error = "Enter a title and a note."
     elif len(title) > TITLE_MAX:
-        error = f"De titel mag maximaal {TITLE_MAX} tekens zijn."
+        error = f"The title can be at most {TITLE_MAX} characters."
     elif len(body) > BODY_MAX:
-        error = f"De notitie mag maximaal {BODY_MAX} tekens zijn."
+        error = f"The note can be at most {BODY_MAX} characters."
     return title, body, error
 
 

@@ -1,75 +1,75 @@
 {% extends "base.html" %}
-{% block title %}Profiel{% endblock %}
+{% block title %}Profile{% endblock %}
 
 {% block content %}
   <header class="bar">
-    <h1>Profiel</h1>
-    <a href="{{ url_for('notes.index') }}">Terug naar notities</a>
+    <h1>Profile</h1>
+    <a href="{{ url_for('notes.index') }}">Back to notes</a>
   </header>
 
   <dl class="card profile-details">
-    <dt>Gebruikersnaam</dt>
+    <dt>Username</dt>
     <dd>{{ profile.username }}</dd>
-    <dt>Lid sinds</dt>
+    <dt>Member since</dt>
     <dd>{{ profile.created_at|date(with_time=False) }}</dd>
-    <dt>Notities</dt>
+    <dt>Notes</dt>
     <dd>{{ profile.note_count }}</dd>
   </dl>
 
   <section class="card">
-    <h2>Tweestapsverificatie</h2>
-    <p class="hint">Staat aan, en is verplicht. Inloggen vraagt naast je wachtwoord een code uit je authenticator-app. Een nieuwe herstelcode of een nieuwe telefoon vraagt ook allebei.</p>
+    <h2>Two-step verification</h2>
+    <p class="hint">On, and required. Logging in asks for your password and a code from your authenticator app. A new recovery code or a new phone asks for both as well.</p>
     <form method="post" action="{{ url_for('account.new_recovery') }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <label>Huidig wachtwoord
+      <label>Current password
         <input name="current_password" type="password" autocomplete="current-password" required>
       </label>
-      <label>Code uit je app
+      <label>Code from your app
         <input name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required>
       </label>
-      <button type="submit" class="secondary">Nieuwe herstelcode</button>
+      <button type="submit" class="secondary">New recovery code</button>
     </form>
     <form method="post" action="{{ url_for('account.reset_2fa') }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <label>Huidig wachtwoord
+      <label>Current password
         <input name="current_password" type="password" autocomplete="current-password" required>
       </label>
-      <label>Code uit je app
+      <label>Code from your app
         <input name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required>
       </label>
-      <button type="submit" class="secondary">Opnieuw instellen (nieuwe telefoon)</button>
+      <button type="submit" class="secondary">Set up again (new phone)</button>
     </form>
   </section>
 
   <form method="post" action="{{ url_for('account.change_password') }}" class="card">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <h2>Wachtwoord wijzigen</h2>
-    <label>Huidig wachtwoord
+    <h2>Change password</h2>
+    <label>Current password
       <input name="current_password" type="password" autocomplete="current-password" required>
     </label>
-    <label>Nieuw wachtwoord <small>({{ PASSWORD_MIN }} tot {{ PASSWORD_MAX }} tekens)</small>
+    <label>New password <small>({{ PASSWORD_MIN }} to {{ PASSWORD_MAX }} characters)</small>
       <input name="password" type="password" autocomplete="new-password" minlength="{{ PASSWORD_MIN }}" maxlength="{{ PASSWORD_MAX }}" required>
     </label>
-    <label>Herhaal het nieuwe wachtwoord
+    <label>Repeat the new password
       <input name="password_repeat" type="password" autocomplete="new-password" minlength="{{ PASSWORD_MIN }}" maxlength="{{ PASSWORD_MAX }}" required>
     </label>
-    <label>Code uit je app
+    <label>Code from your app
       <input name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required>
     </label>
-    <button type="submit">Wachtwoord opslaan</button>
+    <button type="submit">Save password</button>
   </form>
 
   <form method="post" action="{{ url_for('account.delete_account') }}" class="card"
-        data-confirm="Je account en al je notities worden definitief verwijderd. Doorgaan?">
+        data-confirm="Your account and all your notes will be deleted for good. Continue?">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <h2>Account verwijderen</h2>
-    <p class="hint">Je account en al je notities worden definitief verwijderd. Dit kan niet ongedaan worden gemaakt.</p>
-    <label>Huidig wachtwoord
+    <h2>Delete account</h2>
+    <p class="hint">Your account and all your notes will be deleted for good. This cannot be undone.</p>
+    <label>Current password
       <input name="current_password" type="password" autocomplete="current-password" required>
     </label>
-    <label>Code uit je app
+    <label>Code from your app
       <input name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required>
     </label>
-    <button type="submit" class="danger">Account verwijderen</button>
+    <button type="submit" class="danger">Delete account</button>
   </form>
 {% endblock %}

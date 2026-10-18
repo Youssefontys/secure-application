@@ -1,15 +1,15 @@
 {% extends "base.html" %}
-{% block title %}Notitie aanpassen{% endblock %}
+{% block title %}Edit note{% endblock %}
 
 {% block content %}
   <header class="bar">
-    <h1>Notitie aanpassen</h1>
-    <a href="{{ url_for('notes.index') }}">Annuleren</a>
+    <h1>Edit note</h1>
+    <a href="{{ url_for('notes.index') }}">Cancel</a>
   </header>
 
   <form method="post" class="card" data-validate>
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     {% include "_note_fields.html" %}
-    <button type="submit">Wijzigingen opslaan</button>
+    <button type="submit">Save changes</button>
   </form>
 {% endblock %}

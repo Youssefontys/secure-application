@@ -1,25 +1,25 @@
 {% extends "base.html" %}
-{% block title %}Mijn notities{% endblock %}
+{% block title %}My notes{% endblock %}
 
 {% block content %}
   <header class="bar">
     <div>
-      <p class="eyebrow">Mijn notities</p>
+      <p class="eyebrow">My notes</p>
       <h1>{{ greeting() }}, {{ g.user.username }}</h1>
     </div>
     {% include "_account_menu.html" %}
   </header>
 
   <details class="card composer"{% if not notes or error %} open{% endif %}>
-    <summary>Nieuwe notitie</summary>
+    <summary>New note</summary>
     <form method="post" data-validate>
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       {% include "_note_fields.html" %}
-      <button type="submit">Opslaan</button>
+      <button type="submit">Save</button>
     </form>
   </details>
 
-  <p class="count">{{ notes|length }} van {{ NOTES_MAX }} notities</p>
+  <p class="count">{{ notes|length }} of {{ NOTES_MAX }} notes</p>
 
   {# Jinja escapet de waarden hieronder standaard, dus een notitie met een
      script-tag erin verschijnt als tekst. Gebruik hier nooit |safe. #}
@@ -29,18 +29,18 @@
         <h2>{{ note.title }}</h2>
         <p class="note-body">{{ note.body }}</p>
         <div class="note-meta">
-          <small>{{ note.created_at|date }}{% if note.updated_at %} · bewerkt {{ note.updated_at|date }}{% endif %}</small>
+          <small>{{ note.created_at|date }}{% if note.updated_at %} · edited {{ note.updated_at|date }}{% endif %}</small>
           <div class="note-actions">
-            <a class="button secondary" href="{{ url_for('notes.edit_note', note_id=note.id) }}">Aanpassen</a>
-            <form method="post" action="{{ url_for('notes.delete_note', note_id=note.id) }}" data-confirm="Deze notitie verwijderen?">
+            <a class="button secondary" href="{{ url_for('notes.edit_note', note_id=note.id) }}">Edit</a>
+            <form method="post" action="{{ url_for('notes.delete_note', note_id=note.id) }}" data-confirm="Delete this note?">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-              <button type="submit" class="danger">Verwijderen</button>
+              <button type="submit" class="danger">Delete</button>
             </form>
           </div>
         </div>
       </article>
     {% else %}
-      <p class="empty">Nog geen notities.</p>
+      <p class="empty">No notes yet.</p>
     {% endfor %}
   </div>
 {% endblock %}

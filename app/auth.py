@@ -31,7 +31,7 @@ PUBLIC_ENDPOINTS = {"auth.register", "auth.login", "auth.login_code", "auth.logi
 # 3 tot 20 tekens: letters, cijfers en _ (MIT-22). Bij inloggen telt een andere naam als onbekend.
 USERNAME = re.compile(r"[A-Za-z0-9_]{3,20}")
 # Eén melding voor elke fout bij wachtwoord vergeten, ook voor een onbekende naam (MC-21).
-FORGOT_WRONG = "Gebruikersnaam, herstelcode of code klopt niet."
+FORGOT_WRONG = "Username, recovery code or code is incorrect."
 
 
 # Het doelwit in de log, alleen als het account bestaat: een getypte naam kan ook een wachtwoord zijn (MIT-31).
@@ -51,7 +51,7 @@ def load_user():
     if user is None or user.session_version != session.get("session_version"):
         events.event("session_rejected", user_id=user_id)
         session.clear()
-        flash("Je sessie is niet meer geldig. Log opnieuw in.")
+        flash("Your session is no longer valid. Please log in again.")
         return
     g.user = user
 
@@ -101,14 +101,14 @@ def register():
     username = request.form.get("username", "").strip()
     password = request.form.get("password", "")
     if not username or not password:
-        return render_template("auth.html", error="Vul een gebruikersnaam en wachtwoord in."), 400
+        return render_template("auth.html", error="Enter a username and a password."), 400
     if not USERNAME.fullmatch(username):
-        return render_template("auth.html", error="Kies een gebruikersnaam van 3 tot 20 tekens: letters, cijfers en _."), 400
+        return render_template("auth.html", error="Choose a username of 3 to 20 characters: letters, digits and _."), 400
     if error := passwords.password_problem(password):
         return render_template("auth.html", error=error), 400
     # Pas vlak voor het hashen tellen: alleen een registratie die echt rekent, telt mee (MIT-30, MC-10).
     if minutes := throttle.attempt(throttle.limit("register_ip", throttle.client_ip(request.remote_addr))):
-        error = f"Te veel nieuwe accounts vanaf dit adres. Probeer het over {minutes} minuten opnieuw."
+        error = f"Too many new accounts from this address. {throttle.try_again(minutes)}"
         return render_template("auth.html", error=error), *throttle.refusal(minutes)
 
     try:
@@ -116,9 +116,9 @@ def register():
                     (username, passwords.hash_password(password)), one=True)
     except psycopg.errors.UniqueViolation:
         events.event("register_taken", username=username)
-        return render_template("auth.html", error="Die gebruikersnaam is al in gebruik."), 409
+        return render_template("auth.html", error="That username is already taken."), 409
     events.event("account_created", user_id=row.id, username=username)
-    flash("Je account is aangemaakt. Je kunt nu inloggen.")
+    flash("Your account has been created. You can log in now.")
     return redirect(url_for("auth.login"))
 
 
@@ -140,7 +140,7 @@ def login():
     )
     if not passwords.matches(row and row.password_hash, password):
         events.event("login_failed", **target(row, username))
-        return render_template("auth.html", error="Onjuiste gebruikersnaam of wachtwoord."), 400
+        return render_template("auth.html", error="Incorrect username or password."), 400
     throttle.succeeded(*limits)
     passwords.rehash_if_needed(row.id, row.password_hash, password)
 
@@ -164,12 +164,12 @@ def pending_login():
         return None
     if time.time() - session.get("pending_since", 0) > PENDING_MAX_SECONDS:
         session.clear()
-        flash("Dat duurde te lang. Log opnieuw in.")
+        flash("That took too long. Please log in again.")
         return None
     row = query("SELECT session_version FROM users WHERE id = %s", (user_id,), one=True)
     if row is None or row.session_version != session.get("pending_version"):
         session.clear()
-        flash("Je sessie is niet meer geldig. Log opnieuw in.")
+        flash("Your session is no longer valid. Please log in again.")
         return None
     return user_id
 
@@ -227,7 +227,7 @@ def login_recover():
     stored = query("SELECT recovery_hash FROM users WHERE id = %s", (user_id,), one=True)
     if not (stored and stored.recovery_hash and hmac.compare_digest(given, stored.recovery_hash)):
         events.event("recovery_failed", user_id=user_id)
-        return render_template("login_recover.html", error="Onjuiste herstelcode."), 400
+        return render_template("login_recover.html", error="Incorrect recovery code."), 400
     # Werkt één keer: 2FA uit, sessies ongeldig; de hash in de WHERE laat één verzoek winnen.
     row = query(
         "UPDATE users SET recovery_hash = NULL, totp_secret = NULL, totp_enabled = false, totp_last_step = NULL,"
@@ -235,11 +235,11 @@ def login_recover():
         (user_id, given), one=True,
     )
     if row is None:
-        return render_template("login_recover.html", error="Onjuiste herstelcode."), 400
+        return render_template("login_recover.html", error="Incorrect recovery code."), 400
     throttle.succeeded(recovery_limit)
     start_session(user_id, row.session_version)
     events.event("recovery_used", user_id=user_id)
-    flash("Je herstelcode is gebruikt. Stel tweestapsverificatie opnieuw in met je nieuwe telefoon.")
+    flash("Your recovery code has been used. Set up two-step verification again with your new phone.")
     return redirect(url_for("account.setup_2fa"))
 
 
@@ -302,7 +302,7 @@ def check_code(user_id):
     # Niet te ontsleutelen (gewijzigd, verplaatst, andere sleutel) telt als geen geheim: dan wordt elke code geweigerd.
     secret = user and user.totp_secret and encryption.decrypt(user.totp_secret, "totp_secret", user_id)
     if not secret:
-        return CodeError("Er is geen tweestapsverificatie ingesteld.", 0)
+        return CodeError("Two-step verification is not set up.", 0)
     # Op slot: dan wordt ook de juiste code geweigerd (MIT-06).
     if minutes := throttle.attempt(code_limit):
         return CodeError(throttle.message(minutes), minutes)
@@ -318,4 +318,4 @@ def check_code(user_id):
         return None
     # Fout, of al eens gebruikt: de poging is al geteld.
     events.event("totp_failed", user_id=user_id)
-    return CodeError("Onjuiste of al gebruikte code.", 0)
+    return CodeError("Incorrect or already used code.", 0)

@@ -1,38 +1,38 @@
 {% extends "base.html" %}
 {# Inloggen en registreren zijn hetzelfde formulier; alleen de teksten verschillen. #}
 {% set login = request.endpoint == "auth.login" %}
-{% block title %}{{ "Inloggen" if login else "Registreren" }}{% endblock %}
+{% block title %}{{ "Log in" if login else "Register" }}{% endblock %}
 {% block body_class %}auth{% endblock %}
 {% block scene %}{% include "_scene.html" %}{% endblock %}
 
 {% block content %}
-  <h1>{{ "Inloggen" if login else "Account aanmaken" }}</h1>
+  <h1>{{ "Log in" if login else "Create account" }}</h1>
 
   <div class="card">
     <form method="post">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <label>Gebruikersnaam
-        <input name="username" autocomplete="username" required maxlength="20" pattern="[A-Za-z0-9_]{3,20}" title="3 tot 20 tekens: letters, cijfers en _">
+      <label>Username
+        <input name="username" autocomplete="username" required maxlength="20" pattern="[A-Za-z0-9_]{3,20}" title="3 to 20 characters: letters, digits and _">
       </label>
       {% if login %}
-        <label>Wachtwoord
+        <label>Password
           <input name="password" type="password" autocomplete="current-password" required>
         </label>
       {% else %}
-        <label>Wachtwoord <small>({{ PASSWORD_MIN }} tot {{ PASSWORD_MAX }} tekens)</small>
+        <label>Password <small>({{ PASSWORD_MIN }} to {{ PASSWORD_MAX }} characters)</small>
           <input name="password" type="password" autocomplete="new-password" minlength="{{ PASSWORD_MIN }}" maxlength="{{ PASSWORD_MAX }}" required>
         </label>
       {% endif %}
-      <button type="submit">{{ "Inloggen" if login else "Account aanmaken" }}</button>
+      <button type="submit">{{ "Log in" if login else "Create account" }}</button>
     </form>
   </div>
 
-  <nav class="auth-links hint" aria-label="Accountopties">
+  <nav class="auth-links hint" aria-label="Account options">
     {% if login %}
-      <a href="{{ url_for('auth.register') }}">Nog geen account? Registreren</a>
-      <a href="{{ url_for('auth.forgot_password') }}">Wachtwoord vergeten?</a>
+      <a href="{{ url_for('auth.register') }}">No account yet? Register</a>
+      <a href="{{ url_for('auth.forgot_password') }}">Forgot your password?</a>
     {% else %}
-      <a href="{{ url_for('auth.login') }}">Al een account? Inloggen</a>
+      <a href="{{ url_for('auth.login') }}">Already have an account? Log in</a>
     {% endif %}
   </nav>
 {% endblock %}

@@ -38,18 +38,18 @@ if (recoveryCode) {
   document.getElementById("recovery-copy").addEventListener("click", async () => {
     try {
       await navigator.clipboard.writeText(code);
-      status.textContent = "Gekopieerd. Plak hem in je wachtwoordmanager.";
+      status.textContent = "Copied. Paste it into your password manager.";
     } catch {
-      status.textContent = "Kopiëren lukt hier niet; selecteer de code en kopieer hem zelf.";
+      status.textContent = "Copying does not work here; select the code and copy it yourself.";
     }
   });
   document.getElementById("recovery-download").addEventListener("click", () => {
-    const text = `Herstelcode voor Notities\n\n${code}\n\nWerkt één keer. Bewaar hem apart van je telefoon.\n`;
+    const text = `Recovery code for Notes\n\n${code}\n\nWorks once. Keep it separate from your phone.\n`;
     const link = document.createElement("a");
     link.href = URL.createObjectURL(new Blob([text], { type: "text/plain;charset=utf-8" }));
-    link.download = "notities-herstelcode.txt";
+    link.download = "notes-recovery-code.txt";
     link.click();
     setTimeout(() => URL.revokeObjectURL(link.href), 1000);
-    status.textContent = "Gedownload. Bewaar het bestand apart van je telefoon.";
+    status.textContent = "Downloaded. Keep the file separate from your phone.";
   });
 }
