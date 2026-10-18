@@ -150,9 +150,7 @@ Waar de geheimen nu staan, wie ze kan lezen en hoe ze gemaakt worden:
 - **Zelf gemaakt, nooit getoond.** `python scripts/setup.py lokaal` vult een ontbrekende of lege sleutel aan met 256 bits uit de module `secrets` van Python, en noemt alleen de naam. Een bestaande sleutel blijft staan.
 - **Niet leeg starten.** Compose start niet als een van de vier leeg is (`${...:?}`). De app start niet met een `DATA_ENCRYPTION_KEY` die geen 256 bits is.
 - **Eén doel per sleutel, op één na.** De gegevenssleutel staat los van de rest. `FLASK_SECRET_KEY` heeft twee taken. Een nieuwe sessiesleutel maakt daardoor ook alle tellers van de poginglimieten ongeldig (A-05).
-- **De geheimen in de Azure-scripts.** `scripts/azuresetup_v2.py`:
-  - geeft de waarden via stdin aan `gh` en niet als argument, dus ze staan niet in de proceslijst;
-  - zet in GitHub alleen id's en namen (tenant, subscription, de opslag van de state) en geen wachtwoord, want de pipeline hoort in te loggen met OIDC. De client-ID daarvoor komt bij de CI-stap, van een eigen identiteit met een federated credential. Tot b733d12 zette het script de identiteit van de opslag in GitHub: die heeft geen federated credential, mag geen resources maken, en mag wel de sleutel van de state gebruiken.
+- **De Azure-scripts zetten niets in GitHub.** Tot a9b2a23 kon `azuresetup_v2.py` ID's als GitHub-secret zetten, via stdin aan `gh`; geen workflow las ze, dus dat stuk is weg. Uitrollen vanuit GitHub krijgt later een eigen identiteit met een federated credential (OIDC), niet die van de opslag; tot b733d12 zette het script juist die in GitHub.
 - **De sleutel van de Terraform-state.** Een eigen RSA-4096-sleutel in Key Vault, met purge protection en 90 dagen bewaartijd na verwijderen. De rollen zijn gescheiden: wie het script draait, beheert de sleutel (Key Vault Crypto Officer); de managed identity mag hem alleen gebruiken (Key Vault Crypto Service Encryption User).
 
 Wat nog mist:

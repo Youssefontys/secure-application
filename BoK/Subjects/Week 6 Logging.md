@@ -2,7 +2,7 @@
 
 De app logt nu elke security-gebeurtenis als één JSON-regel (MIT-31): wanneer, wat, vanaf welk adres en, als dat bekend is, van welk account. Dat gebeurt op de plekken waar de app al beslist. Een aanval laat daardoor een spoor na (MC-28), lokaal en op Azure op dezelfde manier. Wachtwoorden, codes en geheimen komen er nooit in.
 
-De details staan in de entries (MC-28, MIT-31; A-11, C-05 en F-05 in de architectuur) en de tests (T-93, T-94, T-100 tot T-102, T-104). Overgenomen uit BOK-SECENGINEER, dat dit al deed; de audit van 18-10-2026 maakte twee dingen strakker: een naam alleen als het account bestaat, en één regel per blokkade.
+De details staan in de entries (MC-28, MIT-31; A-11, C-05 en F-05 in de architectuur) en de tests (T-93, T-94, T-100 tot T-102, T-104, T-107, T-108). Sinds c4ce459 geeft een blokkade op Azure ook een mail (MIT-37). Overgenomen uit BOK-SECENGINEER, dat dit al deed; de audit van 18-10-2026 maakte twee dingen strakker: een naam alleen als het account bestaat, en één regel per blokkade.
 
 ## De dreiging
 
@@ -33,6 +33,7 @@ De details staan in de entries (MC-28, MIT-31; A-11, C-05 en F-05 in de architec
 - **De plek:** stderr van de container. Lokaal is dat `docker compose logs app`; op Azure zet Container Apps hem in Log Analytics, in de tabel `ContainerAppConsoleLogs_CL` (de regel staat in `Log_s`). De code is op beide hetzelfde. De output `security_log_command` van Terraform geeft de blokkades van de laatste dag.
 - **Een gebruikersnaam** komt er alleen in als het account bestaat (`target()`); anders staat er `"known": false`. Wat iemand in het naamveld typt, ook een wachtwoord, blijft zo buiten de log.
 - **Een blokkade** logt zichzelf één keer, op het moment dat hij begint: `lockout_started` in `throttle.attempt()`, met de soort teller (`scope`) en hoe lang.
+- **Een mail bij een blokkade (MIT-37):** op Azure kijkt een alert elke 5 minuten of er een `lockout_started` in Log Analytics staat, en mailt dan de beheerder. Na een mail is de regel een uur stil. Hij leest met een eigen identiteit, met alleen leesrechten op de workspace.
 
 | Soort | Wanneer | Extra velden | Misuse case |
 |---|---|---|---|
@@ -58,6 +59,7 @@ De details staan in de entries (MC-28, MIT-31; A-11, C-05 en F-05 in de architec
 | Geen valse regels | JSON escapet regeleindes; een naam zonder account wordt niet gelogd | T-94 |
 | Geen wachtwoord via het naamveld | Een naam alleen als het account bestaat | T-100 |
 | Een script vult de log niet | Eén regel per blokkade, niet per geweigerde poging | T-101 |
+| Iemand ziet een blokkade | Binnen een paar minuten een mail, via een alert op `lockout_started` | T-107; de mail zelf T-108 |
 
 ## Persoonsgegevens
 
@@ -74,7 +76,7 @@ Een IP-adres en een gebruikersnaam zijn persoonsgegevens (A-11). Daarom:
 
 ## Wat het niet oplost
 
-- **Niemand kijkt mee.** Er zijn geen meldingen (alerts) bij een blokkade of een reeks mislukte logins.
+- **Alleen een blokkade geeft een mail.** Een reeks mislukte logins verspreid over veel adressen, die nergens een teller op slot zet, geeft geen melding; dat kan een tweede regel worden, zoals BOK-SECENGINEER deed met `threshold_crossed`. De mail komt een paar minuten later, niet direct.
 - **Lokaal kan wie de host beheert de log wissen.** Op Azure niet vanuit de app: de identiteit van de app heeft geen rechten op de workspace.
 - **De rem van 0,1 GB per dag kan het spoor stoppen.** Is hij bereikt, dan verzamelt Log Analytics niets meer tot de volgende dag, en wat er toch nog binnenkomt, wordt betaald. Microsoft noemt de rem een vangnet tegen onverwachte pieken, geen filter. Wie hem met een script haalt, valt daarna niet meer op.
 - **Gewone verzoeken worden niet gelogd.** Gunicorn draait zonder access-log; daarmee blijven ook de healthchecks van elke 5 seconden buiten de log.
@@ -89,6 +91,8 @@ Een IP-adres en een gebruikersnaam zijn persoonsgegevens (A-11). Daarom:
 - **Op de plekken waar de app al beslist.** Geen aparte laag die raadt wat er gebeurde; de route die weigert, logt ook waarom.
 - **Een naam alleen als het account bestaat.** Zo zie je bij een aanval wie het doelwit was. Eerst gold de naamregel, maar een wachtwoord als `Zomervakantie2026` voldoet daar ook aan; dat liet de audit van 18-10-2026 zien.
 - **Een blokkade één keer loggen.** Elke geweigerde poging loggen gaf een script de kans de log te vullen: lokaal roteert de echte aanval er dan uit, op Azure loopt de rekening op. Het begin van de blokkade is het signaal; hoe vaak het daarna nog geprobeerd werd, zie je niet.
+- **Een mail van Azure Monitor, niet van de app.** Echt direct kan alleen als de app zelf mailt; dan heeft de app een mailtoken nodig, en wie de app overneemt, kan de seintjes uitzetten. De regel kijkt elke 5 minuten (€1,32 per maand, volgens de prijs-API van Azure); elke minuut kost €2,64 en scheelt weinig, want een regel staat pas na een paar minuten in Log Analytics.
+- **Het adres niet in de repo.** `setup.py azure` stelt het adres van `az login` voor en geeft het alleen aan Terraform mee; het staat in de state en in de action group, niet in git (A-13).
 - **Geen sessie-ID.** OWASP raadt af de sessie zelf te loggen. De sessiecookie van Flask is bovendien geen ID maar de hele sessie, en die komt er nooit in.
 
 ## Screenshots
@@ -101,6 +105,7 @@ Voor het verslag, lokaal in `screenshots/Week 6 Logging/` (niet in de repo).
 | Wachtwoord in het naamveld | `week6_voor_logging_2_wachtwoord_in_log` | `week6_na_logging_2_alleen_bestaande_namen` | `week6_code_logging_1_events` |
 | Een regel per blokkade | `week6_voor_logging_3_regel_per_poging` | `week6_na_logging_3_een_regel_per_blokkade` | `week6_code_logging_1_events` |
 | De log op Azure | n.v.t. (eerste uitrol) | `week6_na_logging_4_azure` | `week6_code_logging_2_azure` |
+| Een mail bij een blokkade | `week6_voor_logging_5_geen_alert` | `week6_na_logging_5_alert` | `week6_code_logging_3_alert` |
 
 ## Bronnen
 
@@ -112,3 +117,5 @@ Opgehaald en gecontroleerd op 17-10-2026; de pagina's van Microsoft op 18-10-202
 - Microsoft, logs van Container Apps in Log Analytics (tabel `ContainerAppConsoleLogs_CL`, kolom `Log_s`): https://learn.microsoft.com/en-us/azure/container-apps/log-monitoring
 - Microsoft, bewaartermijn (standaard 30 dagen, 31 in de prijs, `immediatePurgeDataOn30Days`): https://learn.microsoft.com/en-us/azure/azure-monitor/logs/data-retention-configure
 - Microsoft, dagelijkse rem (een vangnet, geen filter; daarna niets verzameld tot de volgende dag): https://learn.microsoft.com/en-us/azure/azure-monitor/logs/daily-cap
+- Microsoft, log search alert rules (een eigen identiteit; zonder leest de regel met de rechten van wie hem het laatst wijzigde): https://learn.microsoft.com/en-us/azure/azure-monitor/alerts/alerts-create-log-alert-rule
+- Azure Retail Prices API (Azure Monitor, France Central: een log-alert elke 5 minuten €1,32 per maand, elke minuut €2,64): https://prices.azure.com/api/retail/prices
