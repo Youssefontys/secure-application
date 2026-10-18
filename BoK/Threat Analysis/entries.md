@@ -804,5 +804,5 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 - Houdt tegen: MC-31 stap 3 en 4
 - Wat: `scripts/azuresetup_v2.py` zet de state in een eigen storage account, versleuteld met een eigen RSA-4096-sleutel in een eigen Key Vault (purge protection, 90 dagen). Terraform logt in via Entra ID (`use_azuread_auth`). De beheerder heeft alleen Storage Blob Data Contributor, wat HashiCorp voor dit backend aanraadt; de identiteit van de opslag heeft alleen de rol om de sleutel te gebruiken. Accountsleutels staan uit, dus ook wie de sleutels mag opvragen, komt er zonder rol niet bij. Vorige versies blijven bewaard, en een verwijderde blob of container is 7 dagen terug te halen.
 - Waar: `scripts/azuresetup_v2.py`; `use_azuread_auth = true` in `backend.conf`, die het script schrijft
-- Status: gebouwd; te meten na de volgende bootstrap (T-109)
+- Status: bewezen (T-109; gemeten op 2026-10-18)
 - Sinds: d51fb9f; minimale rollen en geen accountsleutels sinds e4d9e25
