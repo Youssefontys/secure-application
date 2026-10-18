@@ -10,6 +10,12 @@ import subprocess
 import sys
 from pathlib import Path
 
+# Emoji ook als de uitvoer naar een pipe of bestand gaat: Python voor 3.15 schrijft daar op Windows cp1252.
+# Een stream zonder reconfigure (IDLE, een test) kan al Unicode.
+for stream in (sys.stdout, sys.stderr):
+    if hasattr(stream, "reconfigure"):
+        stream.reconfigure(encoding="utf-8")
+
 REPO = Path(__file__).resolve().parent.parent
 ENV = REPO / ".env"
 # Deze geheimen moeten in .env staan; ontbreekt er een of is hij leeg, dan maakt setup hem aan.

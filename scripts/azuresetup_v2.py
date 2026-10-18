@@ -13,6 +13,12 @@ import sys
 import time
 from pathlib import Path
 
+# Emoji ook als de uitvoer naar een pipe of bestand gaat: Python voor 3.15 schrijft daar op Windows cp1252.
+# Een stream zonder reconfigure (IDLE, een test) kan al Unicode.
+for stream in (sys.stdout, sys.stderr):
+    if hasattr(stream, "reconfigure"):
+        stream.reconfigure(encoding="utf-8")
+
 # backend.conf komt in de hoofdmap van de repo, waar setup.py en terraform init hem zoeken.
 BACKEND_CONF = Path(__file__).resolve().parent.parent / "backend.conf"
 # West Europe neemt geen nieuwe tenants aan (RequestDisallowedByAzure); dezelfde regio als terraform/variables.tf.
