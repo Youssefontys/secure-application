@@ -39,9 +39,9 @@ def as_args(*args):
     return [shutil.which(args[0]) or args[0], *args[1:]]
 
 
-# Stoppen met de melding, met witregels eromheen zodat hij opvalt.
-def stop(message):
-    sys.exit(f"\n❌ {message}\n\n🛑 Stoppen.\n")
+# Stoppen met de melding, met witregels eromheen zodat hij opvalt; zelfde vorm als setup.py.
+def stop(message, icon="❌"):
+    sys.exit(f"\n{icon} {message}\n\n🛑 Stoppen.\n")
 
 
 # De fout van az één keer: de regels Code, Message en Target herhalen meestal de eerste regel.
@@ -90,66 +90,70 @@ def ask_user(question, default=None, pattern=None, shown=None):
             continue
         if pattern is None or re.fullmatch(pattern, ans):
             return ans
-        print("❌ Ongeldige invoer: alleen letters, cijfers en - _ . zijn toegestaan.")
+        print("🤔 Dat kan niet: alleen letters, cijfers en - _ . mogen.")
 
 
 # Is gh er en ingelogd? Anders kunnen de GitHub-secrets niet automatisch.
 def gh_ready():
     gh = shutil.which("gh")
     if not gh:
-        print("\n⚠️ GitHub CLI (gh) niet gevonden; installeer via https://cli.github.com om de secrets automatisch te zetten.")
+        print("   💡 GitHub CLI (gh) niet gevonden; met https://cli.github.com zet dit script de secrets zelf.")
         return False
     if subprocess.run([gh, "auth", "status"], capture_output=True).returncode != 0:
-        print("❌ gh is niet ingelogd of het token is verlopen: gh auth login")
+        print("   💡 gh is niet ingelogd, of het token is verlopen: gh auth login")
         return False
-    print("✅ gh is ingelogd.")
+    print("   ✅ gh is ingelogd")
     return True
 
 
 # De uitrol zelf.
-print("\n🛡️  Azure Terraform Bootstrap\n")
+print("\n🛡️  Azure Terraform Bootstrap")
+print("👋 Eenmalig: de opslag waarin Terraform onthoudt wat er op Azure staat. Daarna doet Terraform de rest.")
+print("   Enter kiest steeds wat tussen [ ] staat.\n")
 
 # 1. Ingelogd en de subscription; de ID's pas daarna lezen, ook de tenant van een andere subscription.
 # Zelf az login starten kan hier niet: az() vangt de uitvoer af, en dan wacht de keuze van de subscription onzichtbaar.
 name = az("account", "show", "--query", "name", "-o", "tsv", ignore_error=True)
 if not name:
-    stop("Niet ingelogd bij Azure. Eerst: az login\n"
-         "   Zegt dat \"Authentication failed against tenant <ID>\" met AADSTS50076, dan eist die tenant MFA:\n"
-         "   az login --tenant <ID>\n   Daarna dit script opnieuw.")
-print(f"✅ Context: {name}")
-if ask_user("Andere subscription? (j/n)", "n").lower() == "j":
+    stop("Eerst even inloggen bij Azure: az login\n"
+         "   Zegt dat \"Authentication failed against tenant <ID>\" met AADSTS50076? Dan wil die tenant MFA:\n"
+         "   az login --tenant <ID>\n   Daarna dit script opnieuw.", icon="🔐")
+print(f"☁️  Ingelogd bij Azure, subscription: {name}")
+if ask_user("🔀 Andere subscription? (j/n)", "n").lower() == "j":
     az("account", "set", "--subscription", ask_user("Subscription ID", pattern=GUID))
 sub_id = az("account", "show", "--query", "id", "-o", "tsv")
 tenant_id = az("account", "show", "--query", "tenantId", "-o", "tsv")
 me = az("ad", "signed-in-user", "show", "--query", "id", "-o", "tsv")
 
 # 2. Providers
-print("\n⚙️  Providers registreren...")
+print("\n🧩 Providers registreren, eenmalig per subscription...")
 for namespace in ("Microsoft.Storage", "Microsoft.KeyVault", "Microsoft.ManagedIdentity"):
     az_retry("provider", "register", "--namespace", namespace, "--wait", "-o", "none", tries=2)
     print(f"   ✅ {namespace}")
 
 # 3. Invoer; met vier cijfers erachter blijft de naam van de opslag binnen de 3 tot 24 tekens van Azure.
-print()
+print("\n📝 Een paar keuzes; de standaard is prima:")
 rg = ask_user("Resource Group naam", DEFAULT_RG_NAME, pattern=r"[A-Za-z0-9_.-]{0,89}[A-Za-z0-9_-]")
 # Doorstrepen met een combinerend streepje per letter: werkt in elke terminal die UTF-8 toont, zonder kleurcodes.
-closed = "".join(char + "̶" for char in CLOSED_LOCATION)
+closed = "".join(char + "\u0336" for char in CLOSED_LOCATION)
 location = ask_user("Regio", DEFAULT_LOCATION, pattern=r"[a-z0-9]+", shown=f"{DEFAULT_LOCATION} | {closed} neemt geen nieuwe klanten aan")
 container = ask_user("Blob container naam", "tfstate", pattern=r"[a-z0-9](?!.*--)[a-z0-9-]{1,61}[a-z0-9]")
 prefix = ask_user("Storage prefix (3-10 chars)", "tfstate", pattern=r"[a-z0-9]{3,10}")
 sa_name = f"{prefix}{random.randint(1000, 9999)}"
 suffix = random.randint(1000, 9999)
 mi_name, kv_name, key_name = f"mi-{prefix}-{suffix}", f"kv-{prefix}-{suffix}", "tfstate-cmk-key"
-if ask_user("\nStarten? (j/n)", "j").lower() != "j":
+if ask_user("\n🚦 Starten? (j/n)", "j").lower() != "j":
+    print("👋 Niets aangemaakt. Tot later!")
     sys.exit(0)
 
-print(f"\n🚀 Start setup in {location}...")
+print(f"\n🚀 Daar gaan we, in {location}. Dit duurt een paar minuten.\n")
 az("group", "create", "--name", rg, "--location", location, "-o", "none")
+print(f"📁 Resource group: {rg}")
 
 # A. De identiteit van de opslag, en wachten tot Azure hem kent.
-print(f"→ UAMI '{mi_name}' aanmaken...")
+print(f"🪪 Identiteit voor de opslag: {mi_name}")
 az_retry("identity", "create", "--name", mi_name, "--resource-group", rg, "--location", location, "-o", "none")
-print("   ⏳ ID propagation...")
+print("   ⏳ Even wachten tot Azure hem overal kent...")
 for _ in range(12):
     mi_principal_id = az("identity", "show", "--name", mi_name, "--resource-group", rg,
                          "--query", "principalId", "-o", "tsv", ignore_error=True)
@@ -159,7 +163,7 @@ for _ in range(12):
 uami_id = f"/subscriptions/{sub_id}/resourceGroups/{rg}/providers/Microsoft.ManagedIdentity/userAssignedIdentities/{mi_name}"
 
 # B. Key Vault met gescheiden rollen: jij beheert de sleutel, de identiteit mag hem alleen gebruiken.
-print(f"→ Key Vault '{kv_name}'...")
+print(f"🔐 Key Vault: {kv_name}")
 az("keyvault", "create", "--name", kv_name, "--resource-group", rg, "--location", location,
    "--enable-rbac-authorization", "true", "--enable-purge-protection", "true", "--retention-days", "90", "-o", "none")
 kv_scope = f"/subscriptions/{sub_id}/resourceGroups/{rg}/providers/Microsoft.KeyVault/vaults/{kv_name}"
@@ -167,12 +171,12 @@ assign("Key Vault Crypto Officer", me, kv_scope)
 assign("Key Vault Crypto Service Encryption User", mi_principal_id, kv_scope)
 
 # C. De eigen sleutel (RSA 4096).
-print(f"→ CMK '{key_name}' (RSA 4096)...")
+print(f"🗝️  Eigen sleutel (RSA 4096): {key_name}")
 time.sleep(15)
 az_retry("keyvault", "key", "create", "--vault-name", kv_name, "--name", key_name, "--kty", "RSA", "--size", "4096", "-o", "none")
 
 # D. De opslag, versleuteld met die sleutel, alleen over HTTPS en niet publiek.
-print(f"→ Storage '{sa_name}' met CMK...")
+print(f"📦 Opslag: {sa_name}, versleuteld met die sleutel, alleen over HTTPS")
 kv_uri = az("keyvault", "show", "--name", kv_name, "--query", "properties.vaultUri", "-o", "tsv")
 az_retry("storage", "account", "create", "--name", sa_name, "--resource-group", rg, "--location", location,
          "--sku", "Standard_LRS", "--kind", "StorageV2", "--allow-blob-public-access", "false",
@@ -181,39 +185,41 @@ az_retry("storage", "account", "create", "--name", sa_name, "--resource-group", 
          "--encryption-key-source", "Microsoft.Keyvault", "--encryption-key-vault", kv_uri,
          "--encryption-key-name", key_name, "--encryption-services", "blob",
          "--key-vault-user-identity-id", uami_id, "-o", "none")
-print("→ Storage settings...")
+print("♻️  Vorige versies bewaren, en 7 dagen terughalen na verwijderen")
 az_retry("storage", "account", "blob-service-properties", "update", "--account-name", sa_name, "--resource-group", rg,
          "--enable-versioning", "true", "--enable-delete-retention", "true", "--delete-retention-days", "7",
          "--enable-container-delete-retention", "true", "--container-delete-retention-days", "7", "-o", "none")
 sa_scope = f"/subscriptions/{sub_id}/resourceGroups/{rg}/providers/Microsoft.Storage/storageAccounts/{sa_name}"
 assign("Storage Blob Data Owner", me, sa_scope)
 assign("Storage Blob Data Contributor", mi_principal_id, sa_scope)
-print(f"⏳ {PROPAGATION_WAIT}s wachten op CMK & RBAC propagatie...")
+print(f"⏳ {PROPAGATION_WAIT // 60} minuten wachten tot Azure de sleutel en de rechten overal kent... ☕")
 time.sleep(PROPAGATION_WAIT)
 az_retry("storage", "container", "create", "--name", container, "--account-name", sa_name, "--auth-mode", "login", "-o", "none")
+print(f"🗃️  Container: {container}")
 
 # E. GitHub: geen geheimen, alleen ID's en namen voor de backend. AZURE_CLIENT_ID komt bij de CI-stap, van een eigen
 # identiteit met een federated credential (OIDC); niet die van de opslag, want die mag de sleutel van de state gebruiken.
-print("\n--- GitHub Integratie ---")
+print("\n🐙 GitHub, voor de pipeline later; nu nog niet nodig")
 values = {"AZURE_SUBSCRIPTION_ID": sub_id, "AZURE_TENANT_ID": tenant_id,
           "BACKEND_RG_NAME": rg, "BACKEND_STORAGE_ACCOUNT": sa_name, "BACKEND_CONTAINER_NAME": container}
 if gh_ready() and ask_user("GitHub Secrets automatisch instellen? (j/n)", "j").lower() == "j":
     repo = ask_user("Volledige GitHub repo (bijv. user/repo)", pattern=r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+")
-    print(f"Secrets aan het zetten in {repo}...")
+    print(f"   🔏 Secrets zetten in {repo}...")
     for key, value in values.items():
         # De waarde via stdin, niet als argument: dan staat hij niet in de proceslijst.
         result = subprocess.run(as_args("gh", "secret", "set", key, "--repo", repo), input=value, capture_output=True, text=True)
         print(f"   ✅ {key}" if result.returncode == 0 else f"   ❌ {key} (mislukt: {result.stderr.strip()})")
 else:
-    print("\nHandmatig kopiëren:")
+    print("   📋 Zelf invullen zodra er een pipeline is (Settings > Secrets and variables > Actions):")
     for key, value in values.items():
-        print(f"   {key:23} = {value}")
+        print(f"      {key:23} = {value}")
 
 # F. Het backend-bestand voor terraform init; één omgeving, dus één state.
-print("\n📝 backend.conf genereren...")
 with open(BACKEND_CONF, "w", encoding="utf-8", newline="\n") as f:
     f.write(f'resource_group_name  = "{rg}"\nstorage_account_name = "{sa_name}"\ncontainer_name       = "{container}"\n'
             f'key                  = "terraform.tfstate"\nuse_azuread_auth     = true\n\n'
             f'subscription_id      = "{sub_id}"\ntenant_id            = "{tenant_id}"\n')
 
-print(f"\n🎉 GEREED! Setup voltooid. Terraform gebruikt nu {BACKEND_CONF}.")
+print(f"\n📝 backend.conf geschreven: {BACKEND_CONF}")
+print("\n🎉 Klaar! De deur voor Terraform staat open.")
+print("👉 Volgende stap: python scripts/setup.py azure, voor de rest van de routekaart.\n")
