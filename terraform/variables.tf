@@ -1,5 +1,6 @@
-# West Europe neemt geen nieuwe tenants aan, en in Germany West Central mag deze subscription geen PostgreSQL maken.
-# France Central is van wat wel mag het dichtst bij Nederland; database.tf controleert de regio al bij het plan.
+# West Europe neemt geen nieuwe tenants aan, in Germany West Central mag deze subscription geen PostgreSQL maken, en
+# Belgium Central heeft geen log search alert. France Central is het goedkoopst en ligt in de EU (Week 8);
+# database.tf controleert de regio al bij het plan.
 variable "location" {
   type    = string
   default = "francecentral"
