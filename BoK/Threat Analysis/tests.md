@@ -3,6 +3,9 @@
 Mogelijke tests per use case en misuse case. Nog niet gebouwd; dit is de
 lijst om ze uit te bouwen.
 
+Sinds 3204eb0 is de interface Engels. Meldingen in eerdere metingen staan
+in het Nederlands, zoals de app ze toen gaf.
+
 Twee soorten:
 
 - **Functioneel (UC):** de normale werking. Moet altijd slagen, ook na elke

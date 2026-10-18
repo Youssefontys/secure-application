@@ -194,7 +194,7 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 - Gerelateerde use case: UC-01
 - Stappen:
   - AND 1. Veel namen proberen te registreren
-  - AND 2. Het antwoord "Die gebruikersnaam is al in gebruik" onderscheidt bestaande namen
+  - AND 2. Het antwoord "That username is already taken" onderscheidt bestaande namen
 - Mitigaties: geen voor registreren (geen limiet). Bij inloggen rekent de app ook voor een onbekende naam een Argon2id-hash (MIT-19), zodat de responstijd geen tweede manier wordt (T-70)
 - Restrisico: onbeperkt opsporen via registreren; de melding zelf is bij zelfgekozen namen niet te vermijden
 - Status: open
@@ -570,7 +570,7 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 
 ### MIT-09 Sessieversie: oude sessies vervallen
 - Houdt tegen: MC-04 stap 4; maakt MC-12 kleiner
-- Wat: elke gebruiker heeft een `session_version` in de database, en de sessiecookie krijgt die mee. `load_user` accepteert de sessie alleen als beide gelijk zijn; anders wordt de sessie gewist met de melding "Je sessie is niet meer geldig". Uitloggen, een nieuw wachtwoord en tweestapsverificatie aanzetten of opnieuw instellen verhogen de versie. Na een nieuw wachtwoord of een 2FA-wijziging krijgt de huidige sessie de nieuwe versie en blijft ingelogd; alle andere vervallen. Ook een halve login vervalt als de versie verandert voordat de code is ingevuld. Uitloggen logt alle apparaten van het account uit: zonder sessies op de server bij te houden kan het niet preciezer
+- Wat: elke gebruiker heeft een `session_version` in de database, en de sessiecookie krijgt die mee. `load_user` accepteert de sessie alleen als beide gelijk zijn; anders wordt de sessie gewist met de melding "Your session is no longer valid". Uitloggen, een nieuw wachtwoord en tweestapsverificatie aanzetten of opnieuw instellen verhogen de versie. Na een nieuw wachtwoord of een 2FA-wijziging krijgt de huidige sessie de nieuwe versie en blijft ingelogd; alle andere vervallen. Ook een halve login vervalt als de versie verandert voordat de code is ingevuld. Uitloggen logt alle apparaten van het account uit: zonder sessies op de server bij te houden kan het niet preciezer
 - Waar: `load_user()`, `start_session()`, `keep_this_session()`, `login_code()` en `logout()` in `app/auth.py`; `change_password()`, `setup_2fa()` en `reset_2fa()` in `app/account.py`
 - Status: gebouwd
 - Sinds: 587955a; in dezelfde UPDATE als het nieuwe wachtwoord of de 2FA-wijziging sinds 96b892d, zodat het nooit het een zonder het ander is
@@ -633,7 +633,7 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 
 ### MIT-18 Versleuteling van notities
 - Houdt tegen: MC-23 stap 2
-- Wat: titel en inhoud gaan met dezelfde helper en sleutel als het TOTP-geheim (MIT-17) de database in: AES-256-GCM, een nieuwe nonce per waarde, de sleutelversie vooraan. De soort (`note_title`, `note_body`) en de `user_id` van de eigenaar gaan mee als associated data, dus een titel als inhoud, of een notitie in de rij van een ander account, ontsleutelt niet (T-67). Wat niet ontsleutelt, staat op de pagina als "(niet te lezen)". De lengtegrens (MIT-04) geldt voor de tekst zelf, vóór het versleutelen
+- Wat: titel en inhoud gaan met dezelfde helper en sleutel als het TOTP-geheim (MIT-17) de database in: AES-256-GCM, een nieuwe nonce per waarde, de sleutelversie vooraan. De soort (`note_title`, `note_body`) en de `user_id` van de eigenaar gaan mee als associated data, dus een titel als inhoud, of een notitie in de rij van een ander account, ontsleutelt niet (T-67). Wat niet ontsleutelt, staat op de pagina als "(unreadable)". De lengtegrens (MIT-04) geldt voor de tekst zelf, vóór het versleutelen
 - Waar: `sealed()` en `readable()` in `app/notes.py`; `app/encryption.py`
 - Status: gebouwd
 - Sinds: b2b60e1
@@ -682,7 +682,7 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 
 ### MIT-25 Veilig falen
 - Houdt tegen: MC-26 stap 1 en 2
-- Wat: een HTTP-fout (404, 405, 413) krijgt de eigen foutpagina met een korte melding; status en headers, zoals `Allow` bij 405, blijven. Een onverwachte fout geeft 500 met "Er ging iets mis", en de fout zelf gaat met traceback naar de log (stderr, lokaal en op Azure hetzelfde). Het pad gaat als repr de log in, zodat een regeleinde in de URL `\n` wordt en geen valse regel maakt (log injection, OWASP Logging Cheat Sheet)
+- Wat: een HTTP-fout (404, 405, 413) krijgt de eigen foutpagina met een korte melding; status en headers, zoals `Allow` bij 405, blijven. Een onverwachte fout geeft 500 met "Something went wrong", en de fout zelf gaat met traceback naar de log (stderr, lokaal en op Azure hetzelfde). Het pad gaat als repr de log in, zodat een regeleinde in de URL `\n` wordt en geen valse regel maakt (log injection, OWASP Logging Cheat Sheet)
 - Waar: `http_error()` en `unexpected_error()` in `app/app.py`; `app/web/templates/error.html`
 - Status: gebouwd
 - Sinds: b362061
