@@ -37,6 +37,8 @@ python scripts/setup.py
 
 It asks where to deploy (local or Azure) and whether to turn on the hackstand for the hacking week, with a class behind one school address. Locally it creates missing secrets in `.env` and starts the stack. On Azure it sets up the Terraform state storage once, checks that GitHub Actions published the image of your last commit, and runs `terraform init` and `apply`; Terraform shows the plan and waits for `yes`, and starts the schema job itself. To update, push to `main`, wait for the Image action, and run it again. With `python scripts/setup.py lokaal` and no terminal (as in CI) it asks nothing and keeps what is in `.env`. On Linux or macOS the command is often `python3`; the script works the same on Windows and Linux.
 
+In your own copy (a fork, or a copy under your own account), nothing needs to be set in GitHub: push to `main` or start the Image workflow in the Actions tab, and GitHub builds the image under your own name with the token of the run. Then `az login` and `python scripts/setup.py azure` set up your own state storage and deploy with your own subscription. In a private copy the image package is private too; Container Apps then cannot pull it, and `setup.py` stops and says so.
+
 Or by hand: copy `.env.example` to `.env`, fill in the four values, and run `docker compose up --build`.
 
 Had the stack running before the app got its own database role? The role is only created in an empty volume, so run `docker compose down -v` first. That deletes the local data.
