@@ -24,7 +24,22 @@ resource "azurerm_postgresql_flexible_server" "main" {
   # Azure kiest zelf een zone; zonder dit wil Terraform de server bij een volgende apply opnieuw maken.
   lifecycle {
     ignore_changes = [zone]
+
+    # Al bij het plan stoppen als deze subscription hier geen PostgreSQL mag maken, niet pas na een kwartier.
+    precondition {
+      condition     = data.azapi_resource_action.postgres_capabilities.output.value[0].restricted != "Enabled"
+      error_message = "Deze subscription mag in ${var.location} geen PostgreSQL maken (restricted). Kies een andere regio met -var location=..., bijvoorbeeld northeurope."
+    }
   }
+}
+
+# Per subscription en regio: mag hier een PostgreSQL-server komen? Dat staat alleen in deze API, niet in list-skus.
+data "azapi_resource_action" "postgres_capabilities" {
+  type                   = "Microsoft.DBforPostgreSQL/locations@2024-08-01"
+  resource_id            = "/subscriptions/${data.azurerm_client_config.current.subscription_id}/providers/Microsoft.DBforPostgreSQL/locations/${var.location}"
+  action                 = "capabilities"
+  method                 = "GET"
+  response_export_values = ["value"]
 }
 
 # Alleen TLS 1.3, de beste instelling volgens Microsoft; require_secure_transport staat standaard al aan.
