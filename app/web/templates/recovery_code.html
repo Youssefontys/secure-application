@@ -27,6 +27,7 @@
       {% if not first %}<li>Je vorige herstelcode werkt niet meer.</li>{% endif %}
     </ul>
     <label class="check" data-js hidden><input type="checkbox" id="recovery-saved"> Ik heb hem bewaard, apart van mijn telefoon</label>
-    <a class="button" id="recovery-done" href="{{ url_for('auth.login') if reset else url_for('account.index') }}">Verder</a>
+    {# Na het aanzetten naar de notities, na een nieuwe code terug naar het profiel, na een nieuw wachtwoord inloggen. #}
+    <a class="button" id="recovery-done" href="{{ url_for('auth.login') if reset else url_for('notes.index') if first else url_for('account.index') }}">Verder</a>
   </div>
 {% endblock %}
