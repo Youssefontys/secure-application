@@ -92,6 +92,7 @@ Een IP-adres en een gebruikersnaam zijn persoonsgegevens (A-11). Daarom:
 - **Een naam alleen als het account bestaat.** Zo zie je bij een aanval wie het doelwit was. Eerst gold de naamregel, maar een wachtwoord als `Zomervakantie2026` voldoet daar ook aan; dat liet de audit van 18-10-2026 zien.
 - **Een blokkade één keer loggen.** Elke geweigerde poging loggen gaf een script de kans de log te vullen: lokaal roteert de echte aanval er dan uit, op Azure loopt de rekening op. Het begin van de blokkade is het signaal; hoe vaak het daarna nog geprobeerd werd, zie je niet.
 - **Een mail van Azure Monitor, niet van de app.** Echt direct kan alleen als de app zelf mailt; dan heeft de app een mailtoken nodig, en wie de app overneemt, kan de seintjes uitzetten. De regel kijkt elke 5 minuten (€1,32 per maand, volgens de prijs-API van Azure); elke minuut kost €2,64 en scheelt weinig, want een regel staat pas na een paar minuten in Log Analytics.
+- **Wat de mail zegt.** Alleen gegevens over de alert: naam, ernst, voorwaarde, resource, tijd en ID's. Geen IP-adres en geen gebruikersnaam, dus er gaat geen persoonsgegeven uit de log naar de mailbox (T-108).
 - **Het adres niet in de repo.** `deployment.py azure` stelt het adres van `az login` voor en geeft het alleen aan Terraform mee; het staat in de state en in de action group, niet in git (A-13).
 - **Geen sessie-ID.** OWASP raadt af de sessie zelf te loggen. De sessiecookie van Flask is bovendien geen ID maar de hele sessie, en die komt er nooit in.
 
