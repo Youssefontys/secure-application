@@ -224,7 +224,7 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
   - OR  2. Een kwaadaardige nieuwe versie van een pakket komt bij de volgende build vanzelf mee
   - OR  3. Een kwetsbaarheid in de base images (`python:3.15-slim`, `postgres:18`), bijvoorbeeld in de Debian-systeembibliotheken
   - OR  4. Een image-tag wijst bij een volgende build naar een andere image dan eerder (tags zijn niet vast)
-- Mitigaties: MIT-03 (stap 2, en stap 4 sinds 7bfd435). MIT-33 (stap 1 en 3: Dependabot stelt elke week nieuwe versies voor). MIT-35 (stap 1 en 3: de pipeline publiceert geen image met een bekend lek van HIGH of CRITICAL waarvoor een oplossing is; T-105)
+- Mitigaties: MIT-03 (stap 2, en stap 4 sinds 7bfd435). MIT-33 (stap 1 en 3: Dependabot stelt elke week nieuwe versies voor). MIT-35 (stap 1 en 3: de pipeline publiceert geen image met een bekend lek van HIGH of CRITICAL waarvoor een oplossing is; T-105). MIT-36 (de SBoM: welke pakketten en versies in elke image zitten; T-106)
 - Restrisico: een lek zonder oplossing houdt de image niet tegen, en een lek dat pas na de build bekend wordt, ziet de scan pas bij de volgende push; een draaiende image wordt niet opnieuw gescand. Dependabot stelt alleen voor; iemand moet de pull request bekijken en samenvoegen. Of hij ook de digests van de images bijwerkt, moet de eerste pull request laten zien (T-97). Minder pakketten helpt wel: sinds 29d201d doet `cryptography` ook Argon2id, en zijn `argon2-cffi` en `argon2-cffi-bindings` weg
 - Status: open
 - Sinds: baseline
@@ -473,8 +473,8 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
   - OR  3. Rijen in de database wijzigen of verplaatsen (MC-08, MC-23): de notitie ontsleutelt niet meer, maar niemand ziet waarom
   - OR  4. Massaal accounts of notities aanmaken (MC-10)
   - OR  5. Met andermans gegevens het wachtwoord, de tweede factor of het account wijzigen (MC-12, MC-13, MC-20, MC-21)
-- Mitigaties: MIT-31 (stap 1 tot 5: elke gebeurtenis een JSON-regel met tijd, soort, adres en account; T-93)
-- Restrisico: niemand kijkt live mee en er zijn geen meldingen (alerts). Lokaal bewaart Docker de log zolang de container bestaat, en wie de host beheert, kan hem wissen. Op Azure staat hij 30 dagen in Log Analytics, waar de app niet bij kan (sinds d547182, uitgerold op 2026-10-18, T-102). Komt er op een dag meer dan 0,1 GB binnen, dan stopt het verzamelen tot de volgende dag: wie dat met een script haalt, valt daarna niet meer op. Gewone verzoeken worden niet gelogd, en een geweigerde poging tijdens een blokkade ook niet apart: je ziet dat er een blokkade was, niet hoe vaak het daarna nog geprobeerd werd. De log bevat persoonsgegevens (A-11): op Azure is de bewaartermijn 30 dagen; het doel hoort bij de AVG-stap
+- Mitigaties: MIT-31 (stap 1 tot 5: elke gebeurtenis een JSON-regel met tijd, soort, adres en account; T-93). MIT-37 (stap 1: een blokkade geeft binnen een paar minuten een mail; T-107)
+- Restrisico: alleen een blokkade geeft een mail (MIT-37), en een paar minuten later; andere gebeurtenissen niet, en ook geen verspreide aanval die nergens een teller op slot zet. Lokaal bewaart Docker de log zolang de container bestaat, en wie de host beheert, kan hem wissen. Op Azure staat hij 30 dagen in Log Analytics, waar de app niet bij kan (sinds d547182, uitgerold op 2026-10-18, T-102). Komt er op een dag meer dan 0,1 GB binnen, dan stopt het verzamelen tot de volgende dag: wie dat met een script haalt, valt daarna niet meer op. Gewone verzoeken worden niet gelogd, en een geweigerde poging tijdens een blokkade ook niet apart: je ziet dat er een blokkade was, niet hoe vaak het daarna nog geprobeerd werd. De log bevat persoonsgegevens (A-11): op Azure is de bewaartermijn 30 dagen; het doel hoort bij de AVG-stap
 - Status: gebouwd
 - Sinds: baseline; gelogd sinds 6992001
 
@@ -752,7 +752,21 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 
 ### MIT-35 Een scan op bekende lekken vóór het publiceren
 - Houdt tegen: MC-11 stap 1 en 3
-- Wat: de workflow scant de gebouwde image met Trivy 0.75.0, vast op versie en digest, vóór het pushen. Een lek van HIGH of CRITICAL waarvoor al een oplossing is (`--ignore-unfixed`), stopt de job; dan staat er geen nieuwe image op ghcr.io, en kan `setup.py azure` hem ook niet uitrollen. De eerste scan vond vier keer HIGH, allemaal in de eigen kopieën van urllib3, msgpack en setuptools die pip meeneemt; sinds b31d334 gaat pip na het installeren uit de image, want de app en de schema-job gebruiken hem niet (T-105)
+- Wat: de workflow scant de SBoM van de gebouwde image (MIT-36) met Trivy 0.75.0, vast op versie en digest, vóór het pushen. Een lek van HIGH of CRITICAL waarvoor al een oplossing is (`--ignore-unfixed`), stopt de job; dan staat er geen nieuwe image op ghcr.io, en kan `setup.py azure` hem ook niet uitrollen. De eerste scan vond vier keer HIGH, allemaal in de eigen kopieën van urllib3, msgpack en setuptools die pip meeneemt; sinds b31d334 gaat pip na het installeren uit de image, want de app en de schema-job gebruiken hem niet (T-105)
 - Waar: de stap Scannen op bekende lekken in `.github/workflows/image.yml`; `RUN` in `app/Dockerfile`
 - Status: gebouwd
-- Sinds: 29e42cc; pip uit de image sinds b31d334
+- Sinds: 29e42cc; pip uit de image sinds b31d334; op de SBoM sinds 1d6f21a
+
+### MIT-36 Een SBoM van elke image
+- Houdt tegen: MC-11 stap 1 en 3, deels: zonder lijst weet je niet of een nieuw lek in jouw image zit
+- Wat: de workflow maakt bij elke build met Trivy 0.75.0 een SBoM in CycloneDX (spec 1.7): alle onderdelen van de image, het besturingssysteem, de Debian-pakketten en de Python-pakketten. Alleen de lijst: volgens Trivy bevat `--format cyclonedx` standaard geen lekken, en VEX komt er niet in. Het hoofdonderdeel heet naar de image en de commit. De SBoM blijft 90 dagen bij de run (een artifact), ook als de scan daarna een lek vindt, en de scan van MIT-35 leest juist die SBoM. Trivy leest de image als tar-bestand, zonder de Docker-socket, dus kan het de image die gepusht wordt niet veranderen (T-106)
+- Waar: de stappen SBoM maken en `actions/upload-artifact` in `.github/workflows/image.yml`
+- Status: gebouwd
+- Sinds: 1d6f21a
+
+### MIT-37 Een mail bij een blokkade
+- Houdt tegen: MC-28 stap 1, en de andere stappen voor zover ze een teller op slot zetten
+- Wat: een log search alert op Azure kijkt elke 5 minuten of er in Log Analytics een `lockout_started` staat, en mailt dan de beheerder via een action group. Na een mail blijft de regel een uur stil, zodat één aanval niet elke 5 minuten een mail geeft. De regel leest met een eigen identiteit, die alleen Log Analytics Reader op de workspace is; zonder eigen identiteit leest een regel volgens Microsoft met de rechten van wie hem het laatst wijzigde. Het adres stelt `setup.py azure` voor uit `az login` en staat niet in de repo. Vaker kijken kost meer (elke minuut €2,64 per maand in plaats van €1,32) en scheelt weinig, want een regel staat pas na een paar minuten in Log Analytics (T-107)
+- Waar: `terraform/alerts.tf`; de vraag naar het adres in `azure()` van `scripts/setup.py`
+- Status: gebouwd; de mail zelf nog niet gemeten (T-108)
+- Sinds: c4ce459

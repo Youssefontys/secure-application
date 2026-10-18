@@ -95,6 +95,6 @@ Dienst onbruikbaar
 ```
 Onopgemerkt aanvallen (MC-28)                                              [MIT-31]
   AND een van de andere aanvallen proberen (raden, CSRF, rijen wijzigen, massaal aanmaken)
-  AND OR  niemand kijkt live mee                                           [open]
+  AND OR  niemand kijkt live mee                                           [MIT-37, bij een blokkade]
       OR  de log wissen, met beheer over de host of de container            [lokaal open; op Azure MIT-31]
 ```
