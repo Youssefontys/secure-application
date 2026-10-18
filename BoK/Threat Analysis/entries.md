@@ -197,7 +197,7 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
     - OR  2a. Via de verbinding van de app tabellen weggooien, rollen aanmaken, of als superuser via `COPY` bestanden lezen en commando's uitvoeren op de databaseserver
     - OR  2b. Het wachtwoord van de eigenaar uit de omgeving van de app halen en daarmee inloggen
 - Mitigaties: MIT-27 (stap 2a: de app logt in als `notities_app`, die alleen mag lezen en schrijven in de eigen tabellen; stap 2b: het wachtwoord van de eigenaar staat niet meer in de app, en op Azure kan de identiteit van de app de vault met dat wachtwoord niet lezen)
-- Restrisico: wat de app mag, mag de aanvaller ook: alle rijen lezen, wijzigen en wissen. Notities en TOTP-geheimen staan versleuteld en wachtwoorden als hash (MIT-17 tot MIT-19), maar hij kan bijvoorbeeld tweestapsverificatie uitzetten of alle notities wissen. Er zijn geen rechten per rij (row-level security); de app filtert zelf op `user_id` (MIT-15). Lokaal staan beide wachtwoorden in `.env` op dezelfde machine. De scheiding op Azure is nog niet gemeten (T-86)
+- Restrisico: wat de app mag, mag de aanvaller ook: alle rijen lezen, wijzigen en wissen. Notities en TOTP-geheimen staan versleuteld en wachtwoorden als hash (MIT-17 tot MIT-19), maar hij kan bijvoorbeeld tweestapsverificatie uitzetten of alle notities wissen. Er zijn geen rechten per rij (row-level security); de app filtert zelf op `user_id` (MIT-15). Lokaal staan beide wachtwoorden in `.env` op dezelfde machine. Op Azure is de scheiding gemeten aan de rollen (T-86, 2026-10-18); een leespoging vanuit de container zelf is niet gedaan
 - Status: gebouwd
 - Sinds: baseline; dicht sinds 1d1b4eb
 
@@ -530,224 +530,224 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 - Houdt tegen: MC-07 stap 2
 - Wat: Flask escapet in `.html`-templates alle `{{ ... }}`-waarden standaard. Dit is een standaardinstelling van het framework en geen eigen werk; wij vermijden alleen `|safe` (opmerking in `notes.html`).
 - Waar: `app/web/templates/*.html`
-- Status: bewezen (T-18)
+- Status: bewezen (T-18; gemeten op 2026-10-15)
 - Sinds: baseline
 
 ### MIT-02 Parameterized queries
 - Houdt tegen: MC-06 stap 1 en 2
 - Wat: alle SQL gaat via één helper, `query(sql, (waarden,))`; de waarden worden los van de SQL-tekst naar de database gestuurd en nooit als SQL gelezen.
 - Waar: `query()` in `app/db.py`
-- Status: bewezen (T-17)
+- Status: bewezen (T-17; gemeten op 2026-10-15)
 - Sinds: baseline
 
 ### MIT-03 Vastgezette versies van de Python-pakketten en de images
 - Houdt tegen: MC-11 stap 2
 - Wat: elk pakket staat op een exacte versie in `requirements.txt`, ook de pakketten die Flask en psycopg meetrekken. Een nieuwe versie komt dus alleen binnen als iemand hem bewust kiest. Er staan geen hashes bij, dus pip controleert niet of het bestand hetzelfde is als toen de versie werd gekozen. Sinds 7bfd435 staan ook de base-images vast, op versie en digest (`python:3.15.0-slim-trixie@sha256:…`, `postgres:18.6-trixie@sha256:…`): een tag kan bij een volgende build niet meer naar een andere image wijzen (stap 4). Op 17-10-2026 bleek waarom: `python:3.15-slim` kreeg die dag een nieuwe digest
 - Waar: `app/requirements.txt`, `FROM` in `app/Dockerfile`, `image` van `db` in `compose.yaml`
-- Status: bewezen (T-22, T-87)
+- Status: bewezen (T-22, T-87; gemeten van 2026-10-15 tot 2026-10-17)
 - Sinds: db6698e
 
 ### MIT-04 Lengtegrens op titel en notitie
 - Houdt tegen: MC-10 stap 1, voor zover het om het opslaan van te lange notities gaat
 - Wat: de server weigert een titel van meer dan 15 en een notitie van meer dan 250 tekens met een 400, bij aanmaken en bij aanpassen. `maxlength` in de formulieren is alleen gemak in de browser. Het verzoek wordt wel eerst helemaal ingelezen; tegen een groot verzoek zelf helpt dit niet (daarvoor is `MAX_CONTENT_LENGTH` nodig).
 - Waar: `read_note_form()` in `app/notes.py`, met `TITLE_MAX` en `BODY_MAX`
-- Status: bewezen (T-27)
+- Status: bewezen (T-27; gemeten op 2026-10-15)
 - Sinds: 32c2661
 
 ### MIT-05 Tweede factor bij inloggen (TOTP)
 - Houdt tegen: MC-03 stap 1 en 2, en een gelekt wachtwoord uit MC-01; sinds MIT-12 voor elk account. Maakt MC-12 kleiner
 - Wat: na het juiste wachtwoord krijgt de sessie alleen een `pending_user_id`. Daarmee opent geen enkele route, want `require_login` en `load_user` kijken naar `user_id`. Pas na een geldige code op `/login/2fa` wordt de sessie gewist en `user_id` gezet. De halve login vervalt na 5 minuten. TOTP volgens RFC 6238: een geheim van 160 bits (RFC 4226 R6), 6 cijfers, 30 seconden, één stap klokverschil (RFC 6238, 5.2), vergeleken in constante tijd. Alleen de cijfers 0-9 tellen; een code met andere cijfers, zoals Arabisch-Indische, is gewoon fout (T-59). De berekening is zonder dependency geschreven en met de hand tegen alle testvectoren van RFC 6238 en RFC 4226 gecontroleerd (T-35). Aanzetten gebeurt pas na een eerste geldige code. Opnieuw instellen vraagt ook een code (AU-06), zodat wie alleen de sessie heeft de tweede factor niet kan vervangen
 - Waar: `login()`, `login_code()` en `check_code()` in `app/auth.py`; `app/totp.py`
-- Status: bewezen (T-32, T-35)
+- Status: bewezen (T-32, T-35; gemeten op 2026-10-15)
 - Sinds: 96626e2; alleen 0-9 sinds ce12d31
 
 ### MIT-06 Blokkade na 5 foute codes
 - Houdt tegen: MC-15 stap 2
 - Wat: foute codes worden per account in de database geteld (`auth_throttle`, via `throttle.py`), niet in de sessie, want een sessie kan de aanvaller gewoon opnieuw beginnen. Elke poging telt vóór de controle, in één SQL-statement, zodat ook verzoeken die tegelijk binnenkomen samen niet meer dan 5 pogingen krijgen; blokkade en verdubbelen gaan dan maar één keer omhoog (T-58). Na 5 fouten in 15 minuten wordt de volgende poging geweigerd en gaat de codestap op slot, in hetzelfde statement; dan wordt ook de juiste code geweigerd. De eerste blokkade duurt 15 minuten, elke volgende twee keer zo lang, tot 24 uur. Een geldige code wist de teller. De controle op de blokkade zit ook in de UPDATE die de code accepteert. Tijdens de blokkade antwoordt de app met 429 en `Retry-After`, de resterende tijd in seconden
 - Waar: `check_code()` in `app/auth.py`, `app/throttle.py`
-- Status: bewezen (T-30, T-58)
+- Status: bewezen (T-30, T-58; gemeten van 2026-10-15 tot 2026-10-16)
 - Sinds: 18e1424; verdubbelend sinds 484eca3; 429 sinds 5a82eb5; tellen vóór de controle sinds 49baae5; blokkade in hetzelfde statement sinds 467623d
 
 ### MIT-07 Elke code werkt één keer
 - Houdt tegen: MC-16 stap 2
 - Wat: de tijdstap van de laatst geaccepteerde code staat in `totp_last_step`. Een code van dezelfde of een eerdere stap wordt geweigerd, zoals RFC 6238 5.2 eist ("MUST NOT accept the second attempt"). De controle zit in de WHERE van dezelfde UPDATE die de stap opslaat, zodat van twee gelijktijdige verzoeken met dezelfde code er maar één wint (T-31)
 - Waar: `check_code()` in `app/auth.py`
-- Status: bewezen (T-31)
+- Status: bewezen (T-31; gemeten op 2026-10-15)
 - Sinds: 18e1424
 
 ### MIT-08 Het geheim alleen tijdens het instellen, en niet in een cache
 - Houdt tegen: MC-17 stap 3, en het later terugkijken uit stap 2
 - Wat: de QR-code (`/account/2fa/qr.svg`) en de sleutel zijn alleen op te vragen zolang tweestapsverificatie nog niet aan staat; daarna geeft de QR-route een 404. Beide worden verstuurd met `Cache-Control: no-store`. De QR-code komt van een eigen route en staat niet inline in de pagina
 - Waar: `setup_2fa()`, `qr_2fa()` en `no_store()` in `app/account.py`
-- Status: bewezen (T-36)
+- Status: bewezen (T-36; gemeten op 2026-10-15)
 - Sinds: 18e1424
 
 ### MIT-09 Sessieversie: oude sessies vervallen
 - Houdt tegen: MC-04 stap 4; maakt MC-12 kleiner
 - Wat: elke gebruiker heeft een `session_version` in de database, en de sessiecookie krijgt die mee. `load_user` accepteert de sessie alleen als beide gelijk zijn; anders wordt de sessie gewist met de melding "Your session is no longer valid". Uitloggen, een nieuw wachtwoord en tweestapsverificatie aanzetten of opnieuw instellen verhogen de versie. Na een nieuw wachtwoord of een 2FA-wijziging krijgt de huidige sessie de nieuwe versie en blijft ingelogd; alle andere vervallen. Ook een halve login vervalt als de versie verandert voordat de code is ingevuld. Uitloggen logt alle apparaten van het account uit: zonder sessies op de server bij te houden kan het niet preciezer
 - Waar: `load_user()`, `start_session()`, `keep_this_session()`, `login_code()` en `logout()` in `app/auth.py`; `change_password()`, `setup_2fa()` en `reset_2fa()` in `app/account.py`
-- Status: bewezen (T-14, T-37, T-38)
+- Status: bewezen (T-14, T-37, T-38; gemeten op 2026-10-15)
 - Sinds: 587955a; in dezelfde UPDATE als het nieuwe wachtwoord of de 2FA-wijziging sinds 96b892d, zodat het nooit het een zonder het ander is
 
 ### MIT-10 Blokkade op de wachtwoordstap
 - Houdt tegen: MC-03 stap 1 en 2
 - Wat: foute wachtwoorden worden geteld per IP-adres (20 in 15 minuten) en per account vanaf één adres (5 in 15 minuten). Daarna volgt een blokkade van 15 minuten, die bij herhaling verdubbelt tot een uur; ook het juiste wachtwoord wordt dan geweigerd, met status 429 en `Retry-After`. De tellers hangen aan wat er is ingevuld en niet aan of het account bestaat, dus een blokkade verraadt geen namen. Elke poging telt vóór de controle, zoals bij MIT-06. Een geslaagde login wist de teller van het account; van de teller van het adres gaat alleen die ene poging af, anders zet een aanvaller met een eigen account de adresteller steeds terug. Bewust geen blokkade per account over alle adressen (MC-18). IPv6-adressen tellen per /64; een IPv4-adres dat via een IPv6-socket binnenkomt, telt als dat IPv4-adres (T-60). De sleutels in `auth_throttle` zijn HMAC's, dus de tabel bevat geen leesbare IP-adressen of gebruikersnamen. Bij een nieuwe blokkade gaan de tellers weg waarvan venster en blokkade meer dan een dag voorbij zijn (T-61). Achter een proxy komt het adres uit `X-Forwarded-For` via `ProxyFix` (`TRUSTED_PROXIES`, lokaal 0); een poort erachter valt eraf (T-72). De hackstand voor de hacking week (`THROTTLE_IP_MODE=hackweek`) maakt de limiet per adres 100, met een vaste blokkade van 5 minuten zonder verdubbeling, en `THROTTLE_PAIR_EXEMPT_USERS` haalt het demoaccount uit de teller per naam per adres. Standaard staat beide uit, en een onbekende stand laat de app niet starten (T-71)
 - Waar: `login()` in `app/auth.py`, `app/throttle.py`
-- Status: bewezen (T-12, T-39, T-58, T-60, T-71, T-72)
+- Status: bewezen (T-12, T-39, T-58, T-60, T-71, T-72; gemeten van 2026-10-15 tot 2026-10-16)
 - Sinds: 484eca3; `Retry-After` sinds 5a82eb5; tellen vóór de controle sinds 49baae5, blokkade in hetzelfde statement sinds 467623d; IPv4 achter IPv6 sinds 87a5006; opruimen sinds db7c907; zonder poort sinds 67a2636; hackstand sinds 8c3fc87
 
 ### MIT-11 Herstelcode
 - Houdt tegen: MC-19 stap 2a, 2c en 2d; maakt tweestapsverificatie mogelijk zonder dat een kwijtgeraakte telefoon het account onbereikbaar maakt
 - Wat: bij het aanzetten van tweestapsverificatie krijgt de gebruiker één keer een herstelcode van 128 willekeurige bits te zien. Alleen de SHA-256 wordt bewaard; een snelle hash is genoeg bij 128 willekeurige bits, anders dan bij een zelfverzonnen wachtwoord. Inloggen met de code kan alleen na het juiste wachtwoord; zonder wachtwoord werkt hij alleen samen met een code uit de app, om een nieuw wachtwoord in te stellen (MIT-14). De code werkt één keer. Bij inloggen zet hij tweestapsverificatie uit en verhoogt de sessieversie, en de app stuurt meteen naar het opnieuw instellen met een nieuwe telefoon (MIT-12). Het verbruik zit in een UPDATE met de hash in de WHERE, dus twee gelijktijdige verzoeken kunnen hem niet allebei gebruiken. 5 fouten in 15 minuten geven een blokkade (via `throttle.py`, met 429 en `Retry-After`). Een nieuwe code maken vraagt het huidige wachtwoord en een code uit de app (AU-06, sinds 997e641; MC-29) en maakt de vorige ongeldig; na wachtwoord vergeten krijgt de gebruiker meteen een nieuwe. De pagina's met de code worden met `Cache-Control: no-store` verstuurd
 - Waar: `new_recovery_code()`, `hash_recovery_code()` en `login_recover()` in `app/auth.py`; `setup_2fa()` en `new_recovery()` in `app/account.py`. Sinds 54d4d62 kan de gebruiker de code kopiëren of downloaden, en gaat Verder pas na het vinkje dat hij hem bewaard heeft (`recovery_code.html`, `forms.js`; T-96); zonder JavaScript werkt de pagina als voorheen. Overgenomen uit BOK-SECENGINEER
-- Status: bewezen (T-46)
+- Status: bewezen (T-46; gemeten op 2026-10-15)
 - Sinds: dc7d258; `Retry-After` sinds 5a82eb5
 
 ### MIT-12 Tweestapsverificatie verplicht
 - Houdt tegen: MC-03 stap 1 en 2 voor alle accounts, niet alleen voor wie het zelf aanzet; beperkt het venster van MC-20
 - Wat: `require_login` laat een ingelogde gebruiker zonder tweestapsverificatie alleen het instellen afmaken (`/account/2fa` en de QR-code); elke andere pagina stuurt daarheen. Dat geldt voor een nieuw account na het eerste wachtwoord, en na het gebruik van een herstelcode. De instelpagina maakt zelf een geheim aan en biedt uitloggen in plaats van annuleren. Uitzetten bestaat niet meer: alleen opnieuw instellen voor een nieuwe telefoon, met een code (AU-06), waarna de app meteen naar het instellen stuurt
 - Waar: `require_login()` en `login()` in `app/auth.py`; `setup_2fa()` en `reset_2fa()` in `app/account.py`
-- Status: bewezen (T-50)
+- Status: bewezen (T-50; gemeten op 2026-10-15)
 - Sinds: 42ab429
 
 ### MIT-13 Sterkte-eis voor een nieuw wachtwoord
 - Houdt tegen: MC-03 stap 3
 - Wat: een nieuw wachtwoord moet 12 tot 64 tekens zijn, bij registreren, wijzigen en wachtwoord vergeten; inloggen controleert alleen. Geen eisen aan cijfers of leestekens: NIST SP 800-63B-4 verbiedt zulke samenstellingsregels. 12 ligt bewust tussen de 8 die NIST minstens eist voor een wachtwoord dat deel is van inloggen met meer factoren, en de 15 voor een wachtwoord als enige factor. 64 is de lengte die NIST minstens wil toestaan. Afwijking van NIST: nog geen vergelijking met een lijst van veelgebruikte en gelekte wachtwoorden (een blocklist, daar een SHALL); die is gepland, met een lijst in de repo in plaats van een externe dienst. De formulieren tonen de grenzen en controleren ze ook in de browser, maar de server beslist
 - Waar: `password_problem()` in `app/passwords.py`; `register()` en `forgot_password()` in `app/auth.py`; `change_password()` in `app/account.py`
-- Status: bewezen (T-13, T-53)
+- Status: bewezen (T-13, T-53; gemeten op 2026-10-16)
 - Sinds: 9f690ce
 
 ### MIT-14 Wachtwoord vergeten met twee van de drie factoren
 - Houdt tegen: MC-21 stap 1b, 2a, 3a en 3b; maakt een vergeten wachtwoord op te lossen zonder het account te verliezen
 - Wat: `/login/forgot` vraagt gebruikersnaam, herstelcode, een code uit de app en twee keer het nieuwe wachtwoord. Wachtwoord en telefoon is gewoon inloggen, wachtwoord en herstelcode is telefoon kwijt (MIT-11), herstelcode en telefoon is wachtwoord vergeten; één factor is nooit genoeg. De route is bereikbaar zonder wachtwoord, dus een foute herstelcode telt alleen per IP-adres en per naam per adres, met dezelfde tellers als inloggen (MIT-10), en een juiste herstelcode telt daar als geslaagde poging: een blokkade per account zou iedereen die een naam kent de herstelroutes laten blokkeren (MC-18). Een onbekende naam krijgt dezelfde melding en dezelfde blokkade; het enige verschil in werk is één vergelijking van 64 tekens. Pas als de herstelcode klopt, wordt de code uit de app gecontroleerd met `check_code()`, dus met de blokkade per account en het eenmalige gebruik van de codestap (MIT-06, MIT-07). Nieuw wachtwoord, verbruik van de oude herstelcode, de nieuwe herstelcode en een hogere sessieversie zitten in één UPDATE met de oude hash in de WHERE, dus van twee gelijktijdige verzoeken wint er één. Daarna is de gebruiker niet ingelogd, zoals het OWASP Forgot Password Cheat Sheet aanraadt, maar krijgt meteen een nieuwe herstelcode, met `Cache-Control: no-store`. Het nieuwe wachtwoord valt onder de sterkte-eis (MIT-13)
 - Waar: `forgot_password()` en `hash_recovery_code()` in `app/auth.py`; `no_store()` in `app/account.py`
-- Status: bewezen (T-54, T-57)
+- Status: bewezen (T-54, T-57; gemeten op 2026-10-16)
 - Sinds: 428858e; nieuwe herstelcode in dezelfde UPDATE sinds 3f7eb20
 
 ### MIT-15 Eigenaarscontrole op notities
 - Houdt tegen: MC-02 stap 2
 - Wat: elke query op één notitie heeft naast de id ook `user_id` uit de sessie in de WHERE: `own_note()` bij openen en aanpassen, de UPDATE zelf, en de DELETE met `RETURNING`. Is de notitie niet van de ingelogde gebruiker, dan volgt 404, precies zoals bij een id dat niet bestaat; zo verraadt het antwoord niet dat de notitie bestaat, wat het OWASP IDOR Prevention Cheat Sheet aanraadt. De lijst op `/` liet al alleen eigen notities zien (AZ-01)
 - Waar: `own_note()`, `edit_note()` en `delete_note()` in `app/notes.py`
-- Status: bewezen (T-11)
+- Status: bewezen (T-11; gemeten op 2026-10-16)
 - Sinds: 668166a
 
 ### MIT-16 Herauthenticatie bij wachtwoord wijzigen, account verwijderen en het vervangen van de tweede factor
 - Houdt tegen: MC-12 stap 2, MC-13 stap 2 en MC-29 stap 3; ook via een andere site (MC-05) lukken deze twee acties niet meer, want die site kent het wachtwoord niet
 - Wat: beide formulieren vragen het huidige wachtwoord én een code uit de app, zodat wie alleen het wachtwoord heeft, hier niets kan (sinds 72ddaed, T-98). Sinds 997e641 geldt hetzelfde voor de tweede factor opnieuw instellen en een nieuwe herstelcode: met alleen de code kon wie de sessie en één code had, zijn eigen telefoon koppelen en via wachtwoord vergeten een eigen wachtwoord zetten (MC-29, T-99). De code loopt via `check_code()`, met dezelfde blokkade en hetzelfde eenmalige gebruik als bij het inloggen (MIT-06, MIT-07). Het wachtwoord controleert `passwords.is_current()`. Dat is de enige plek; sinds MIT-19 met Argon2id. Elke poging telt vóór de controle, per account (`reauth_account`): na 5 fouten in 15 minuten wordt de volgende geweigerd, 15 minuten, verdubbelend tot 24 uur. Per account mag hier, want deze stap is alleen met een sessie te bereiken; zonder limiet kan iemand met een gestolen sessie het wachtwoord raden. Bij wachtwoord wijzigen gaat de sterkte-eis (MIT-13) eerst, zodat een fout in het nieuwe wachtwoord geen poging kost. Het OWASP Authentication Cheat Sheet vraagt de huidige gegevens opnieuw voor het wijzigen van gevoelige accountgegevens, zoals het wachtwoord
 - Waar: `refuse_without_both_factors()`, `change_password()`, `delete_account()`, `reset_2fa()` en `new_recovery()` in `app/account.py`; `is_current()` in `app/passwords.py`; `check_code()` in `app/auth.py`
-- Status: bewezen (T-23, T-62, T-98, T-99)
+- Status: bewezen (T-23, T-62, T-98, T-99; gemeten van 2026-10-16 tot 2026-10-18)
 - Sinds: f40781b; met code sinds 72ddaed; ook bij de tweede factor sinds 997e641
 
 ### MIT-17 Versleuteling van het TOTP-geheim
 - Houdt tegen: MC-17 stap 1
 - Wat: de app versleutelt het TOTP-geheim voordat het de database in gaat, met AES-256-GCM uit de library `cryptography`, zoals het OWASP Cryptographic Storage Cheat Sheet aanraadt: AES met een sleutel van 256 bits in een geauthenticeerde modus. Elke waarde krijgt een nieuwe willekeurige nonce van 96 bits, de lengte die NIST aanraadt. De soort en de `user_id` gaan mee als associated data: een waarde die naar de rij van een ander account wordt gekopieerd, ontsleutelt daar niet (T-63). Vooraan staat de sleutelversie (`v1:`), zodat een nieuwe sleutel later naast de oude kan. De sleutel (A-09) staat in de omgeving van de app en nooit in de database. Wat niet ontsleutelt, telt als geen geheim: dan wordt elke code geweigerd. Een half ingesteld geheim dat niet ontsleutelt, wordt vervangen, want het werkte nog nergens (T-65). Bewust in de app en niet met pgcrypto in de database: dan zou de sleutel bij elke query als parameter mee naar de database gaan, en in de databaselog staan zodra het loggen van statements aanstaat (`log_statement = all`, zoals tijdelijk voor `17_sqli_databaselog`)
 - Waar: `app/encryption.py`; `setup_2fa()` en `qr_2fa()` in `app/account.py`; `check_code()` in `app/auth.py`
-- Status: bewezen (T-34, T-63)
+- Status: bewezen (T-34, T-63; gemeten van 2026-10-16 tot 2026-10-17)
 - Sinds: 776931a
 
 ### MIT-18 Versleuteling van notities
 - Houdt tegen: MC-23 stap 2
 - Wat: titel en inhoud gaan met dezelfde helper en sleutel als het TOTP-geheim (MIT-17) de database in: AES-256-GCM, een nieuwe nonce per waarde, de sleutelversie vooraan. De soort (`note_title`, `note_body`) en de `user_id` van de eigenaar gaan mee als associated data, dus een titel als inhoud, of een notitie in de rij van een ander account, ontsleutelt niet (T-67). Wat niet ontsleutelt, staat op de pagina als "(unreadable)". De lengtegrens (MIT-04) geldt voor de tekst zelf, vóór het versleutelen
 - Waar: `sealed()` en `readable()` in `app/notes.py`; `app/encryption.py`
-- Status: bewezen (T-66, T-67)
+- Status: bewezen (T-66, T-67; gemeten van 2026-10-16 tot 2026-10-17)
 - Sinds: b2b60e1
 
 ### MIT-19 Wachtwoorden als Argon2id-hash
 - Houdt tegen: MC-01 stap 2
 - Wat: wachtwoorden worden gehasht met Argon2id uit `cryptography` (via OpenSSL; tot 29d201d uit `argon2-cffi`, met hetzelfde formaat), met de minimale instelling uit het OWASP Password Storage Cheat Sheet: 19 MiB geheugen, 2 iteraties, 1 thread. Elke hash krijgt een eigen salt van 16 willekeurige bytes, en algoritme, instelling en salt staan in de hash zelf, in het PHC-formaat (T-68). Hashen en niet versleutelen: de app hoeft het wachtwoord nooit terug te lezen, en OWASP noemt versleutelen alleen voor uitzonderingen waarin dat wel moet. Bij een onbekende naam rekent de app tegen een vaste hash, zodat de responstijd niet verraadt of een naam bestaat (T-70). Is een hash met een oudere instelling gemaakt, dan maakt de app bij de volgende geslaagde login een nieuwe, zoals OWASP aanraadt (T-69). Geen pepper: OWASP noemt dat alleen extra verdediging, en een pepper kan niet meer veranderen zonder de wachtwoorden. Geen omzetting van leesbare wachtwoorden: in de ontwikkelfase begint de database leeg
 - Waar: `app/passwords.py`; `register()`, `login()` en `forgot_password()` in `app/auth.py`; `change_password()` in `app/account.py`
-- Status: bewezen (T-10, T-68, T-69, T-70)
+- Status: bewezen (T-10, T-68, T-69, T-70; gemeten van 2026-10-16 tot 2026-10-17)
 - Sinds: 9e6e365
 
 ### MIT-20 CSRF-token per sessie
 - Houdt tegen: MC-05 stap 2
 - Wat: elke sessie krijgt een willekeurig token van 32 bytes (`secrets.token_urlsafe`), en elk formulier stuurt het mee in een verborgen veld. Een POST zonder het juiste token krijgt 400, met de vergelijking in constante tijd (`hmac.compare_digest`), zoals het OWASP CSRF Prevention Cheat Sheet aanraadt. Een token per sessie, niet per verzoek: OWASP noemt beide, en per verzoek geeft fouten met de terugknop. De controle draait vóór het laden van de gebruiker, zodat een verlopen sessie gewoon naar de inlogpagina gaat. `SameSite=Lax` op de cookie (MIT-23) is volgens OWASP een extra laag, geen vervanging
 - Waar: `app/csrf.py`; het veld in alle 14 formulieren in `app/web/templates/`
-- Status: bewezen (T-16, T-73)
+- Status: bewezen (T-16, T-73; gemeten op 2026-10-17)
 - Sinds: 5bd55c5
 
 ### MIT-21 Beveiligingsheaders
 - Houdt tegen: MC-07 stap 2 (tweede laag), MC-24 stap 2
 - Wat: op elk antwoord, ook op foutpagina's: `Content-Security-Policy: default-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'`, `X-Frame-Options: DENY` voor oudere browsers, `X-Content-Type-Options: nosniff` en `Referrer-Policy: same-origin`. De app had al geen inline script of style, dus de CSP kan streng; op de belangrijkste pagina's gaf de browser geen enkele overtreding (T-75). `Strict-Transport-Security` alleen als de app op HTTPS draait, anders zou de browser het lokaal verkeerd onthouden
 - Waar: `security_headers()` in `app/app.py`
-- Status: bewezen (T-18, T-74, T-75)
+- Status: bewezen (T-18, T-74, T-75; gemeten van 2026-10-15 tot 2026-10-16)
 - Sinds: 2587a60
 
 ### MIT-22 Invoercontrole
 - Houdt tegen: MC-10 stap 1, MC-07 stap 1 (gebruikersnaam), MC-18 stap 3
 - Wat: een gebruikersnaam is 3 tot 20 letters, cijfers of `_`, gecontroleerd met `fullmatch` op een allowlist, zoals het OWASP Input Validation Cheat Sheet aanraadt. Bij registreren een melding; bij inloggen en wachtwoord vergeten telt een andere naam als onbekend, met hetzelfde antwoord. De browser controleert hetzelfde met `pattern` en `maxlength`, maar dat is alleen gemak: de server beslist. Een verzoek boven 16 KiB (`MAX_CONTENT_LENGTH`) krijgt 413 voordat het is ingelezen. Alleen een POST voert een formulieractie uit; HEAD en GET tonen alleen de pagina
 - Waar: `USERNAME` en `register()`, `login()`, `forgot_password()` in `app/auth.py`; `MAX_CONTENT_LENGTH` in `app/app.py`
-- Status: bewezen (T-21, T-76, T-77, T-78)
+- Status: bewezen (T-21, T-76, T-77, T-78; gemeten van 2026-10-16 tot 2026-10-17)
 - Sinds: 7fbc42e (alleen POST); 61221ed (naam en grootte)
 
 ### MIT-23 Configuratie controleren en veilige standaarden
 - Houdt tegen: MC-18 stap 4; MC-04 en MC-05 (de cookie)
 - Wat: configuratie is ook invoer. Bij het starten moeten `TRUSTED_PROXIES` 0 of 1 zijn en `HTTPS_ONLY` 0 of 1, `FLASK_SECRET_KEY` minstens 32 tekens, `DATA_ENCRYPTION_KEY` 256 bits en `THROTTLE_IP_MODE` een bekende stand; anders start de app niet. Standaard veilig: zonder `HTTPS_ONLY` gaat de cookie alleen over HTTPS, en alleen `compose.yaml` zet dat lokaal uit. De cookie heeft altijd `HttpOnly` en `SameSite=Lax`
 - Waar: `setting()` en de configuratie in `app/app.py`; `compose.yaml`
-- Status: bewezen (T-79)
+- Status: bewezen (T-79; gemeten op 2026-10-16)
 - Sinds: 172f43d
 
 ### MIT-24 Standaard dicht
 - Houdt tegen: MC-25 stap 1
 - Wat: één hook vraagt voor elke route een login met tweestapsverificatie; alleen een vaste lijst (`PUBLIC_ENDPOINTS`: inloggen, registreren, de code- en herstelroutes, wachtwoord vergeten, uitloggen en de statische bestanden) mag zonder. Dat vervangt de tien losse `@login_required`. De regressietest haalt alle routes uit de app zelf en controleert dat elke andere route een anonieme bezoeker naar `/login` stuurt (T-80)
 - Waar: `require_login()` en `PUBLIC_ENDPOINTS` in `app/auth.py`
-- Status: bewezen (T-80)
+- Status: bewezen (T-80; gemeten op 2026-10-16)
 - Sinds: 6d9f255
 
 ### MIT-25 Veilig falen
 - Houdt tegen: MC-26 stap 1 en 2
 - Wat: een HTTP-fout (404, 405, 413) krijgt de eigen foutpagina met een korte melding; status en headers, zoals `Allow` bij 405, blijven. Een onverwachte fout geeft 500 met "Something went wrong", en de fout zelf gaat met traceback naar de log (stderr, lokaal en op Azure hetzelfde). Het pad gaat als repr de log in, zodat een regeleinde in de URL `\n` wordt en geen valse regel maakt (log injection, OWASP Logging Cheat Sheet)
 - Waar: `http_error()` en `unexpected_error()` in `app/app.py`; `app/web/templates/error.html`
-- Status: bewezen (T-81)
+- Status: bewezen (T-81; gemeten op 2026-10-16)
 - Sinds: b362061
 
 ### MIT-26 Gunicorn als gewone gebruiker
 - Houdt tegen: MC-14 stap 1 en 2
 - Wat: de image maakt een systeemgebruiker `app` zonder shell en draait daaronder. De code is van root, dus de app kan hem lezen maar niet aanpassen. Gunicorn met twee workers vervangt de ontwikkelserver van Flask, die zelf waarschuwt niet voor productie te zijn. Docker raadt zelf aan: kan een dienst zonder rechten draaien, zet dan met `USER` een gewone gebruiker
 - Waar: `app/Dockerfile`; `gunicorn` in `app/requirements.txt`
-- Status: bewezen (T-82)
+- Status: bewezen (T-82; gemeten op 2026-10-16)
 - Sinds: 13a2eb4
 
 ### MIT-27 Eigen databaserol voor de app
 - Houdt tegen: MC-08 stap 2a en 2b
 - Wat: de app logt in als `notities_app`: geen superuser en nergens eigenaar van. Hij mag `SELECT`, `INSERT`, `UPDATE` en `DELETE` op `users`, `notes` en `auth_throttle`, en `USAGE` op de twee sequences, precies wat de app doet. Tabellen maken, wijzigen of weggooien, rollen aanmaken en `COPY` naar een bestand of programma kunnen niet. Dat laatste mag in PostgreSQL alleen een superuser of een lid van `pg_read_server_files`, `pg_write_server_files` of `pg_execute_server_program`. In een nieuwe database heeft `PUBLIC` sinds PostgreSQL 15 geen `CREATE` meer op het schema `public`, dus ook een eigen tabel maken lukt niet. Lokaal zet `db/app-password.sh` het wachtwoord bij de eerste start, met psql als letterlijke tekst; de app krijgt alleen dat wachtwoord. Op Azure staat het wachtwoord van de eigenaar in een eigen Key Vault die alleen de schema-job leest, met een eigen identiteit; Microsoft raadt een vault per applicatie aan en geen rechten per geheim. De job maakt het schema in een lege database en zet bij elke start het wachtwoord van de app-rol, met `sql.Literal`
 - Waar: `db/schema.sql`, `db/app-password.sh`, `DATABASE_URL` in `compose.yaml`; `azurerm_key_vault.admin` in `terraform/keyvault.tf`, `azurerm_container_app_job.schema` in `terraform/app.tf`
-- Status: bewezen (T-19, T-83, T-84, T-86)
+- Status: bewezen (T-19, T-83, T-84, T-86; gemeten van 2026-10-17 tot 2026-10-18)
 - Sinds: 1d1b4eb; Azure sinds 7535a78
 
 ### MIT-28 Geen pagina in de cache
 - Houdt tegen: MC-27 stap 1
 - Wat: elk antwoord behalve een statisch bestand krijgt `Cache-Control: no-store`, zoals de OWASP Session Management Cheat Sheet aanraadt voor antwoorden met gevoelige sessiedata. De browser bewaart de pagina dan niet, dus na uitloggen toont Terug de inlogpagina in plaats van de notities (T-89). Dit vervangt de lijst van vier pagina's met het TOTP-geheim en de herstelcode (MIT-08, MIT-11). CSS en scripts bevatten niets van een gebruiker en mogen wel in de cache. Gevonden met de audit van 17-10-2026
 - Waar: `security_headers()` in `app/app.py`
-- Status: bewezen (T-89)
+- Status: bewezen (T-89; gemeten op 2026-10-17)
 - Sinds: dfa6a6f
 
 ### MIT-29 Sessie van hooguit 8 uur
 - Houdt tegen: MC-04 stap 4, MC-27 stap 2
 - Wat: `PERMANENT_SESSION_LIFETIME` is 8 uur. Flask controleert bij elk verzoek hoe oud de handtekening van de sessiecookie is, ook bij een cookie die alleen voor de browsersessie geldt (gelezen in de broncode van Flask 3.1.3); een oudere cookie telt als geen sessie (T-90). De app schrijft de cookie bij het inloggen en bij een melding (`flash()`), dus de grens ligt ongeveer 8 uur na de login. Daarvoor gold de standaard van 31 dagen. OWASP noemt een absolute timeout voor elke sessie, met 4 tot 8 uur als voorbeeld voor een werkdag. Overgenomen uit BOK-SECENGINEER
 - Waar: `app/app.py`
-- Status: bewezen (T-90)
+- Status: bewezen (T-90; gemeten op 2026-10-17)
 - Sinds: 2f1236e
 
 ### MIT-30 Limiet op registreren en op notities
 - Houdt tegen: MC-10 stap 2 en 3
 - Wat: elke registratie telt per adres in `auth_throttle`, ook een gelukte, want ook die kost een Argon2id-berekening van 19 MiB: 10 per uur, daarna een uur op slot, bij herhaling oplopend tot 4 uur; in de hackstand 60 per uur en 5 minuten (T-91). De teller staat vlak voor het hashen, dus een ongeldige naam of een te kort wachtwoord telt niet. Per account hooguit 25 notities, geteld en toegevoegd in één statement (T-92); gelijktijdige verzoeken kunnen er samen een paar overheen, hooguit één per worker, want een slot zou elke notitie trager maken voor een grens die alleen de groei afremt. Overgenomen uit BOK-SECENGINEER (10 per uur en 25 notities; de hackstand daar was 30 per uur)
 - Waar: `POLICIES` en `IP_MODES` in `app/throttle.py`; `register()` in `app/auth.py`; `index()` in `app/notes.py`
-- Status: bewezen (T-91, T-92)
+- Status: bewezen (T-91, T-92; gemeten op 2026-10-17)
 - Sinds: 5d0f1d0
 
 ### MIT-31 Security-events loggen
 - Houdt tegen: MC-28 stap 1 tot 5
 - Wat: één functie, `events.event()`, schrijft per gebeurtenis een JSON-regel naar stderr: tijd (UTC), soort, IP-adres, en als dat bekend is het account. Dat is het "when, where, who and what" van de OWASP Logging Cheat Sheet. Lokaal in `docker compose logs`; op Azure zet Container Apps hem in een Log Analytics-workspace, 30 dagen en dan weg, zonder verschil in de code (sinds d547182, T-102 na de uitrol). 21 soorten, op de plekken waar de app al beslist: registreren, inloggen en de blokkades, codes en herstelcodes, wachtwoord vergeten, uitloggen, een verlopen sessie, tweestapsverificatie aan en opnieuw, een nieuw wachtwoord, herauthenticatie, account verwijderen, een geweigerd CSRF-token, de limiet op notities en een notitie die niet ontsleutelt. JSON escapet regeleindes en stuurtekens, dus invoer maakt geen valse regel (log injection). Een gebruikersnaam komt er alleen in als het account bestaat; anders staat er `"known": false` (sinds f977f6d, T-100). Eerst gold de naamregel van MIT-22, maar een wachtwoord als `Zomervakantie2026` voldoet daar ook aan. Een blokkade staat er één keer in, op het moment dat hij begint (`lockout_started`, met de soort teller), en niet bij elke geweigerde poging; anders kon een script de log vullen (sinds f977f6d, T-101). Wachtwoorden, codes, geheimen en de sessiecookie nooit (T-93, T-94). Overgenomen uit BOK-SECENGINEER
 - Waar: `app/events.py`; aanroepen in `app/auth.py`, `app/account.py`, `app/csrf.py` en `app/notes.py`; op Azure `terraform/logs.tf`
-- Status: bewezen (T-93, T-94, T-100, T-101); op Azure uitgerold op 2026-10-18 (T-102)
+- Status: bewezen (T-93, T-94, T-100, T-101; gemeten van 2026-10-17 tot 2026-10-18); op Azure uitgerold op 2026-10-18 (T-102)
 - Sinds: 6992001; naam en blokkade sinds f977f6d; bewaard op Azure sinds d547182
 
 ### MIT-32 .env alleen voor de eigenaar
 - Houdt tegen: MC-22 stap 2, deels
 - Wat: `deployment.py` zet `.env` op 0600 (alleen de eigenaar mag lezen en schrijven), al vóór het schrijven, en ook een bestaand bestand. Op Linux kreeg het eerst de standaard 0644, leesbaar voor elke gebruiker van de machine (T-95). Op Windows doet `chmod` verder niets; daar gelden de rechten van de map waarin de repo staat. Gevonden met de audit van 17-10-2026
 - Waar: `write_env()` in `scripts/deploy_local.py`
-- Status: bewezen (T-95)
+- Status: bewezen (T-95; gemeten op 2026-10-17)
 - Sinds: 9d3f985
 
 ### MIT-33 Dependabot
@@ -761,26 +761,26 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 - Houdt tegen: MC-30 stap 1 tot 4
 - Wat: `.github/workflows/image.yml` bouwt bij elke push naar `main` de image en publiceert hem op ghcr.io. Standaard heeft de workflow geen rechten (`permissions: {}`); de job krijgt alleen `contents: read` en `packages: write`, zoals GitHub aanraadt. Inloggen bij ghcr.io gaat met het token van de run, via stdin; een eigen token (classic) is niet meer nodig. `actions/checkout` staat vast op een volledige commit-hash, en verder gebruikt de workflow gewone `docker`-opdrachten, geen actions van derden. Er is geen trigger op `pull_request`. De tags zijn de commit en de inhoud van `app/` (de tree-hash van git), nooit `latest`; `deployment.py azure` zoekt de image op die tweede tag en kijkt anoniem of hij openbaar is (T-103)
 - Waar: `.github/workflows/image.yml`; het zoeken in `run()` van `scripts/deploy_azure.py`
-- Status: bewezen (T-103)
+- Status: bewezen (T-103; gemeten op 2026-10-18)
 - Sinds: 19a34dd; tag op de inhoud van `app/` sinds 7d8f7b5
 
 ### MIT-35 Een scan op bekende lekken vóór het publiceren
 - Houdt tegen: MC-11 stap 1 en 3
 - Wat: de workflow scant de SBoM van de gebouwde image (MIT-36) met Trivy 0.75.0, vast op versie en digest, vóór het pushen. Een lek van HIGH of CRITICAL waarvoor al een oplossing is (`--ignore-unfixed`), stopt de job; dan staat er geen nieuwe image op ghcr.io, en kan `deployment.py azure` hem ook niet uitrollen. De eerste scan vond vier keer HIGH, allemaal in de eigen kopieën van urllib3, msgpack en setuptools die pip meeneemt; sinds b31d334 gaat pip na het installeren uit de image, want de app en de schema-job gebruiken hem niet (T-105)
 - Waar: de stap Scannen op bekende lekken in `.github/workflows/image.yml`; `RUN` in `app/Dockerfile`
-- Status: bewezen (T-105)
+- Status: bewezen (T-105; gemeten op 2026-10-18)
 - Sinds: 29e42cc; pip uit de image sinds b31d334; op de SBoM sinds 1d6f21a
 
 ### MIT-36 Een SBoM van elke image
 - Houdt tegen: MC-11 stap 1 en 3, deels: zonder lijst weet je niet of een nieuw lek in jouw image zit
 - Wat: de workflow maakt bij elke build met Trivy 0.75.0 een SBoM in CycloneDX (spec 1.7): alle onderdelen van de image, het besturingssysteem, de Debian-pakketten en de Python-pakketten. Alleen de lijst: volgens Trivy bevat `--format cyclonedx` standaard geen lekken, en VEX komt er niet in. Het hoofdonderdeel heet naar de image en de commit. De SBoM blijft 90 dagen bij de run (een artifact), ook als de scan daarna een lek vindt, en de scan van MIT-35 leest juist die SBoM. Trivy leest de image als tar-bestand, zonder de Docker-socket, dus kan het de image die gepusht wordt niet veranderen (T-106)
 - Waar: de stappen SBoM maken en `actions/upload-artifact` in `.github/workflows/image.yml`
-- Status: bewezen (T-106)
+- Status: bewezen (T-106; gemeten op 2026-10-18)
 - Sinds: 1d6f21a
 
 ### MIT-37 Een mail bij een blokkade
 - Houdt tegen: MC-28 stap 1, en de andere stappen voor zover ze een teller op slot zetten
 - Wat: een log search alert op Azure kijkt elke 5 minuten of er in Log Analytics een `lockout_started` staat, en mailt dan de beheerder via een action group. Na een mail blijft de regel een uur stil, zodat één aanval niet elke 5 minuten een mail geeft. De regel leest met een eigen identiteit, die alleen Log Analytics Reader op de workspace is; zonder eigen identiteit leest een regel volgens Microsoft met de rechten van wie hem het laatst wijzigde. Het adres stelt `deployment.py azure` voor uit `az login` en staat niet in de repo. Vaker kijken kost meer (elke minuut €2,64 per maand in plaats van €1,32) en scheelt weinig, want een regel staat pas na een paar minuten in Log Analytics (T-107)
 - Waar: `terraform/alerts.tf`; de vraag naar het adres in `run()` van `scripts/deploy_azure.py`
-- Status: gebouwd; de mail zelf nog niet gemeten (T-108)
+- Status: bewezen (T-107, T-108; gemeten op 2026-10-18)
 - Sinds: c4ce459
