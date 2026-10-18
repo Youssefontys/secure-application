@@ -1,4 +1,4 @@
-# Zet eenmalig de opslag voor de Terraform-state op Azure op, en de ID's van die opslag in GitHub.
+# Zet eenmalig de opslag voor de Terraform-state op Azure op; daarna doet Terraform de rest (setup.py azure).
 # - De opslag is versleuteld met een eigen sleutel (RSA 4096) in Key Vault, met purge protection.
 # - Gescheiden rollen: wie dit draait beheert de sleutel; de identiteit van de opslag mag hem alleen gebruiken.
 # - Geen shell: elk commando is een lijst van argumenten. Op Windows is az een .cmd-bestand en leest cmd.exe
@@ -93,19 +93,6 @@ def ask_user(question, default=None, pattern=None, shown=None):
         print("🤔 Dat kan niet: alleen letters, cijfers en - _ . mogen.")
 
 
-# Is gh er en ingelogd? Anders kunnen de GitHub-secrets niet automatisch.
-def gh_ready():
-    gh = shutil.which("gh")
-    if not gh:
-        print("   💡 GitHub CLI (gh) niet gevonden; met https://cli.github.com zet dit script de secrets zelf.")
-        return False
-    if subprocess.run([gh, "auth", "status"], capture_output=True).returncode != 0:
-        print("   💡 gh is niet ingelogd, of het token is verlopen: gh auth login")
-        return False
-    print("   ✅ gh is ingelogd")
-    return True
-
-
 # De uitrol zelf.
 print("\n🛡️  Azure Terraform Bootstrap")
 print("👋 Eenmalig: de opslag waarin Terraform onthoudt wat er op Azure staat. Daarna doet Terraform de rest.")
@@ -197,24 +184,7 @@ time.sleep(PROPAGATION_WAIT)
 az_retry("storage", "container", "create", "--name", container, "--account-name", sa_name, "--auth-mode", "login", "-o", "none")
 print(f"🗃️  Container: {container}")
 
-# E. GitHub: geen geheimen, alleen ID's en namen voor de backend. AZURE_CLIENT_ID komt bij de CI-stap, van een eigen
-# identiteit met een federated credential (OIDC); niet die van de opslag, want die mag de sleutel van de state gebruiken.
-print("\n🐙 GitHub, voor de pipeline later; nu nog niet nodig")
-values = {"AZURE_SUBSCRIPTION_ID": sub_id, "AZURE_TENANT_ID": tenant_id,
-          "BACKEND_RG_NAME": rg, "BACKEND_STORAGE_ACCOUNT": sa_name, "BACKEND_CONTAINER_NAME": container}
-if gh_ready() and ask_user("GitHub Secrets automatisch instellen? (j/n)", "j").lower() == "j":
-    repo = ask_user("Volledige GitHub repo (bijv. user/repo)", pattern=r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+")
-    print(f"   🔏 Secrets zetten in {repo}...")
-    for key, value in values.items():
-        # De waarde via stdin, niet als argument: dan staat hij niet in de proceslijst.
-        result = subprocess.run(as_args("gh", "secret", "set", key, "--repo", repo), input=value, capture_output=True, text=True)
-        print(f"   ✅ {key}" if result.returncode == 0 else f"   ❌ {key} (mislukt: {result.stderr.strip()})")
-else:
-    print("   📋 Zelf invullen zodra er een pipeline is (Settings > Secrets and variables > Actions):")
-    for key, value in values.items():
-        print(f"      {key:23} = {value}")
-
-# F. Het backend-bestand voor terraform init; één omgeving, dus één state.
+# E. Het backend-bestand voor terraform init; één omgeving, dus één state.
 with open(BACKEND_CONF, "w", encoding="utf-8", newline="\n") as f:
     f.write(f'resource_group_name  = "{rg}"\nstorage_account_name = "{sa_name}"\ncontainer_name       = "{container}"\n'
             f'key                  = "terraform.tfstate"\nuse_azuread_auth     = true\n\n'
