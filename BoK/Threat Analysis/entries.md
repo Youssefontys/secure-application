@@ -732,7 +732,7 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 ### MIT-32 .env alleen voor de eigenaar
 - Houdt tegen: MC-22 stap 2, deels
 - Wat: `setup.py` zet `.env` op 0600 (alleen de eigenaar mag lezen en schrijven), al vóór het schrijven, en ook een bestaand bestand. Op Linux kreeg het eerst de standaard 0644, leesbaar voor elke gebruiker van de machine (T-95). Op Windows doet `chmod` verder niets; daar gelden de rechten van de map waarin de repo staat. Gevonden met de audit van 17-10-2026
-- Waar: `write_env()` in `scripts/setup.py`
+- Waar: `write_env()` in `scripts/deploy_local.py`
 - Status: gebouwd
 - Sinds: 9d3f985
 
@@ -746,7 +746,7 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 ### MIT-34 De image-pipeline met minimale rechten
 - Houdt tegen: MC-30 stap 1 tot 4
 - Wat: `.github/workflows/image.yml` bouwt bij elke push naar `main` de image en publiceert hem op ghcr.io. Standaard heeft de workflow geen rechten (`permissions: {}`); de job krijgt alleen `contents: read` en `packages: write`, zoals GitHub aanraadt. Inloggen bij ghcr.io gaat met het token van de run, via stdin; een eigen token (classic) is niet meer nodig. `actions/checkout` staat vast op een volledige commit-hash, en verder gebruikt de workflow gewone `docker`-opdrachten, geen actions van derden. Er is geen trigger op `pull_request`. De tags zijn de commit en de inhoud van `app/` (de tree-hash van git), nooit `latest`; `setup.py azure` zoekt de image op die tweede tag en kijkt anoniem of hij openbaar is (T-103)
-- Waar: `.github/workflows/image.yml`; het zoeken in `azure()` van `scripts/setup.py`
+- Waar: `.github/workflows/image.yml`; het zoeken in `run()` van `scripts/deploy_azure.py`
 - Status: gebouwd
 - Sinds: 19a34dd; tag op de inhoud van `app/` sinds 7d8f7b5
 
@@ -767,6 +767,6 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 ### MIT-37 Een mail bij een blokkade
 - Houdt tegen: MC-28 stap 1, en de andere stappen voor zover ze een teller op slot zetten
 - Wat: een log search alert op Azure kijkt elke 5 minuten of er in Log Analytics een `lockout_started` staat, en mailt dan de beheerder via een action group. Na een mail blijft de regel een uur stil, zodat één aanval niet elke 5 minuten een mail geeft. De regel leest met een eigen identiteit, die alleen Log Analytics Reader op de workspace is; zonder eigen identiteit leest een regel volgens Microsoft met de rechten van wie hem het laatst wijzigde. Het adres stelt `setup.py azure` voor uit `az login` en staat niet in de repo. Vaker kijken kost meer (elke minuut €2,64 per maand in plaats van €1,32) en scheelt weinig, want een regel staat pas na een paar minuten in Log Analytics (T-107)
-- Waar: `terraform/alerts.tf`; de vraag naar het adres in `azure()` van `scripts/setup.py`
+- Waar: `terraform/alerts.tf`; de vraag naar het adres in `run()` van `scripts/deploy_azure.py`
 - Status: gebouwd; de mail zelf nog niet gemeten (T-108)
 - Sinds: c4ce459
