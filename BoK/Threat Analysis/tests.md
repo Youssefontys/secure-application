@@ -1,7 +1,7 @@
 # Tests
 
-Mogelijke tests per use case en misuse case. Nog niet gebouwd; dit is de
-lijst om ze uit te bouwen.
+De tests per use case en misuse case, gemeten met de hand (curl, Edge, `az`) en met de
+regressietest (`tests/regress.py`, lokaal, nog niet in de repo of in CI).
 
 Sinds 3204eb0 is de interface Engels. Meldingen in eerdere metingen staan
 in het Nederlands, zoals de app ze toen gaf.
@@ -16,7 +16,8 @@ Twee soorten:
 
 ID's: `T-`, nooit hergebruiken. Kolom "Nu" is gemeten tegen de lokale stack: tot
 en met T-51 op 2026-10-15 met curl, vanaf T-52 op 2026-10-16 met de
-regressietest, behalve waar iets anders staat.
+regressietest, behalve waar iets anders staat. Op 2026-10-18 slaagde de hele regressietest opnieuw,
+na de vertaling naar het Engels: 182 keer ok.
 
 ## Functioneel
 
@@ -25,10 +26,10 @@ regressietest, behalve waar iets anders staat.
 | T-01 | UC-01 | Registreren met een nieuwe naam; dezelfde naam nog een keer | 302 naar `/login` met melding; daarna 409 |
 | T-02 | UC-02 | Inloggen met juist en fout wachtwoord; uitloggen en daarna `/` openen | Na de code 302 naar `/` (T-29); 400; 302 naar `/login` |
 | T-03 | UC-02 | Als ingelogde gebruiker `/login` en `/register` openen | 302 naar `/` |
-| T-04 | UC-03 | Notitie aanmaken, tonen, aanpassen, verwijderen | Na aanpassen staat "bewerkt" met tijd erbij; na verwijderen is hij weg |
+| T-04 | UC-03 | Notitie aanmaken, tonen, aanpassen, verwijderen | Na aanpassen staat "edited" met tijd erbij; na verwijderen is hij weg |
 | T-05 | UC-03 | Lege titel of inhoud bij aanmaken en bij aanpassen | Beide 400 met dezelfde foutmelding |
 | T-06 | UC-03 | Tijd van een nieuwe notitie | Nederlandse tijd, niet UTC |
-| T-07 | UC-02 | Begroeting om 05:59, 06:00, 11:59, 12:00, 17:59 en 18:00 | Goedenacht, Goedemorgen, Goedemorgen, Goedemiddag, Goedemiddag, Goedenavond, gevolgd door de gebruikersnaam |
+| T-07 | UC-02 | Begroeting om 05:59, 06:00, 11:59, 12:00, 17:59 en 18:00 | Hello, Good morning, Good morning, Good afternoon, Good afternoon, Good evening, gevolgd door de gebruikersnaam; tot 3204eb0 Goedenacht, Goedemorgen, Goedemiddag en Goedenavond |
 | T-08 | UC-04 | Wachtwoord wijzigen met het huidige wachtwoord: leeg, twee verschillende, geldig | 400; 400; daarna werkt het oude niet (400) en het nieuwe wel |
 | T-09 | UC-05 | Account verwijderen met het huidige wachtwoord | Inloggen geeft 400, de notities zijn weg, een tweede sessie van hetzelfde account geldt als uitgelogd |
 | T-26 | UC-06 | `/account` openen als ingelogde gebruiker, en zonder in te loggen | Eigen gebruikersnaam, aanmaakdatum en aantal notities; zonder login 302 naar `/login` |
@@ -55,7 +56,7 @@ regressietest, behalve waar iets anders staat.
 | T-19 | MC-08 | Met de verbinding van de app `CREATE TABLE` en `DROP TABLE` uitvoeren | Geweigerd: `permission denied for schema public` en `must be owner of table notes` (sinds MIT-27, gemeten op 2026-10-17). Voor 1d1b4eb: lukte, als superuser | Idem; bewijs voor MIT-27 |
 | T-20 | MC-09 | Een bestaande en een nieuwe naam registreren, antwoorden vergelijken | Verschillend antwoord (409 en 302) | Vertraagd of beperkt na een aantal pogingen |
 | T-21 | MC-10 | Een notitie van 5 MB sturen | 413 binnen 0,15 s, zonder dat de app het inleest (sinds MIT-22, gemeten op 2026-10-17). Voor 61221ed: 400, pas nadat de 5 MB was ingelezen | Idem; bewijs voor MIT-22 |
-| T-22 | MC-11 | `pip freeze` in de image vergelijken met `requirements.txt`; image scannen | `pip freeze` gelijk; een scan is nog niet gedaan | Gelijk; de scan draait in CI en meldt bekende kwetsbaarheden |
+| T-22 | MC-11 | `pip freeze` in de image vergelijken met `requirements.txt`; image scannen | `pip freeze` gelijk. De scan draait sinds 29e42cc in CI (T-105) | Gelijk; de scan draait in CI en meldt bekende kwetsbaarheden |
 | T-23 | MC-12 | Wachtwoord wijzigen zonder het huidige te kennen | Zonder huidig wachtwoord 400; met een fout 400 en "Je huidige wachtwoord klopt niet." (sinds MIT-16, gemeten op 2026-10-16) | Idem; bewijs voor MIT-16 |
 | T-24 | MC-13 | Account verwijderen met een `POST` zonder bevestiging en zonder wachtwoord | Zonder wachtwoord 400, en het account bestaat nog (sinds MIT-16, gemeten op 2026-10-16) | Idem; bewijs voor MIT-16 |
 | T-25 | MC-14 | `whoami` in de app-container; de logs bij het starten | `root`; "WARNING: This is a development server" | Een gewone gebruiker; een productieserver zonder die waarschuwing |
@@ -122,7 +123,7 @@ regressietest, behalve waar iets anders staat.
 | T-93 | MC-28 | De hele regressietest, en een kleine aanval: 6 foute wachtwoorden, een onbekende naam en een POST zonder CSRF-token; daarna de log | Alle soorten die de code kan loggen staan erin (de test haalt de lijst uit de code), elke regel geldige JSON met tijd, soort en adres; de aanval staat er regel voor regel in (gemeten op 2026-10-17). Voor 6992001: de log was leeg | Idem; bewijs voor MIT-31 |
 | T-94 | MC-28, MC-26 | Inloggen met een naam met een regeleinde en een nep-gebeurtenis erin; de log doorzoeken op de testwachtwoorden, TOTP-geheimen en herstelcodes van de test | Geen valse regel en geen naam; geen enkel wachtwoord, geheim of code in de log (gemeten op 2026-10-17) | Idem; bewijs voor MIT-31 |
 | T-95 | MC-22 | `ensure_env()` in een Linux-container, met een nieuw en met een bestaand `.env` (0644) | Beide 0600, en het bestaande geheim blijft staan (gemeten op 2026-10-17). Voor 9d3f985: 0644, leesbaar voor iedereen | Idem; bewijs voor MIT-32 |
-| T-96 | MC-19 | De herstelcodepagina in Edge: Verder zonder en met vinkje, kopiëren en downloaden; en een foute login | Zonder vinkje blijft de pagina staan, met vinkje naar `/account`; het klembord en het bestand `notities-herstelcode.txt` bevatten de code; de foutmelding krijgt de focus, met `role="alert"` (gemeten op 2026-10-17) | Idem; bewijs voor de uitbreiding van MIT-11 |
+| T-96 | MC-19 | De herstelcodepagina in Edge: Verder zonder en met vinkje, kopiëren en downloaden; en een foute login | Zonder vinkje blijft de pagina staan, met vinkje naar `/account`; het klembord en het bestand `notities-herstelcode.txt` bevatten de code; de foutmelding krijgt de focus, met `role="alert"` (gemeten op 2026-10-17). Sinds 828d04f gaat Verder na het aanzetten naar `/` en na een nieuwe herstelcode naar `/account` (regressietest, 2026-10-18), en sinds 3204eb0 heet het bestand `notes-recovery-code.txt`; dat laatste is niet opnieuw gemeten in Edge | Idem; bewijs voor de uitbreiding van MIT-11 |
 | T-97 | MC-11 | Na de push: opent Dependabot pull requests, ook voor de digests van de images? | Ja: het eerste pull request (#1, 2026-10-18) zette azurerm van 5.8.0 naar 5.9.0, met de lock-file erbij; na het samenvoegen gaf het plan dezelfde uitkomst. Een pull request voor een digest van een image is nog niet gekomen | Een pull request per nieuwe versie |
 | T-98 | MC-12, MC-13 | Wachtwoord wijzigen en account verwijderen met het juiste wachtwoord: zonder code, met een foute code, en met een goede | Zonder code 400; met een foute code 400 en "Onjuiste of al gebruikte code."; het wachtwoord is daarna nog het oude en het account bestaat nog; met wachtwoord en code gelukt (gemeten op 2026-10-17). Voor 72ddaed: met alleen het wachtwoord gewijzigd en verwijderd | Idem; bewijs voor MIT-16 |
 | T-99 | MC-29 | Met de sessie en één code van het slachtoffer: de tweede factor opnieuw instellen, de eigen telefoon koppelen en via wachtwoord vergeten een nieuw wachtwoord zetten; en een nieuwe herstelcode vragen zonder wachtwoord | Bij de eerste stap 400 "Je huidige wachtwoord klopt niet.", de tweede factor blijft aan; een nieuwe herstelcode zonder wachtwoord 400 (gemeten op 2026-10-18). Voor 997e641: alle vier de stappen lukten en het slachtoffer was buitengesloten | Idem; bewijs voor MIT-16 |
