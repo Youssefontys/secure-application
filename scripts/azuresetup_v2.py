@@ -31,7 +31,7 @@ PROPAGATION_WAIT = 120
 GUID = r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"
 # Fouten die bij het doorvoeren in Azure horen en vanzelf overgaan, en fouten die betekenen dat het er al is.
 RETRYABLE = ("ResourceNotFound", "ConnectionAbortedError", "PrincipalNotFound", "AuthorizationFailed")
-IGNORABLE = ("RoleAssignmentExists", "already exists", "Subscription is not registered")
+IGNORABLE = ("RoleAssignmentExists", "already exists")
 
 
 # Het commando als lijst van argumenten, zonder shell; het programma via PATH (op Windows az.cmd).
@@ -163,11 +163,12 @@ time.sleep(15)
 az_retry("keyvault", "key", "create", "--vault-name", kv_name, "--name", key_name, "--kty", "RSA", "--size", "4096", "-o", "none")
 
 # D. De opslag, versleuteld met die sleutel, alleen over HTTPS en niet publiek.
-print(f"📦 Opslag: {sa_name}, versleuteld met die sleutel, alleen over HTTPS")
+# Zonder accountsleutels: anders leest wie de sleutels mag opvragen de state buiten de rollen om; Terraform logt in via Entra.
+print(f"📦 Opslag: {sa_name}, versleuteld met die sleutel, alleen over HTTPS en zonder accountsleutels")
 kv_uri = az("keyvault", "show", "--name", kv_name, "--query", "properties.vaultUri", "-o", "tsv")
 az_retry("storage", "account", "create", "--name", sa_name, "--resource-group", rg, "--location", location,
          "--sku", "Standard_LRS", "--kind", "StorageV2", "--allow-blob-public-access", "false",
-         "--min-tls-version", "TLS1_2", "--https-only", "true",
+         "--min-tls-version", "TLS1_2", "--https-only", "true", "--allow-shared-key-access", "false",
          "--identity-type", "UserAssigned", "--user-identity-id", uami_id,
          "--encryption-key-source", "Microsoft.Keyvault", "--encryption-key-vault", kv_uri,
          "--encryption-key-name", key_name, "--encryption-services", "blob",
@@ -177,8 +178,8 @@ az_retry("storage", "account", "blob-service-properties", "update", "--account-n
          "--enable-versioning", "true", "--enable-delete-retention", "true", "--delete-retention-days", "7",
          "--enable-container-delete-retention", "true", "--container-delete-retention-days", "7", "-o", "none")
 sa_scope = f"/subscriptions/{sub_id}/resourceGroups/{rg}/providers/Microsoft.Storage/storageAccounts/{sa_name}"
-assign("Storage Blob Data Owner", me, sa_scope)
-assign("Storage Blob Data Contributor", mi_principal_id, sa_scope)
+# Wat HashiCorp voor het backend aanraadt. De identiteit krijgt hier niets: Storage gebruikt hem alleen voor de sleutel.
+assign("Storage Blob Data Contributor", me, sa_scope)
 print(f"⏳ {PROPAGATION_WAIT // 60} minuten wachten tot Azure de sleutel en de rechten overal kent... ☕")
 time.sleep(PROPAGATION_WAIT)
 az_retry("storage", "container", "create", "--name", container, "--account-name", sa_name, "--auth-mode", "login", "-o", "none")
