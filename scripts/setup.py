@@ -29,7 +29,7 @@ NEEDS = {
     "lokaal": [("docker", "Docker met Compose v2, voor de containers")],
     "azure": [("az", "de Azure CLI, om in te loggen en de Terraform-state op te zetten"),
               ("terraform", "Terraform 1.11 of nieuwer, voor de resources"),
-              ("git", "Git, voor de commit waarvan GitHub de image bouwde")],
+              ("git", "Git, om de image te vinden die GitHub van je app/ bouwde")],
 }
 # Zonder terminal geen vragen: dan gelden de standaardwaarden.
 INTERACTIVE = sys.stdin.isatty()
@@ -198,12 +198,14 @@ def azure():
         if subprocess.run([sys.executable, str(REPO / "scripts" / "azuresetup_v2.py")], cwd=REPO).returncode != 0:
             sys.exit(1)
 
-    repo, commit = github_repo(git("remote", "get-url", "origin")), git("rev-parse", "HEAD")
-    if not (repo and commit):
+    # De tag is de inhoud van app/ in je laatste commit (zie image.yml): een commit zonder app-wijziging hergebruikt hem.
+    repo, tree = github_repo(git("remote", "get-url", "origin")), git("rev-parse", "HEAD:app")
+    if not (repo and tree):
         stop("Geen GitHub-repo gevonden (git remote get-url origin); de image komt van GitHub Actions.", icon="🤔")
-    image = f"ghcr.io/{repo}:{commit}"
-    print(f"\n📦 De image van je laatste commit: {image}")
-    if not image_public(repo, commit):
+    tag = f"app-{tree}"
+    image = f"ghcr.io/{repo}:{tag}"
+    print(f"\n📦 De image van app/ zoals in je laatste commit: {image}")
+    if not image_public(repo, tag):
         stop("Die image staat nog niet op ghcr.io, of hij is niet openbaar.\n"
              "   💡 Push je laatste commit en wacht tot de GitHub Action Image groen is, een paar minuten:\n"
              f"      https://github.com/{repo}/actions\n"
