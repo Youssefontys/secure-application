@@ -24,6 +24,7 @@ Every feature that is added has an entry in `BoK/`: the use case, the misuse cas
 
 - **Locally:** Docker with Compose v2, and Python 3 for `scripts/setup.py`.
 - **Azure:** an Azure subscription in which you may create resources and role assignments, the Azure CLI, Terraform 1.11 or newer, Python 3, and Docker to build the image. The GitHub CLI (`gh`) is optional, for the pipeline secrets.
+- **Signed in to Azure** before `python scripts/setup.py azure`: run `az login`. If it says `Authentication failed against tenant <ID>` with `AADSTS50076`, that tenant requires MFA and `az login` skipped it; run `az login --tenant <ID>` and approve the second step in your authenticator app. On Windows the sign-in opens in a small Windows window (Web Account Manager) instead of the browser; that is the default since Azure CLI 2.61.0.
 
 `setup.py` checks these first and names what is missing.
 
