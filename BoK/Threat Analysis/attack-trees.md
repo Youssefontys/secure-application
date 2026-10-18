@@ -100,3 +100,14 @@ Onopgemerkt aanvallen (MC-28)                                              [MIT-
       OR  de log wissen, met beheer over de host of de container            [lokaal open; op Azure MIT-31]
       OR  valse regels in de log zetten om een spoor te verbergen (MC-26)   [MIT-25]
 ```
+
+## Doel 5: de omgeving op Azure overnemen
+
+```
+Alles op Azure in handen (MC-31)                                           [MIT-38, deels]
+  OR  De Azure-login van de beheerder stelen                               [open; de tenant vraagt een tweede stap]
+  OR  Een geldige az login-sessie op de pc van de beheerder gebruiken      [open]
+  OR  De Terraform-state wijzigen of wissen                                [MIT-38, deels: een Owner geeft zich een rol]
+  OR  De state lezen met een accountsleutel, buiten de rollen om           [MIT-38]
+  OR  Eigen code laten uitrollen via de pipeline (MC-30)                   [MIT-34, MIT-35, deels]
+```

@@ -524,6 +524,21 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 - Status: open
 - Sinds: 19a34dd
 
+### MC-31 De omgeving op Azure overnemen via de beheerder
+- Aanvallersdoel: alles op Azure in handen krijgen: de geheimen, de database en wat er draait
+- Aanvaller: wie de Azure-login van de beheerder, zijn pc of de Terraform-state te pakken krijgt
+- Assets / onderdelen: A-15, A-16, C-09, C-10, F-10, F-11, B-05
+- Gerelateerde use case: UC-10
+- Stappen:
+  - OR  1. De Azure-login van de beheerder stelen, bijvoorbeeld met phishing
+  - OR  2. Een geldige `az login`-sessie gebruiken op de pc van de beheerder, zonder zelf in te loggen
+  - OR  3. De Terraform-state wijzigen of wissen, zodat de volgende `apply` iets anders doet of resources vergeet
+  - OR  4. De Terraform-state lezen met een accountsleutel van de opslag, buiten de rollen om
+- Mitigaties: MIT-38 (stap 3 en 4: de state alleen via Entra ID, alleen de beheerder heeft een rol op de blobs, accountsleutels uit, en vorige versies en 7 dagen terughalen na verwijderen). Bij stap 1 vraagt de tenant een tweede stap bij het inloggen (AADSTS50076); dat is een instelling van de tenant, geen eigen maatregel.
+- Restrisico: stap 2 blijft: een sessie op de pc geldt zonder nieuwe tweede stap. De beheerder is Owner op de subscription, dus wie zijn login heeft, kan zichzelf elke rol geven en elk geheim lezen; dat geldt ook voor stap 3, want een Owner kan zichzelf een rol op de opslag geven. Een eigen identiteit met minder rechten komt pas met CD, en dan alleen om de image te vervangen.
+- Status: open
+- Sinds: 75c9967
+
 ## Mitigaties
 
 ### MIT-01 Automatisch escapen in Jinja
@@ -784,3 +799,10 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 - Waar: `terraform/alerts.tf`; de vraag naar het adres in `run()` van `scripts/deploy_azure.py`
 - Status: bewezen (T-107, T-108; gemeten op 2026-10-18)
 - Sinds: c4ce459
+
+### MIT-38 De Terraform-state: eigen sleutel, alleen via Entra ID
+- Houdt tegen: MC-31 stap 3 en 4
+- Wat: `scripts/azuresetup_v2.py` zet de state in een eigen storage account, versleuteld met een eigen RSA-4096-sleutel in een eigen Key Vault (purge protection, 90 dagen). Terraform logt in via Entra ID (`use_azuread_auth`). De beheerder heeft alleen Storage Blob Data Contributor, wat HashiCorp voor dit backend aanraadt; de identiteit van de opslag heeft alleen de rol om de sleutel te gebruiken. Accountsleutels staan uit, dus ook wie de sleutels mag opvragen, komt er zonder rol niet bij. Vorige versies blijven bewaard, en een verwijderde blob of container is 7 dagen terug te halen.
+- Waar: `scripts/azuresetup_v2.py`; `use_azuread_auth = true` in `backend.conf`, die het script schrijft
+- Status: gebouwd; te meten na de volgende bootstrap (T-109)
+- Sinds: d51fb9f; minimale rollen en geen accountsleutels sinds e4d9e25
