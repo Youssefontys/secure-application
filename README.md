@@ -6,7 +6,7 @@ Professional application for the Yellow Teaming (Security Engineering) specialis
 
 A small notes application that started as a **deliberately insecure baseline** and gets security features one at a time. The baseline only did what is needed to be functional: register, log in, change the password, delete the account, and create, edit and delete notes, with plain-text passwords, no CSRF protection, no rate limiting and no ownership check on notes. What has been added since is under Status.
 
-Every feature that is added has an entry in `BoK/`: the use case, the misuse case it answers and the mitigation, written at the moment it is built. We build first and write the analysis alongside, not the other way around. The first version of this application (more complete, with Argon2, 2FA, Vault encryption and rate limiting) is in [BOK-SECENGINEER](https://github.com/Youssefontys/BOK-SECENGINEER) and is used as a reference for what to add next.
+Every feature that is added has an entry in `BoK/`: the use case, the misuse case it answers and the mitigation, written at the moment it is built. We build first and write the analysis alongside, not the other way around. The app itself is in English; the BoK, the code comments and the scripts are in Dutch. The first version of this application (more complete, with Argon2, 2FA, Vault encryption and rate limiting) is in [BOK-SECENGINEER](https://github.com/Youssefontys/BOK-SECENGINEER) and is used as a reference for what to add next.
 
 ## Structure
 
@@ -18,7 +18,7 @@ Every feature that is added has an entry in `BoK/`: the use case, the misuse cas
 - `compose.yaml` - app and database for local use, with a ZAP profile in comments for later
 - `.github/dependabot.yml` - weekly update proposals for the pinned packages, images, Terraform providers and GitHub Actions
 - `.github/workflows/image.yml` - builds the image on every push to `main` and publishes it to ghcr.io, tagged with the commit
-- `scripts/` - `setup.py` to deploy, locally or to Azure, and to remove it all again, and `azuresetup_v2.py`, the one-time Terraform state bootstrap that `setup.py` starts when it is missing
+- `scripts/` - `setup.py` to deploy, locally or to Azure, and to remove it all again. It only asks what to do and starts `deploy_local.py`, `deploy_azure.py` or `cleanup.py`, which share `common.py`. `azuresetup_v2.py` is the one-time Terraform state bootstrap that `deploy_azure.py` starts when it is missing
 - `terraform/` - Azure: Container Apps, PostgreSQL B1ms in a private network and Key Vault; secrets stay out of the Terraform state. Deployed on 18 October 2026 in France Central
 
 ## Requirements
