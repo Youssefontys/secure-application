@@ -29,6 +29,11 @@ resource "azurerm_subnet" "db" {
   resource_group_name  = azurerm_resource_group.main.name
   virtual_network_name = azurerm_virtual_network.main.name
   address_prefixes     = ["10.20.1.0/28"]
+  # Zet Azure zelf bij de eerste server, voor het archiveren van het transactielog (WAL) naar Storage. Hier vastgelegd,
+  # anders haalt de volgende apply hem weg.
+  service_endpoint {
+    service = "Microsoft.Storage"
+  }
 
   delegation {
     name = "postgres"
