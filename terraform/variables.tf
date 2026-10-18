@@ -1,7 +1,7 @@
-# West Europe neemt geen nieuwe tenants aan (RequestDisallowedByAzure); Sweden Central heeft alles wat hier nodig is, in de EU.
+# West Europe neemt geen nieuwe tenants aan (RequestDisallowedByAzure); Germany West Central ligt het dichtst bij, met dezelfde prijs.
 variable "location" {
   type    = string
-  default = "swedencentral"
+  default = "germanywestcentral"
 }
 
 # De image van de app met een vaste tag of digest, nooit latest (MIT-03); de pipeline bouwt en pusht hem.

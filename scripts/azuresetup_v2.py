@@ -16,7 +16,9 @@ from pathlib import Path
 # backend.conf komt in de hoofdmap van de repo, waar setup.py en terraform init hem zoeken.
 BACKEND_CONF = Path(__file__).resolve().parent.parent / "backend.conf"
 # West Europe neemt geen nieuwe tenants aan (RequestDisallowedByAzure); dezelfde regio als terraform/variables.tf.
-DEFAULT_LOCATION = "swedencentral"
+DEFAULT_LOCATION = "germanywestcentral"
+# In de vraag doorgestreept; wie daar al resources heeft, mag hem nog wel intypen.
+CLOSED_LOCATION = "westeurope"
 DEFAULT_RG_NAME = "rg-tfstate-mgmt"
 PROPAGATION_WAIT = 120
 # Allowlist voor een subscription ID: een GUID, verder niets.
@@ -61,8 +63,9 @@ def assign(role, assignee, scope):
 
 
 # Een vraag met een standaardwaarde; met pattern alleen een antwoord dat er helemaal aan voldoet.
-def ask_user(question, default=None, pattern=None):
-    prompt = f"{question} [{default}]: " if default else f"{question}: "
+# shown vervangt wat er tussen de haakjes staat, bijvoorbeeld met een optie die niet kan.
+def ask_user(question, default=None, pattern=None, shown=None):
+    prompt = f"{question} [{shown or default}]: " if default else f"{question}: "
     while True:
         ans = input(prompt).strip() or default
         if ans is None:
@@ -109,7 +112,9 @@ for namespace in ("Microsoft.Storage", "Microsoft.KeyVault", "Microsoft.ManagedI
 
 # 3. Invoer; met vier cijfers erachter blijft de naam van de opslag binnen de 3 tot 24 tekens van Azure.
 rg = ask_user("Resource Group naam", DEFAULT_RG_NAME, pattern=r"[A-Za-z0-9_.-]{0,89}[A-Za-z0-9_-]")
-location = ask_user("Regio", DEFAULT_LOCATION, pattern=r"[a-z0-9]+")
+# Doorstrepen met een combinerend streepje per letter: werkt in elke terminal die UTF-8 toont, zonder kleurcodes.
+closed = "".join(char + "̶" for char in CLOSED_LOCATION)
+location = ask_user("Regio", DEFAULT_LOCATION, pattern=r"[a-z0-9]+", shown=f"{DEFAULT_LOCATION} | {closed} neemt geen nieuwe klanten aan")
 container = ask_user("Blob container naam", "tfstate", pattern=r"[a-z0-9](?!.*--)[a-z0-9-]{1,61}[a-z0-9]")
 prefix = ask_user("Storage prefix (3-10 chars)", "tfstate", pattern=r"[a-z0-9]{3,10}")
 sa_name = f"{prefix}{random.randint(1000, 9999)}"
