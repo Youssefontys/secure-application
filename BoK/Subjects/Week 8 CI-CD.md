@@ -72,6 +72,24 @@ De details staan in de entries (MC-30, MC-11, MIT-34 tot MIT-36; C-06, A-12, A-1
 - **Wat misging:** azurerm 5.8.0 kon het verwijderen van de Container Apps-omgeving in Germany West Central niet volgen (`polling support for the Content-Type "" was not implemented`); Azure verwijderde hem wel. Een onderbroken `apply` liet daarna een private DNS-zone buiten de state; `terraform import` nam hem op, zonder iets in Azure te veranderen.
 - **Gemeten na de uitrol:** HTTPS met een geldig certificaat, HTTP met een 301 naar HTTPS, HSTS, CSP, `no-store` en een sessiecookie met `Secure`. De schema-job draaide en slaagde. De log komt in Log Analytics, met het adres van de bezoeker (T-102, T-104), en de identiteit van de app heeft geen rol op de vault van de eigenaar (T-86).
 
+### De regio, vergeleken (18-10-2026)
+
+Gemeten en opgezocht na de eerste uitrol, om te zien of een andere regio sneller of goedkoper is. De ping is één meting met azurespeed.com vanuit de browser, in Nederland. De prijzen komen uit de Azure Retail Prices API: PostgreSQL B1ms 730 uur plus 32 GB opslag per maand, in euro; Container Apps per vCPU-seconde in dollar, omdat de API dat bedrag in euro op 0 afrondt.
+
+| Regio | Ping | PostgreSQL per maand | Container Apps per vCPU-s | Kan het? |
+|---|---|---|---|---|
+| West Europe | 14 ms | €16,63 | $0,000034 | Nee: neemt geen nieuwe tenants aan (`RequestDisallowedByAzure`) |
+| Germany West Central | 18 ms | €16,63 | $0,000024 | Nee: PostgreSQL is `restricted` voor deze subscription |
+| UK South | 20 ms | €15,94 | $0,000034 | Ja, maar buiten de EU |
+| Belgium Central | 21 ms | €16,63 | $0,000031 | Nee: geen log search alert (`scheduledQueryRules`) in deze regio |
+| France Central | 23 ms | €15,94 | $0,000024 | Ja, en uitgerold |
+
+- **Beschikbaarheid gecontroleerd met Azure zelf.** De capabilities-API van PostgreSQL per regio (B1ms en versie 18 zijn er in alle vijf), en de regio's per soort resource (`az provider show`): in Belgium Central bestaat alles wat Terraform maakt, behalve de log search alert van MIT-37. De action group is wereldwijd. Of die alert in een andere regio mag staan dan de workspace, is nergens bevestigd te vinden.
+- **Ping maakt niet uit.** 9 ms tussen de snelste en France Central, terwijl inloggen alleen al zo'n 130 ms rekent aan Argon2id (gemeten in de regressietest).
+- **Prijs maakt weinig uit.** De database scheelt hooguit €0,69 per maand. Container Apps blijft binnen het gratis tegoed van 180.000 vCPU-seconden en 360.000 GiB-seconden per subscription per maand, ook een week hackstand met 1 replica (0,25 vCPU en 0,5 GiB: 151.200 vCPU-seconden en 302.400 GiB-seconden); daarboven is France Central per vCPU-seconde het goedkoopst.
+- **UK South ligt buiten de EU.** Dan staan gebruikersnamen, IP-adressen in de log en het e-mailadres van de beheerder in het Verenigd Koninkrijk; dat moet Laws & Compliance dan verantwoorden.
+- **Besluit: France Central blijft.** Het goedkoopst, in de EU, en al uitgerold en gemeten.
+
 ## Volgende stappen, één per keer
 
 1. Gedaan: een scan van de image op bekende lekken, met een rem vóór het publiceren (MIT-35).
@@ -101,3 +119,6 @@ Opgehaald en gecontroleerd op 18-10-2026.
 - Trivy, een SBoM scannen ("Trivy can take the following SBOM formats as an input and scan for vulnerabilities"): https://trivy.dev/latest/docs/target/sbom/
 - Trivy, filtering (`--ignore-unfixed`: "To skip all unfixed vulnerabilities"): https://trivy.dev/latest/docs/configuration/filtering/
 - Microsoft, regio's die geen nieuwe klanten aannemen: https://learn.microsoft.com/azure/azure-resource-manager/troubleshooting/error-region-access-policy
+- Azure Retail Prices API (PostgreSQL B1ms en opslag, Container Apps, Log Analytics per regio): https://prices.azure.com/api/retail/prices
+- Azure Speed Test (ping per regio vanuit de browser): https://www.azurespeed.com/Azure/Latency
+- Microsoft, prijzen van Container Apps ("The first 180,000 vCPU-seconds, 360,000 GiB-seconds, and 2 million requests per subscription per month are free"): https://azure.microsoft.com/pricing/details/container-apps/
