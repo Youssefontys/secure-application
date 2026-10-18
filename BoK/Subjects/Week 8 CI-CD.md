@@ -20,7 +20,7 @@ De details staan in de entries (MC-30, MC-11, MIT-34 tot MIT-36; C-06, A-12, A-1
 | De tag | Zelf kiezen | De commit, en de inhoud van `app/` (de tree-hash van git), nooit `latest` |
 | Weten wat er in de image zit | Nergens vastgelegd | Een CycloneDX-SBoM van elke image, 90 dagen bij de run |
 | Bekende lekken in de image | Niemand keek; er zaten vier keer HIGH in, in pip | Trivy vóór het publiceren; 0, want pip gaat na het installeren uit de image |
-| Uitrollen | Vijf stappen van de routekaart in `setup.py` | `python scripts/deployment.py azure`: het zoekt de image bij je laatste commit en draait Terraform |
+| Uitrollen | Vijf stappen van de routekaart in `setup.py` (nu `deployment.py`) | `python scripts/deployment.py azure`: het zoekt de image bij je laatste commit en draait Terraform |
 
 ## Hoe het werkt
 
@@ -41,7 +41,7 @@ De details staan in de entries (MC-30, MC-11, MIT-34 tot MIT-36; C-06, A-12, A-1
 | Een pull request publiceert niets | Geen trigger op `pull_request` | In de workflow |
 | De lijst klopt | De SBoM bevat het besturingssysteem, de Debian-pakketten en precies de 14 Python-pakketten uit `requirements.txt` | T-106: 103 onderdelen; een scan op de SBoM vindt hetzelfde als een scan op de image |
 | Een bekend lek gaat niet live | Trivy vóór het pushen; met een lek stopt de job | T-105: met pip 4 keer HIGH (exit 1), zonder pip 0 (exit 0) |
-| Geen token dat kan uitlekken | Geen eigen token meer; dat van de run vervalt na de run | De stap met een token (classic) is weg uit `setup.py` |
+| Geen token dat kan uitlekken | Geen eigen token meer; dat van de run vervalt na de run | De stap met een token (classic) is weg uit `setup.py` (nu `deployment.py`) |
 
 ## Wat het niet oplost
 
