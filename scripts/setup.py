@@ -231,7 +231,9 @@ def azure():
         variables.append(f"throttle_pair_exempt_users={hack['THROTTLE_PAIR_EXEMPT_USERS']}")
 
     print("\n🏗️  Terraform. Het laat eerst zien wat het gaat doen, en begint pas als jij yes typt.\n")
-    if not terraform("init", "-input=false", "-backend-config=../backend.conf"):
+    # backend.conf is de enige bron: na een nieuwe bootstrap kent .terraform nog de oude opslag, en dan stopt init
+    # zonder -reconfigure. Er gaat geen state mee; die hoort bij de opslag.
+    if not terraform("init", "-input=false", "-reconfigure", "-backend-config=../backend.conf"):
         stop("terraform init lukte niet; de melding staat hierboven.")
     # De vraag om yes blijft staan: hier gaan resources aan die geld kosten.
     if not terraform("apply", *(f"-var={v}" for v in variables)):
