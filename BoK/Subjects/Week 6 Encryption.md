@@ -53,7 +53,7 @@ Drie verschillende dingen, die in deze app allemaal voorkomen:
   - Eén sleutel voor het geheim en de notities; de soort in de associated data houdt ze uit elkaar.
 - **Ontsleutelen mislukt:**
   - Bij het TOTP-geheim telt dat als geen geheim, en wordt elke code geweigerd; bij twijfel gaat de deur dus dicht. Alleen een half ingesteld geheim wordt dan vervangen, want dat werkte nog nergens (T-65).
-  - Bij een notitie staat er "(niet te lezen)".
+  - Bij een notitie staat er "(unreadable)".
 - **In de code:** `encrypt()` en `decrypt()` in `app/encryption.py`.
   - Het geheim wordt versleuteld in `setup_2fa()`, en ontsleuteld in `setup_2fa()`, `qr_2fa()` en `check_code()`.
   - De notities lopen via `sealed()` en `readable()` in `app/notes.py`.

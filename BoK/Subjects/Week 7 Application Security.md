@@ -72,7 +72,7 @@ De details staan in de entries (MC-04, MC-05, MC-07, MC-08, MC-10, MC-11, MC-14,
 - **Standaard dicht (MIT-24).** Eén hook (`require_login`) vraagt voor elke route een login met tweestapsverificatie. Alleen `PUBLIC_ENDPOINTS` mag zonder.
 - **Veilig falen (MIT-25).**
   - HTTP-fouten krijgen de eigen foutpagina, met behoud van status en headers. Die pagina toont een grote robot die het heeft begeven, met de statuscode op zijn borst; een inline SVG zonder `style`-attributen, met de opmaak en animatie in `style.css`, zodat de CSP streng blijft.
-  - Een onverwachte fout geeft "Er ging iets mis". De fout zelf gaat met traceback naar stderr: lokaal `docker compose logs`, op Azure de log van Container Apps.
+  - Een onverwachte fout geeft "Something went wrong". De fout zelf gaat met traceback naar stderr: lokaal `docker compose logs`, op Azure de log van Container Apps.
   - Het pad gaat als repr de log in, dus een regeleinde in de URL wordt `\n`.
 - **Gewone gebruiker (MIT-26).** De image maakt de systeemgebruiker `app` zonder shell en draait daaronder, met Gunicorn en twee workers. De code is van root, dus de app kan hem lezen maar niet aanpassen.
 - **Databaserol (MIT-27).**
