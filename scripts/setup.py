@@ -25,11 +25,17 @@ NEEDS = {
 INTERACTIVE = sys.stdin.isatty()
 # Eist een tenant MFA, dan slaat az login hem over (AADSTS50076) en is er geen subscription; --tenant vraagt er wel om.
 AZ_LOGIN_HELP = """Niet ingelogd bij Azure, of geen subscription gevonden. Eerst inloggen:
-  az login
-Zegt az login "Authentication failed against tenant <ID>" met AADSTS50076, dan eist die tenant MFA.
-Log dan in bij die tenant, en keur de tweede stap goed in je authenticator-app:
-  az login --tenant <ID>
-Daarna opnieuw: python scripts/setup.py azure"""
+   az login
+   Zegt az login "Authentication failed against tenant <ID>" met AADSTS50076, dan eist die tenant MFA.
+   Log dan in bij die tenant, en keur de tweede stap goed in je authenticator-app:
+   az login --tenant <ID>
+   Daarna opnieuw: python scripts/setup.py azure"""
+IMAGE = "ghcr.io/youssefontys/secure-application:<tag>"
+
+
+# Stoppen met de melding, met witregels eromheen zodat hij opvalt; zelfde vorm als azuresetup_v2.py.
+def stop(message):
+    sys.exit(f"\n❌ {message}\n\n🛑 Stoppen.\n")
 
 
 # Een vraag met een standaardwaarde; alleen een antwoord dat helemaal op pattern past (allowlist, MIT-22).
@@ -45,7 +51,7 @@ def ask(question, default, pattern):
             return default
         if re.fullmatch(pattern, answer):
             return answer
-        print("Dat antwoord ken ik niet; probeer het opnieuw.")
+        print("❌ Dat antwoord ken ik niet; probeer het opnieuw.")
 
 
 def yes(question):
@@ -54,9 +60,10 @@ def yes(question):
 
 # Stopt met een lijst van wat ontbreekt, voordat er iets gebeurt.
 def check_tools(target):
-    missing = [f"  - {tool}: {why}" for tool, why in NEEDS[target] if not shutil.which(tool)]
+    missing = [f"   - {tool}: {why}" for tool, why in NEEDS[target] if not shutil.which(tool)]
     if missing:
-        sys.exit("Niet gevonden:\n" + "\n".join(missing))
+        stop("Niet gevonden:\n" + "\n".join(missing))
+    print("✅ Gevonden:", ", ".join(tool for tool, _ in NEEDS[target]))
 
 
 def read_env():
@@ -99,13 +106,13 @@ def set_env(name, value):
 
 # De hackstand voor de hacking week (MC-18), standaard uit. Geeft de instellingen, of None per instelling.
 def hackstand():
-    print("\nHackstand, alleen voor de hacking week, als de hele klas aanvalt vanaf één schooladres:\n"
-          "  n  normaal (standaard): per adres 20 foute inlogpogingen per kwartier en 10 nieuwe accounts per uur\n"
-          "  j  hacking week: per adres 100 foute inlogpogingen per kwartier en 60 nieuwe accounts per uur,\n"
-          "     zodat klasgenoten elkaar niet buitensluiten")
+    print("\n⚙️  Hackstand, alleen voor de hacking week, als de hele klas aanvalt vanaf één schooladres:\n"
+          "   n  normaal (standaard): per adres 20 foute inlogpogingen per kwartier en 10 nieuwe accounts per uur\n"
+          "   j  hacking week: per adres 100 foute inlogpogingen per kwartier en 60 nieuwe accounts per uur,\n"
+          "      zodat klasgenoten elkaar niet buitensluiten")
     if not yes("Hackstand aan?"):
         return {"THROTTLE_IP_MODE": None, "THROTTLE_PAIR_EXEMPT_USERS": None}
-    print("\nEen gedeeld demo-account dat iedereen mag aanvallen: foute wachtwoorden sluiten het dan niet af voor de rest.")
+    print("\n🎯 Een gedeeld demo-account dat iedereen mag aanvallen: foute wachtwoorden sluiten het dan niet af voor de rest.")
     # Dezelfde regel als een gebruikersnaam in de app; "-" is geen demo-account.
     demo = ask("Naam van het demo-account (- voor geen)", "hackingweek", r"[A-Za-z0-9_]{3,20}|-")
     return {"THROTTLE_IP_MODE": "hackweek", "THROTTLE_PAIR_EXEMPT_USERS": None if demo == "-" else demo}
@@ -114,8 +121,8 @@ def hackstand():
 def local():
     check_tools("lokaal")
     added = ensure_env()
-    if added:
-        print("Nieuw in .env:", ", ".join(added))
+    print(f"🔑 Nieuw in .env: {', '.join(added)} (256 willekeurige bits, niet getoond)" if added
+          else "✅ .env: alle geheimen staan erin")
     # Zonder terminal blijft wat er in .env staat; HTTPS_ONLY zet compose.yaml lokaal op 0 (HTTP).
     if INTERACTIVE:
         settings = hackstand()
@@ -123,8 +130,10 @@ def local():
         if INTERACTIVE:
             for name, value in settings.items():
                 set_env(name, value)
-    subprocess.run([shutil.which("docker"), "compose", "up", "-d", "--build", "--wait"], cwd=REPO, check=True)
-    print("De app draait op http://127.0.0.1:5000")
+    print("\n🐳 Containers bouwen en starten...\n")
+    if subprocess.run([shutil.which("docker"), "compose", "up", "-d", "--build", "--wait"], cwd=REPO).returncode != 0:
+        stop("docker compose up lukte niet; de melding van Docker staat hierboven.")
+    print("\n🎉 De app draait op http://127.0.0.1:5000\n")
 
 
 # Nog niet automatisch: eerst de image en de koppeling met GitHub (OIDC). Wel de juiste stappen, met deze keuzes.
@@ -133,29 +142,34 @@ def azure():
     # Stap 1 kan niets zonder login; dan eerst uitleggen hoe, ook bij een tenant die MFA eist.
     account = subprocess.run([shutil.which("az"), "account", "show", "--query", "name", "-o", "tsv"], capture_output=True, text=True)
     if account.returncode != 0:
-        sys.exit(AZ_LOGIN_HELP)
-    print(f"Ingelogd bij Azure, subscription: {account.stdout.strip()}")
+        stop(AZ_LOGIN_HELP)
+    print(f"✅ Ingelogd bij Azure, subscription: {account.stdout.strip()}")
     hack = hackstand() if INTERACTIVE else {"THROTTLE_IP_MODE": None, "THROTTLE_PAIR_EXEMPT_USERS": None}
-    image = "ghcr.io/youssefontys/secure-application:<tag>"
-    variables = [f"app_image={image}"]
+    variables = [f"app_image={IMAGE}"]
     if hack["THROTTLE_IP_MODE"]:
         variables += ["throttle_ip_mode=hackweek", "min_replicas=1"]
     if hack["THROTTLE_PAIR_EXEMPT_USERS"]:
         variables.append(f"throttle_pair_exempt_users={hack['THROTTLE_PAIR_EXEMPT_USERS']}")
-    print("\nAzure rolt nog niet automatisch uit. De stappen:")
-    print("  1. Eenmalig de Terraform-state:  python scripts/azuresetup_v2.py")
+    print("\n📋 Azure rolt nog niet automatisch uit. De stappen, één commando per regel:\n")
+    print("   1. De Terraform-state, eenmalig")
+    print("      python scripts/azuresetup_v2.py\n")
     # GitHub Packages accepteert alleen een token (classic); docker vraagt erom, dus het komt niet in de shellgeschiedenis.
-    print("  2. De image:                     docker login ghcr.io -u youssefontys  (wachtwoord: token (classic) met write:packages)")
-    print(f"                                   docker build -t {image} app  en  docker push {image}")
+    print("   2. De image")
+    print("      docker login ghcr.io -u youssefontys     (wachtwoord: een token (classic) met write:packages)")
+    print(f"      docker build -t {IMAGE} app")
+    print(f"      docker push {IMAGE}")
     # Een nieuw pakket is privé, en Terraform geeft Container Apps geen inlog voor ghcr.io: dan start de app niet.
-    print("     Eenmalig na de eerste push:   het pakket openbaar maken (Package settings > Change visibility > Public).")
-    print("                                   Daarna kan het niet meer privé; de repo is al openbaar en de image heeft geen geheimen.")
-    print("  3. Terraform:                    terraform -chdir=terraform init -backend-config=../backend.conf")
-    print("                                   terraform -chdir=terraform apply " + " ".join(f"-var {v}" for v in variables))
-    print("  4. Het schema, eenmalig:         het commando uit de output schema_job_command")
+    print("      Eenmalig na de eerste push: het pakket openbaar maken (Package settings > Change visibility > Public).")
+    print("      Daarna kan het niet meer privé; de repo is al openbaar en de image heeft geen geheimen.\n")
+    print("   3. Terraform")
+    print("      terraform -chdir=terraform init -backend-config=../backend.conf")
+    print("      terraform -chdir=terraform apply " + " ".join(f"-var {v}" for v in variables) + "\n")
+    print("   4. Het schema, eenmalig")
+    print("      het commando uit de output schema_job_command\n")
     sys.exit(1)
 
 
+print("\n🛡️  Notities-app uitrollen\n")
 if len(sys.argv) > 1:
     choice = sys.argv[1]
 elif INTERACTIVE:
@@ -167,4 +181,4 @@ if choice == "lokaal":
 elif choice == "azure":
     azure()
 else:
-    sys.exit(f"Onbekende keuze: {choice!r}. Kies lokaal of azure.")
+    stop(f"Onbekende keuze: {choice!r}. Kies lokaal of azure.")
