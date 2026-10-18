@@ -18,7 +18,7 @@ Every feature that is added has an entry in `BoK/`: the use case, the misuse cas
 - `compose.yaml` - app and database for local use, with a ZAP profile in comments for later
 - `.github/dependabot.yml` - weekly update proposals for the pinned packages, images, Terraform providers and GitHub Actions
 - `.github/workflows/image.yml` - builds the image on every push to `main` and publishes it to ghcr.io, tagged with the commit
-- `scripts/` - `setup.py` to deploy, locally or to Azure, and `azuresetup_v2.py`, the one-time Terraform state bootstrap that `setup.py` starts when it is missing
+- `scripts/` - `setup.py` to deploy, locally or to Azure, and to remove it all again, and `azuresetup_v2.py`, the one-time Terraform state bootstrap that `setup.py` starts when it is missing
 - `terraform/` - Azure: Container Apps, PostgreSQL B1ms in a private network and Key Vault; secrets stay out of the Terraform state. Deployed on 18 October 2026 in France Central
 
 ## Requirements
@@ -35,7 +35,7 @@ Every feature that is added has an entry in `BoK/`: the use case, the misuse cas
 python scripts/setup.py
 ```
 
-It asks where to deploy (local or Azure) and whether to turn on the hackstand for the hacking week, with a class behind one school address. Locally it creates missing secrets in `.env` and starts the stack. On Azure it sets up the Terraform state storage once, checks that GitHub Actions published the image of your last commit, and runs `terraform init` and `apply`; Terraform shows the plan and waits for `yes`, and starts the schema job itself. To update, push to `main`, wait for the Image action, and run it again. With `python scripts/setup.py lokaal` and no terminal (as in CI) it asks nothing and keeps what is in `.env`. On Linux or macOS the command is often `python3`; the script works the same on Windows and Linux.
+It asks where to deploy (local or Azure) and whether to turn on the hackstand for the hacking week, with a class behind one school address. Locally it creates missing secrets in `.env` and starts the stack. On Azure it sets up the Terraform state storage once, checks that GitHub Actions published the image of your last commit, and runs `terraform init` and `apply`; Terraform shows the plan and waits for `yes`, and starts the schema job itself. To update, push to `main`, wait for the Image action, and run it again. To remove it all again, `python scripts/setup.py opruimen` asks per part, with no as the default: on Azure `terraform destroy` (which still waits for `yes`) and then the state storage, `backend.conf` and `terraform/.terraform`; locally the containers, the database volume, the built image and `.env`. A step that fails stops before the next one, so the state storage stays as long as Terraform still needs it. With `python scripts/setup.py lokaal` and no terminal (as in CI) it asks nothing and keeps what is in `.env`. On Linux or macOS the command is often `python3`; the script works the same on Windows and Linux.
 
 In your own copy (a fork, or a copy under your own account), nothing needs to be set in GitHub: push to `main` or start the Image workflow in the Actions tab, and GitHub builds the image under your own name with the token of the run. Then `az login` and `python scripts/setup.py azure` set up your own state storage and deploy with your own subscription. In a private copy the image package is private too; Container Apps then cannot pull it, and `setup.py` stops and says so.
 
