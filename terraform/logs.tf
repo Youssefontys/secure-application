@@ -1,7 +1,7 @@
 # De security-log (MIT-31) bewaard op Azure: Container Apps zet stdout en stderr van de app in deze workspace (MC-28).
 # Daar kan de app zelf niet bij: wie de container overneemt, kan de log niet meer wissen.
 resource "azurerm_log_analytics_workspace" "main" {
-  name                = "log-${local.name}"
+  name                = "log-${local.unique}"
   location            = azurerm_resource_group.main.location
   resource_group_name = azurerm_resource_group.main.name
   sku                 = "PerGB2018"

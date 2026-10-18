@@ -22,7 +22,7 @@ for stream in (sys.stdout, sys.stderr):
 # backend.conf komt in de hoofdmap van de repo, waar setup.py en terraform init hem zoeken.
 BACKEND_CONF = Path(__file__).resolve().parent.parent / "backend.conf"
 # West Europe neemt geen nieuwe tenants aan (RequestDisallowedByAzure); dezelfde regio als terraform/variables.tf.
-DEFAULT_LOCATION = "germanywestcentral"
+DEFAULT_LOCATION = "francecentral"
 # In de vraag doorgestreept; wie daar al resources heeft, mag hem nog wel intypen.
 CLOSED_LOCATION = "westeurope"
 DEFAULT_RG_NAME = "rg-tfstate-mgmt"

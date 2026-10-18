@@ -2,6 +2,8 @@ data "azurerm_client_config" "current" {}
 
 # Een kort achtervoegsel voor namen die wereldwijd uniek moeten zijn (Key Vault, PostgreSQL). Geen geheim.
 resource "random_string" "suffix" {
+  # Een andere regio krijgt nieuwe namen: een verwijderde Key Vault houdt zijn naam nog 90 dagen vast.
+  keepers = { location = var.location }
   length  = 4
   special = false
   upper   = false

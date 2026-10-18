@@ -1,7 +1,8 @@
-# West Europe neemt geen nieuwe tenants aan (RequestDisallowedByAzure); Germany West Central ligt het dichtst bij, met dezelfde prijs.
+# West Europe neemt geen nieuwe tenants aan, en in Germany West Central mag deze subscription geen PostgreSQL maken.
+# France Central is van wat wel mag het dichtst bij Nederland; database.tf controleert de regio al bij het plan.
 variable "location" {
   type    = string
-  default = "germanywestcentral"
+  default = "francecentral"
 }
 
 # De image van de app met een vaste tag of digest, nooit latest (MIT-03); de pipeline bouwt en pusht hem.
