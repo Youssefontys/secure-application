@@ -1,4 +1,4 @@
-# Wat setup.py, deploy_local.py, deploy_azure.py en cleanup.py delen: paden, vragen, stoppen en de hackstand.
+# Wat deployment.py, deploy_local.py, deploy_azure.py en undo.py delen: paden, vragen, stoppen en de hackstand.
 # Werkt op Windows en Linux: geen shell, alleen lijsten van argumenten.
 
 import re

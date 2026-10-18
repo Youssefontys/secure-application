@@ -33,7 +33,7 @@ variable "throttle_ip_mode" {
   }
 }
 
-# Waar de alert bij een blokkade heen gaat (alerts.tf); setup.py vult het adres van az login in. Niet in de repo: die is openbaar.
+# Waar de alert bij een blokkade heen gaat (alerts.tf); deployment.py vult het adres van az login in. Niet in de repo: die is openbaar.
 variable "alert_email" {
   type = string
 

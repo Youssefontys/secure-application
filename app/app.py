@@ -27,7 +27,7 @@ def setting(name, default, allowed):
 
 # De website (HTML-templates en statische bestanden) staat in web/, los van de code.
 app = Flask(__name__, template_folder="web/templates", static_folder="web/static")
-# Flask ondertekent de sessiecookie met deze sleutel; setup.py maakt er een van 64 tekens.
+# Flask ondertekent de sessiecookie met deze sleutel; deployment.py maakt er een van 64 tekens.
 app.secret_key = os.environ["FLASK_SECRET_KEY"]
 if len(app.secret_key) < 32:
     raise RuntimeError("FLASK_SECRET_KEY moet minstens 32 tekens zijn.")

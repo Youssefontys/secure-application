@@ -1,4 +1,4 @@
-# Zet eenmalig de opslag voor de Terraform-state op Azure op; daarna doet Terraform de rest (setup.py azure).
+# Zet eenmalig de opslag voor de Terraform-state op Azure op; daarna doet Terraform de rest (deployment.py azure).
 # - De opslag is versleuteld met een eigen sleutel (RSA 4096) in Key Vault, met purge protection.
 # - Gescheiden rollen: wie dit draait beheert de sleutel; de identiteit van de opslag mag hem alleen gebruiken.
 # - Geen shell: elk commando is een lijst van argumenten. Op Windows is az een .cmd-bestand en leest cmd.exe
@@ -19,7 +19,7 @@ for stream in (sys.stdout, sys.stderr):
     if hasattr(stream, "reconfigure"):
         stream.reconfigure(encoding="utf-8")
 
-# backend.conf komt in de hoofdmap van de repo, waar setup.py en terraform init hem zoeken.
+# backend.conf komt in de hoofdmap van de repo, waar deployment.py en terraform init hem zoeken.
 BACKEND_CONF = Path(__file__).resolve().parent.parent / "backend.conf"
 # West Europe neemt geen nieuwe tenants aan (RequestDisallowedByAzure); dezelfde regio als terraform/variables.tf.
 DEFAULT_LOCATION = "francecentral"
@@ -39,7 +39,7 @@ def as_args(*args):
     return [shutil.which(args[0]) or args[0], *args[1:]]
 
 
-# Stoppen met de melding, met witregels eromheen zodat hij opvalt; zelfde vorm als setup.py.
+# Stoppen met de melding, met witregels eromheen zodat hij opvalt; zelfde vorm als deployment.py.
 def stop(message, icon="❌"):
     sys.exit(f"\n{icon} {message}\n\n🛑 Stoppen.\n")
 
@@ -193,4 +193,4 @@ with open(BACKEND_CONF, "w", encoding="utf-8", newline="\n") as f:
 
 print(f"\n📝 backend.conf geschreven: {BACKEND_CONF}")
 print("\n🎉 Klaar! De deur voor Terraform staat open.")
-print("👉 De rest doet python scripts/setup.py azure; als dat dit script startte, gaat het nu vanzelf verder.\n")
+print("👉 De rest doet python scripts/deployment.py azure; als dat dit script startte, gaat het nu vanzelf verder.\n")

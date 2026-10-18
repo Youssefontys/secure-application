@@ -1,5 +1,5 @@
 # Op Azure uitrollen: de state-opslag als die er nog niet is (azuresetup_v2.py), de image die GitHub bouwde,
-# en Terraform. Start via setup.py.
+# en Terraform. Start via deployment.py.
 
 import json
 import re
@@ -18,7 +18,7 @@ AZ_LOGIN_HELP = """Eerst even inloggen bij Azure: je bent nog niet ingelogd, of 
    Zegt az login "Authentication failed against tenant <ID>" met AADSTS50076? Dan wil die tenant een
    tweede stap (MFA). Log dan in bij die tenant, en keur het goed in je authenticator-app:
    az login --tenant <ID>
-   Daarna opnieuw: python scripts/setup.py azure"""
+   Daarna opnieuw: python scripts/deployment.py azure"""
 # Een e-mailadres, als allowlist (MIT-22); dezelfde regel als de validatie van alert_email in terraform/variables.tf.
 EMAIL = r"[^@\s]+@[^@\s]+\.[A-Za-z]{2,}"
 
@@ -80,7 +80,7 @@ def run():
         stop("Die image staat nog niet op ghcr.io, of hij is niet openbaar.\n"
              "   💡 Push je laatste commit en wacht tot de GitHub Action Image groen is, een paar minuten:\n"
              f"      https://github.com/{repo}/actions\n"
-             "   Daarna opnieuw: python scripts/setup.py azure", icon="⏳")
+             "   Daarna opnieuw: python scripts/deployment.py azure", icon="⏳")
     print("   ✅ Staat klaar, en Container Apps mag hem ophalen")
 
     hack = hackstand() if common.INTERACTIVE else {"THROTTLE_IP_MODE": None, "THROTTLE_PAIR_EXEMPT_USERS": None}
@@ -110,4 +110,4 @@ def run():
     print(f"\n🎉 Klaar! De app staat op {url}")
     print("⏳ Terraform heeft de schema-job gestart; geeft inloggen de eerste minuut een fout, probeer het dan zo nog eens.")
     print("💡 Bijwerken: push naar main, wacht tot de Action Image groen is, en draai dit script opnieuw.")
-    print("💡 Alles weer weg, zodat het niets meer kost: python scripts/setup.py opruimen\n")
+    print("💡 Alles weer weg, zodat het niets meer kost: python scripts/deployment.py undo\n")

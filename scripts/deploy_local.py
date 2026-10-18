@@ -1,4 +1,4 @@
-# Lokaal uitrollen met Docker Compose: de geheimen in .env, de hackstand, en de containers. Start via setup.py.
+# Lokaal uitrollen met Docker Compose: de geheimen in .env, de hackstand, en de containers. Start via deployment.py.
 
 import secrets
 import shutil
@@ -63,4 +63,4 @@ def run():
         stop("docker compose up lukte niet; de melding van Docker staat hierboven.\n"
              "   💡 Draait Docker (op Windows: Docker Desktop)? Start het en probeer het opnieuw.")
     print("\n🎉 Klaar! De app draait op http://127.0.0.1:5000")
-    print("💡 Stoppen kan met: docker compose down; alles weg, ook de data: python scripts/setup.py opruimen\n")
+    print("💡 Stoppen kan met: docker compose down; alles weg, ook de data: python scripts/deployment.py undo\n")

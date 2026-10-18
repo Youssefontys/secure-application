@@ -1,4 +1,4 @@
-# Alles weer weg, op Azure en lokaal. Start via setup.py opruimen.
+# Alles weer weg, op Azure en lokaal. Start via deployment.py undo.
 # Elke stap vraagt eerst, standaard nee; zonder terminal gebeurt er dus niets.
 
 import os
@@ -38,10 +38,10 @@ def run():
         check_tools("lokaal")
         # Eerst de database: zonder .env maar met de oude database in het volume start de app niet meer.
         # compose.yaml eist de geheimen ook bij down (${...:?}), dus zonder .env vulwaarden; down gebruikt ze niet.
-        env = {**os.environ, **dict.fromkeys(SECRETS, "opruimen")}
+        env = {**os.environ, **dict.fromkeys(SECRETS, "undo")}
         if subprocess.run([shutil.which("docker"), "compose", "down", "--volumes", "--rmi", "local"], cwd=REPO, env=env).returncode != 0:
             stop("docker compose down lukte niet; .env blijft staan, anders past hij niet meer bij de database.\n"
                  "   💡 Draait Docker (op Windows: Docker Desktop)? Start het en probeer het opnieuw.")
         ENV.unlink(missing_ok=True)
-        print("   ✅ Weg. Opnieuw beginnen: python scripts/setup.py lokaal")
+        print("   ✅ Weg. Opnieuw beginnen: python scripts/deployment.py lokaal")
     print("\n👋 Klaar.\n")

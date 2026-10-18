@@ -1,6 +1,6 @@
 # Bouwt bij elke push naar main de image, maakt de SBoM, scant die, en zet de image op ghcr.io, met het token van deze run.
 # Een pakket dat zo ontstaat, krijgt de zichtbaarheid van de repo; Container Apps haalt het dus zonder inloggen op.
-# Twee tags, nooit latest (MIT-03): de commit, en de inhoud van app/ (de tree-hash van git). setup.py azure zoekt op de
+# Twee tags, nooit latest (MIT-03): de commit, en de inhoud van app/ (de tree-hash van git). deployment.py azure zoekt op de
 # tweede: een commit die alleen Terraform of de BoK verandert, heeft zo geen nieuwe build nodig.
 name: Image
 
