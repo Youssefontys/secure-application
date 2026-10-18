@@ -94,9 +94,10 @@ Gemeten en opgezocht na de eerste uitrol, om te zien of een andere regio sneller
 
 1. Gedaan: een scan van de image op bekende lekken, met een rem vóór het publiceren (MIT-35).
 2. Gedaan: de SBoM van elke image, als bewijs bij de build, en de scan daarop (MIT-36).
-3. De tests in de pipeline, tegen een wegwerp-stack.
-4. SAST (statische code-analyse).
-5. Uitrollen vanuit GitHub, met een akkoord per uitrol.
+3. Eerst deelvraag 1 van het onderzoek: welk formaat en welke tool, waar de SBoM gemaakt wordt, wie hem leest, en hoe een merge wordt tegengehouden. Tot die beantwoord is, blijft de pipeline zo kaal als nu, zodat de screenshots laten zien wat het onderzoek veranderde.
+4. Daaruit: een workflow bij elke pull request die de image bouwt, start en test, de SBoM maakt en scant, en niets publiceert, als verplichte check. Dat zijn ook de tests in de pipeline.
+5. SAST (statische code-analyse), als workflow-bestand, zodat het meegaat met een kopie van de repo.
+6. Uitrollen vanuit GitHub (CD), alleen de image, met een akkoord per uitrol. Niet nodig voor het onderzoek: een image met een bekend lek komt nu al niet op ghcr.io, en `deployment.py azure` rolt alleen een gepubliceerde image uit.
 
 ## Screenshots
 
