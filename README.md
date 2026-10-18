@@ -16,14 +16,15 @@ Every feature that is added has an entry in `BoK/`: the use case, the misuse cas
 - `BoK/Threat Analysis/` - use cases, misuse cases, mitigations, attack trees and the tests that go with them
 - `BoK/Subjects/` - per BoK subject (week) what was built, why it is safe and what it does not solve
 - `compose.yaml` - app and database for local use, with scanner profiles in comments
-- `.github/dependabot.yml` - weekly update proposals for the pinned packages, images and Terraform providers
-- `scripts/` - `setup.py` to deploy (locally now, Azure follows), and `azuresetup_v2.py`, the one-time Terraform state bootstrap imported from BOK-SECENGINEER
+- `.github/dependabot.yml` - weekly update proposals for the pinned packages, images, Terraform providers and GitHub Actions
+- `.github/workflows/image.yml` - builds the image on every push to `main` and publishes it to ghcr.io, tagged with the commit
+- `scripts/` - `setup.py` to deploy, locally or to Azure, and `azuresetup_v2.py`, the one-time Terraform state bootstrap that `setup.py` starts when it is missing
 - `terraform/` - Azure: Container Apps, PostgreSQL B1ms in a private network and Key Vault; secrets stay out of the Terraform state. Not deployed yet
 
 ## Requirements
 
 - **Locally:** Docker with Compose v2, and Python 3 for `scripts/setup.py`.
-- **Azure:** an Azure subscription in which you may create resources and role assignments, the Azure CLI, Terraform 1.11 or newer, Python 3, and Docker to build the image. The GitHub CLI (`gh`) is optional, for the pipeline secrets.
+- **Azure:** an Azure subscription in which you may create resources and role assignments, the Azure CLI, Terraform 1.11 or newer, Python 3 and Git. No Docker and no GitHub token: GitHub Actions builds the image on every push to `main`. The GitHub CLI (`gh`) is optional, for the pipeline secrets.
 - **Signed in to Azure** before `python scripts/setup.py azure`: run `az login`. If it says `Authentication failed against tenant <ID>` with `AADSTS50076`, that tenant requires MFA and `az login` skipped it; run `az login --tenant <ID>` and approve the second step in your authenticator app. On Windows the sign-in opens in a small Windows window (Web Account Manager) instead of the browser; that is the default since Azure CLI 2.61.0.
 
 `setup.py` checks these first and names what is missing.
@@ -34,7 +35,7 @@ Every feature that is added has an entry in `BoK/`: the use case, the misuse cas
 python scripts/setup.py
 ```
 
-It asks where to deploy (local or Azure) and whether to turn on the hackstand for the hacking week, with a class behind one school address. Locally it creates missing secrets in `.env` and starts the stack; Azure does not deploy automatically yet, so it prints the exact steps. With `python scripts/setup.py lokaal` and no terminal (as in CI) it asks nothing and keeps what is in `.env`. On Linux or macOS the command is often `python3`; the script works the same on Windows and Linux.
+It asks where to deploy (local or Azure) and whether to turn on the hackstand for the hacking week, with a class behind one school address. Locally it creates missing secrets in `.env` and starts the stack. On Azure it sets up the Terraform state storage once, checks that GitHub Actions published the image of your last commit, and runs `terraform init` and `apply`; Terraform shows the plan and waits for `yes`, and starts the schema job itself. To update, push to `main`, wait for the Image action, and run it again. With `python scripts/setup.py lokaal` and no terminal (as in CI) it asks nothing and keeps what is in `.env`. On Linux or macOS the command is often `python3`; the script works the same on Windows and Linux.
 
 Or by hand: copy `.env.example` to `.env`, fill in the four values, and run `docker compose up --build`.
 
