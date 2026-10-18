@@ -1,4 +1,4 @@
-# Bouwt bij elke push naar main de image, scant hem, en zet hem op ghcr.io, met het token van deze run: geen eigen token nodig.
+# Bouwt bij elke push naar main de image, maakt de SBoM, scant die, en zet de image op ghcr.io, met het token van deze run.
 # Een pakket dat zo ontstaat, krijgt de zichtbaarheid van de repo; Container Apps haalt het dus zonder inloggen op.
 # Twee tags, nooit latest (MIT-03): de commit, en de inhoud van app/ (de tree-hash van git). setup.py azure zoekt op de
 # tweede: een commit die alleen Terraform of de BoK verandert, heeft zo geen nieuwe build nodig.
@@ -18,6 +18,9 @@ jobs:
     permissions:
       contents: read
       packages: write
+    env:
+      # Vast op versie en digest (MIT-03); Dependabot ziet een image in een run-regel niet, dus die werk je zelf bij.
+      TRIVY: aquasec/trivy:0.75.0@sha256:af6acf9a6b85dfe389a1941505c0ce9efef52a4719635e1a962f022a3d855daa
     steps:
       # Vast op een commit, niet op een tag die kan verschuiven (MIT-03); Dependabot houdt hem bij (MIT-33).
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -32,14 +35,26 @@ jobs:
             -t "$image:$GITHUB_SHA" -t "$image:app-$(git rev-parse HEAD:app)" app
           echo "IMAGE=$image" >> "$GITHUB_ENV"
 
-      # De rem (MIT-35): een bekend lek van HIGH of CRITICAL waarvoor al een oplossing is, stopt de job vóór het publiceren.
-      # Trivy vast op versie en digest (MIT-03); Dependabot ziet een image in een run-regel niet, dus die werk je zelf bij.
-      - name: Scannen op bekende lekken
+      # De SBoM (MIT-36): alle onderdelen van de image als CycloneDX, alleen de lijst, zonder lekken of VEX. Trivy leest de
+      # image als tar-bestand, zonder de Docker-socket, dus kan het de image die straks gepusht wordt niet veranderen.
+      # Trivy noemt het hoofdonderdeel naar het tar-bestand; jq zet er de naam en tag van de image voor in de plaats.
+      - name: SBoM maken
         run: |
           docker save "$IMAGE:$GITHUB_SHA" -o "$RUNNER_TEMP/image.tar"
-          docker run --rm -v "$RUNNER_TEMP:/scan" \
-            aquasec/trivy:0.75.0@sha256:af6acf9a6b85dfe389a1941505c0ce9efef52a4719635e1a962f022a3d855daa \
-            image --input /scan/image.tar --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 --no-progress
+          docker run --rm -v "$RUNNER_TEMP:/scan" "$TRIVY" image --input /scan/image.tar --format cyclonedx --output /scan/sbom.json --quiet
+          jq --arg name "$IMAGE:$GITHUB_SHA" '.metadata.component.name = $name' "$RUNNER_TEMP/sbom.json" > sbom.cdx.json
+
+      # Bij de run bewaard, ook als de scan hierna een lek vindt; GitHub houdt hem 90 dagen, het maximum voor een openbare repo.
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: sbom-${{ github.sha }}
+          path: sbom.cdx.json
+          retention-days: 90
+
+      # De rem (MIT-35), op de SBoM: een bekend lek van HIGH of CRITICAL waarvoor al een oplossing is, stopt de job vóór
+      # het publiceren.
+      - name: Scannen op bekende lekken
+        run: docker run --rm -v "$PWD:/scan" "$TRIVY" sbom /scan/sbom.cdx.json --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 --no-progress
 
       # Het token via stdin en een omgevingsvariabele, niet in de opdracht zelf.
       - name: Pushen naar ghcr.io
