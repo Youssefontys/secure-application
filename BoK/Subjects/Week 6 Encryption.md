@@ -160,14 +160,14 @@ Wat nog mist:
 - Er is nog geen rotatie: `v2:` is voorbereid, niet gebouwd.
 - De pipeline scant nog niet op geheimen.
 
-## Later: key management op Azure
+## Key management op Azure
 
-De Terraform-code staat in `terraform/`, maar is nog niet uitgerold. MC-05 (CSRF) en MC-14 (de ontwikkelserver als root) zijn sinds Week 7 dicht; de uitrol wacht nog op de image en de koppeling met GitHub. Voor key management:
+Uitgerold op 18-10-2026, in France Central (zie Week 8 voor de uitrol). In Container Apps staan de drie geheimen van de app alleen als verwijzing naar Key Vault, zonder waarde (gemeten met `az containerapp secret list`). Voor key management:
 
 - **De geheimen komen nergens in Terraform terecht.** Terraform maakt ze als ephemeral waarde: de gegevenssleutel en de sessiesleutel elk 32 willekeurige bytes, de twee databasewachtwoorden elk 40 tekens. Die stuurt Terraform write-only naar Key Vault, dus ze staan niet in het plan en niet in de state. Het databasewachtwoord leest Terraform terug uit Key Vault, zodat vault en database altijd hetzelfde hebben, ook als een eerste uitrol halverwege stopt.
 - **Alleen de app leest ze**, met een eigen managed identity die de rol Key Vault Secrets User heeft. Het wachtwoord van de eigenaar staat sinds MIT-27 in een eigen vault, die alleen de schema-job leest. Container Apps zet de waarden als omgevingsvariabele, dus de code blijft gelijk. Wie Terraform draait, mag geheimen schrijven (Key Vault Secrets Officer), niet de vault beheren.
 - **Kwijtraken kan niet zomaar.** Purge protection en 90 dagen bewaartijd na verwijderen. Belangrijk, want sleutel kwijt is notities kwijt.
-- **Een nieuwe sleutel.** De databasewachtwoorden en de sessiesleutel veranderen als `secret_version` omhoog gaat; daarna de schema-job starten voor het wachtwoord van de app-rol. De gegevenssleutel staat vast op versie 1, tot `v2:` gebouwd is.
+- **Een nieuwe sleutel.** De databasewachtwoorden en de sessiesleutel veranderen als `secret_version` omhoog gaat; Terraform start dan zelf de schema-job, die het nieuwe wachtwoord van de app-rol zet. De gegevenssleutel staat vast op versie 1, tot `v2:` gebouwd is.
 - **Eventueel envelope-versleuteling:** een tweede sleutel (KEK) in Key Vault die `DATA_ENCRYPTION_KEY` (de DEK) versleutelt. Volgens OWASP werkt dat alleen als de KEK apart van de DEK staat; de versleutelde DEK mag dan bij de data.
 - **De opslag van de Terraform-state** wordt al versleuteld met een eigen sleutel (RSA 4096) in Key Vault, door `scripts/azuresetup_v2.py`. Dat is key management voor de infrastructuur.
 

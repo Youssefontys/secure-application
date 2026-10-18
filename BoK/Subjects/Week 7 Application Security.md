@@ -78,7 +78,7 @@ De details staan in de entries (MC-04, MC-05, MC-07, MC-08, MC-10, MC-11, MC-14,
 - **Databaserol (MIT-27).**
   - `db/schema.sql` maakt de rol `notities_app`, geen superuser en nergens eigenaar van. Hij krijgt `SELECT`, `INSERT`, `UPDATE` en `DELETE` op de drie tabellen en `USAGE` op de twee sequences: precies wat de app doet.
   - Lokaal zet `db/app-password.sh` het wachtwoord bij de eerste start van een leeg volume. Het komt uit `APP_DB_PASSWORD` in `.env`, dat `scripts/setup.py` aanmaakt. De app krijgt alleen dat wachtwoord.
-  - Op Azure staat het wachtwoord van de eigenaar in een eigen Key Vault. Alleen de schema-job leest die, met een eigen identiteit. De job maakt het schema in een lege database en zet bij elke start het wachtwoord van de app-rol, dus na een nieuw wachtwoord (`secret_version`) start je hem opnieuw.
+  - Op Azure staat het wachtwoord van de eigenaar in een eigen Key Vault. Alleen de schema-job leest die, met een eigen identiteit. De job maakt het schema in een lege database en zet bij elke start het wachtwoord van de app-rol, en Terraform start hem zelf, ook na een nieuw wachtwoord (`secret_version`). Op Azure gemeten: de app heeft geen rol op de vault van de eigenaar (T-86).
 - **Geen cache (MIT-28).** Elk antwoord behalve CSS en scripts krijgt `Cache-Control: no-store`, zoals de OWASP Session Management Cheat Sheet aanraadt. Na uitloggen vraagt Terug de pagina opnieuw op, en dan stuurt de app naar de inlogpagina.
 - **Sessieduur (MIT-29).** `PERMANENT_SESSION_LIFETIME` is 8 uur. Flask controleert bij elk verzoek hoe oud de handtekening van de cookie is, ook bij een cookie die alleen voor de browsersessie geldt; dat staat in de broncode van Flask 3.1.3. Zonder deze regel was het 31 dagen.
 - **Limieten (MIT-30).** Elke registratie telt per adres, met de tellers van de poginglimieten: 10 per uur, in de hackstand 60. De teller staat vlak voor het hashen, dus alleen een registratie die echt rekent, telt. Een notitie wordt geteld en toegevoegd in één statement, tot 25 per account.
@@ -101,7 +101,7 @@ De details staan in de entries (MC-04, MC-05, MC-07, MC-08, MC-10, MC-11, MC-14,
 | Geen details naar buiten, geen valse logregels | Eigen foutpagina's; het pad als repr | T-81 |
 | Overname is geen root | `app`, Gunicorn, geen schrijfrecht op `/app` | T-82 |
 | Overname is geen databasebeheer | `notities_app`: geen tabellen maken of weggooien, geen rollen, geen `COPY` naar een programma | T-19, T-83 |
-| De app kent het wachtwoord van de eigenaar niet | Niet in de omgeving van de app; op Azure in een vault die alleen de schema-job leest | T-84; T-86 na de uitrol |
+| De app kent het wachtwoord van de eigenaar niet | Niet in de omgeving van de app; op Azure in een vault die alleen de schema-job leest | T-84, T-86 |
 | De schema-job mag opnieuw | Het schema alleen in een lege database; het wachtwoord als tekst, niet als SQL | T-85 |
 | Geen notities na uitloggen | `no-store` op elke pagina; getest met de Terug-knop in Edge | T-89 |
 | Een oude cookie werkt niet | Ondertekend alsof het 9 uur of 30 dagen geleden was: naar de inlogpagina | T-90 |

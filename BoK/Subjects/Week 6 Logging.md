@@ -2,7 +2,7 @@
 
 De app logt nu elke security-gebeurtenis als één JSON-regel (MIT-31): wanneer, wat, vanaf welk adres en, als dat bekend is, van welk account. Dat gebeurt op de plekken waar de app al beslist. Een aanval laat daardoor een spoor na (MC-28), lokaal en op Azure op dezelfde manier. Wachtwoorden, codes en geheimen komen er nooit in.
 
-De details staan in de entries (MC-28, MIT-31; A-11, C-05 en F-05 in de architectuur) en de tests (T-93, T-94, T-100, T-101; T-102 na de uitrol). Overgenomen uit BOK-SECENGINEER, dat dit al deed; de audit van 18-10-2026 maakte twee dingen strakker: een naam alleen als het account bestaat, en één regel per blokkade.
+De details staan in de entries (MC-28, MIT-31; A-11, C-05 en F-05 in de architectuur) en de tests (T-93, T-94, T-100 tot T-102, T-104). Overgenomen uit BOK-SECENGINEER, dat dit al deed; de audit van 18-10-2026 maakte twee dingen strakker: een naam alleen als het account bestaat, en één regel per blokkade.
 
 ## De dreiging
 
@@ -18,7 +18,7 @@ De details staan in de entries (MC-28, MIT-31; A-11, C-05 en F-05 in de architec
 | Soorten gebeurtenissen | Alleen onverwachte fouten (MIT-25) | 21 soorten, op elke plek waar de app beslist |
 | Een wachtwoord per ongeluk in het naamveld | Stond leesbaar in de log, want het voldeed aan de naamregel | Niet in de log: een naam alleen als het account bestaat |
 | 40 pogingen tijdens een blokkade | 41 regels, één per geweigerde poging | Eén regel per blokkade (`lockout_started`) |
-| De log op Azure | Alleen live te volgen; na een herstart weg | 30 dagen in Log Analytics, waar de app niet bij kan (nog niet uitgerold) |
+| De log op Azure | Alleen live te volgen; na een herstart weg | 30 dagen in Log Analytics, waar de app niet bij kan (uitgerold op 18-10-2026) |
 | Een naam met een regeleinde | Kwam niet in de log, want er werd niets gelogd | Komt er nog steeds niet in: alleen de naam van een bestaand account, en JSON escapet stuurtekens |
 
 ## Hoe het werkt
@@ -69,7 +69,7 @@ Een IP-adres en een gebruikersnaam zijn persoonsgegevens (A-11). Daarom:
 ## Lokaal en op Azure
 
 - **Lokaal** bewaart Docker de log zolang de container bestaat. Een `docker compose down` of een nieuwe build begint met een lege log.
-- **Op Azure** zet Container Apps de log in een Log Analytics-workspace (`terraform/logs.tf`, sinds d547182): 30 dagen, met een rem van 0,1 GB per dag. Een regel staat er een paar minuten na het gebeuren; live meekijken kan nog steeds met de log stream. Nog niet uitgerold, dus nog niet gemeten (T-102).
+- **Op Azure** zet Container Apps de log in een Log Analytics-workspace (`terraform/logs.tf`, sinds d547182): 30 dagen, met een rem van 0,1 GB per dag. Een regel staat er een paar minuten na het gebeuren; live meekijken kan nog steeds met de log stream. Gemeten na de uitrol op 18-10-2026: een geweigerd CSRF-token stond erin, met het adres van de bezoeker en niet dat van de proxy (T-102, T-104). Opvragen kan met de output `security_log_command`; de eerste keer vraagt `az` om de extensie log-analytics te installeren.
 - **De databaselog** gaat nog nergens heen: de drie Trivy-punten daarover (AZU-0019, AZU-0021, AZU-0024) staan nog open.
 
 ## Wat het niet oplost
@@ -100,7 +100,7 @@ Voor het verslag, lokaal in `screenshots/Week 6 Logging/` (niet in de repo).
 | Security-events | `week6_voor_logging_1_geen_spoor` | `week6_na_logging_1_json_per_gebeurtenis` | `week6_code_logging_1_events` |
 | Wachtwoord in het naamveld | `week6_voor_logging_2_wachtwoord_in_log` | `week6_na_logging_2_alleen_bestaande_namen` | `week6_code_logging_1_events` |
 | Een regel per blokkade | `week6_voor_logging_3_regel_per_poging` | `week6_na_logging_3_een_regel_per_blokkade` | `week6_code_logging_1_events` |
-| De log op Azure | na de uitrol | na de uitrol | `week6_code_logging_2_azure` |
+| De log op Azure | n.v.t. (eerste uitrol) | `week6_na_logging_4_azure` | `week6_code_logging_2_azure` |
 
 ## Bronnen
 
