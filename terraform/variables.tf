@@ -1,6 +1,7 @@
+# West Europe neemt geen nieuwe tenants aan (RequestDisallowedByAzure); Sweden Central heeft alles wat hier nodig is, in de EU.
 variable "location" {
   type    = string
-  default = "westeurope"
+  default = "swedencentral"
 }
 
 # De image van de app met een vaste tag of digest, nooit latest (MIT-03); de pipeline bouwt en pusht hem.

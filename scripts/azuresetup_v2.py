@@ -15,7 +15,8 @@ from pathlib import Path
 
 # backend.conf komt in de hoofdmap van de repo, waar setup.py en terraform init hem zoeken.
 BACKEND_CONF = Path(__file__).resolve().parent.parent / "backend.conf"
-DEFAULT_LOCATION = "westeurope"
+# West Europe neemt geen nieuwe tenants aan (RequestDisallowedByAzure); dezelfde regio als terraform/variables.tf.
+DEFAULT_LOCATION = "swedencentral"
 DEFAULT_RG_NAME = "rg-tfstate-mgmt"
 PROPAGATION_WAIT = 120
 # Allowlist voor een subscription ID: een GUID, verder niets.
