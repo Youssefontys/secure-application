@@ -55,9 +55,9 @@ The baseline plus the first security features, each with an entry in `BoK/Threat
 - a hackstand for the hacking week, off by default (MIT-10)
 - a CSRF token on every form, strict security headers, input and configuration checks, every route closed by default, safe failure, gunicorn as an unprivileged user, and an own database role that can only read and write the app's tables (MIT-20 to MIT-27); see `BoK/Subjects/Week 7 Application Security.md`
 - taken from BOK-SECENGINEER and an audit: no page in the browser cache, sessions of at most 8 hours, a limit on registrations and notes, every security event as a JSON line in the log, an owner-only `.env`, and Dependabot (MIT-28 to MIT-33); see `BoK/Subjects/Week 6 Logging.md`
-- the image built and published by GitHub Actions with only the rights it needs, and no own token (MIT-34); see `BoK/Subjects/Week 8 CI-CD.md`
+- the image built, scanned for known vulnerabilities and published by GitHub Actions with only the rights it needs, and no own token (MIT-34, MIT-35); see `BoK/Subjects/Week 8 CI-CD.md`
 
-On Azure the log is kept for 30 days in Log Analytics (MIT-31). Still open: nobody is alerted (MC-28), the database role can still change every row the app can (MC-08), the running app holds the data key, locally from `.env` and on Azure from Key Vault (MC-22), and the pipeline does not scan or test yet (MC-30). Deployed to Azure on 18 October 2026.
+On Azure the log is kept for 30 days in Log Analytics (MIT-31). Still open: nobody is alerted (MC-28), the database role can still change every row the app can (MC-08), the running app holds the data key, locally from `.env` and on Azure from Key Vault (MC-22), and the pipeline does not test yet (MC-30). Deployed to Azure on 18 October 2026.
 
 ## License
 
