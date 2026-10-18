@@ -72,6 +72,20 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 - Assets: A-01, A-07, A-08
 - Sinds: 428858e
 
+### UC-10 De app uitrollen, bijwerken en weer weghalen
+- Actor: beheerder
+- Doel: de app op Azure zetten of bijwerken met `python scripts/deployment.py azure`, en alles weer weghalen met `undo`, zonder dat een geheim in de repo, het plan of de state komt
+- Onderdelen: C-10, C-09, C-06, C-02, C-03, C-07 (AU-09, AU-13)
+- Assets: A-12, A-15, A-16
+- Sinds: 75c9967
+
+### UC-11 Een melding krijgen bij een blokkade
+- Actor: beheerder
+- Doel: binnen ongeveer 10 minuten een mail krijgen als er een blokkade begint, zodat een aanval niet onopgemerkt blijft
+- Onderdelen: C-05, C-08 (AZ-13)
+- Assets: A-11, A-13
+- Sinds: c4ce459
+
 ## Misuse cases
 
 ### MC-01 Wachtwoorden uit de database lezen
@@ -466,7 +480,7 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 - Aanvallersdoel: aanvallen zonder dat iemand het merkt, en zonder spoor voor achteraf
 - Aanvaller: iedereen die een van de andere misuse cases probeert
 - Assets / onderdelen: alle assets, A-11, C-02, C-05, F-05
-- Gerelateerde use case: geen
+- Gerelateerde use case: UC-11
 - Stappen:
   - OR  1. Wachtwoorden, codes of herstelcodes raden (MC-03, MC-15, MC-19): de blokkades werken, maar niemand ziet ze
   - OR  2. Een formulier van een andere site laten versturen (MC-05)
@@ -498,7 +512,7 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 - Aanvallersdoel: eigen code op Azure laten draaien, met de rechten en geheimen van de app
 - Aanvaller: wie de workflow, een action of een token voor ghcr.io kan misbruiken, of wie naar `main` kan pushen
 - Assets / onderdelen: A-12, C-06, C-02, F-06, F-07, B-04
-- Gerelateerde use case: geen
+- Gerelateerde use case: UC-10
 - Stappen:
   - OR  1. Een workflow-stap die meer mag dan nodig, bijvoorbeeld een token met schrijfrechten op de repo of op andere pakketten
   - OR  2. Een action op een tag die de maker, of wie de action overneemt, naar andere code laat wijzen
