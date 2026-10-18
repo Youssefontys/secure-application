@@ -16,6 +16,7 @@ Notities van een ander lezen of wijzigen
               OR  een query met de rechten van de app (lezen mag die nog, MC-08)
               OR  het volume of een backup lezen
         AND de gegevenssleutel hebben (MC-22)                              [open]
+  OR  Eigen code laten uitrollen, die de sleutel dan heeft (MC-30)          [MIT-34, deels]
   OR  De app overnemen, die de sleutel heeft (MC-11)
         OR  bekende kwetsbaarheid, niet bijgewerkt                         [MIT-33, deels]
         OR  kwaadaardige nieuwe pakketversie                               [MIT-03]
@@ -95,5 +96,5 @@ Dienst onbruikbaar
 Onopgemerkt aanvallen (MC-28)                                              [MIT-31]
   AND een van de andere aanvallen proberen (raden, CSRF, rijen wijzigen, massaal aanmaken)
   AND OR  niemand kijkt live mee                                           [open]
-      OR  de log wissen, met beheer over de host of de container            [open]
+      OR  de log wissen, met beheer over de host of de container            [lokaal open; op Azure MIT-31]
 ```

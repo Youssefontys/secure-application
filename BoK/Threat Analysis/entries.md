@@ -325,7 +325,7 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
   - OR  3. HEAD-verzoeken sturen: tot 7fbc42e telde elke HEAD op een formulierroute als foute poging, zonder formulier in te vullen (T-78)
   - OR  4. Een verkeerde `TRUSTED_PROXIES` (zoals -1 of 2) uitbuiten: dan kiest de aanvaller zelf het adres waarop geteld wordt (T-79)
 - Mitigaties: MIT-22 (stap 3: alleen een POST telt). MIT-23 (stap 4: alleen 0 of 1, anders start de app niet). In het ontwerp van MIT-10: de wachtwoordstap blokkeert nooit een account over alle adressen, alleen per adres. Wie een naam kent maar niet op het netwerk van het slachtoffer zit, kan hem niet buitensluiten. Voor de hacking week, met een klas achter één adres van school, de hackstand: `THROTTLE_IP_MODE=hackweek` (100 per adres en een vaste blokkade van 5 minuten) en `THROTTLE_PAIR_EXEMPT_USERS` voor het demoaccount (T-71). Achter een proxy het echte clientadres via `ProxyFix` met `TRUSTED_PROXIES` (3a7c5ae), zonder de poort die Azure kan meesturen (T-72)
-- Restrisico: op een gedeeld netwerk delen gebruikers één adres; de hackstand verkleint dat, maar lost het niet op. `TRUSTED_PROXIES` moet bij de uitrol gemeten worden: te laag en iedereen deelt het adres van de proxy, te hoog en een aanvaller kiest zelf zijn adres. In de hackstand mag vanaf één adres meer geraden worden en heeft het demoaccount geen teller per naam, dus de stand hoort alleen aan tijdens de hacking week. Stap 2 kan alleen wie het wachtwoord al heeft
+- Restrisico: op een gedeeld netwerk delen gebruikers één adres; de hackstand verkleint dat, maar lost het niet op. `TRUSTED_PROXIES` is op Azure gemeten: met 1 staat het adres van de bezoeker in de log, niet dat van de proxy (T-104). Te laag en iedereen deelt het adres van de proxy, te hoog en een aanvaller kiest zelf zijn adres. In de hackstand mag vanaf één adres meer geraden worden en heeft het demoaccount geen teller per naam, dus de stand hoort alleen aan tijdens de hacking week. Stap 2 kan alleen wie het wachtwoord al heeft
 - Status: open
 - Sinds: 484eca3
 
@@ -474,7 +474,7 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
   - OR  4. Massaal accounts of notities aanmaken (MC-10)
   - OR  5. Met andermans gegevens het wachtwoord, de tweede factor of het account wijzigen (MC-12, MC-13, MC-20, MC-21)
 - Mitigaties: MIT-31 (stap 1 tot 5: elke gebeurtenis een JSON-regel met tijd, soort, adres en account; T-93)
-- Restrisico: niemand kijkt live mee en er zijn geen meldingen (alerts). Lokaal bewaart Docker de log zolang de container bestaat, en wie de host beheert, kan hem wissen. Op Azure staat hij 30 dagen in Log Analytics, waar de app niet bij kan (sinds d547182). Komt er op een dag meer dan 0,1 GB binnen, dan stopt het verzamelen tot de volgende dag: wie dat met een script haalt, valt daarna niet meer op. Gewone verzoeken worden niet gelogd, en een geweigerde poging tijdens een blokkade ook niet apart: je ziet dat er een blokkade was, niet hoe vaak het daarna nog geprobeerd werd. De log bevat persoonsgegevens (A-11): op Azure is de bewaartermijn 30 dagen; het doel hoort bij de AVG-stap
+- Restrisico: niemand kijkt live mee en er zijn geen meldingen (alerts). Lokaal bewaart Docker de log zolang de container bestaat, en wie de host beheert, kan hem wissen. Op Azure staat hij 30 dagen in Log Analytics, waar de app niet bij kan (sinds d547182, uitgerold op 2026-10-18, T-102). Komt er op een dag meer dan 0,1 GB binnen, dan stopt het verzamelen tot de volgende dag: wie dat met een script haalt, valt daarna niet meer op. Gewone verzoeken worden niet gelogd, en een geweigerde poging tijdens een blokkade ook niet apart: je ziet dat er een blokkade was, niet hoe vaak het daarna nog geprobeerd werd. De log bevat persoonsgegevens (A-11): op Azure is de bewaartermijn 30 dagen; het doel hoort bij de AVG-stap
 - Status: gebouwd
 - Sinds: baseline; gelogd sinds 6992001
 
@@ -493,6 +493,22 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 - Restrisico: wie het wachtwoord én de telefoon heeft, kan dit wel; dan is het account sowieso over. Gevonden in de audit van 18-10-2026: met alleen de code was dit de zwakste weg, terwijl wachtwoord wijzigen al beide vroeg
 - Status: gebouwd
 - Sinds: baseline; dicht sinds 997e641
+
+### MC-30 Eigen code laten uitrollen via de pipeline
+- Aanvallersdoel: eigen code op Azure laten draaien, met de rechten en geheimen van de app
+- Aanvaller: wie de workflow, een action of een token voor ghcr.io kan misbruiken, of wie naar `main` kan pushen
+- Assets / onderdelen: A-12, C-06, C-02, F-06, F-07, B-04
+- Gerelateerde use case: geen
+- Stappen:
+  - OR  1. Een workflow-stap die meer mag dan nodig, bijvoorbeeld een token met schrijfrechten op de repo of op andere pakketten
+  - OR  2. Een action op een tag die de maker, of wie de action overneemt, naar andere code laat wijzen
+  - OR  3. Een pull request vanuit een fork die de workflow aanpast en zo een image publiceert
+  - OR  4. Een lang geldig token met `write:packages` stelen en daarmee een image onder dezelfde naam publiceren
+  - OR  5. Met een overgenomen GitHub-account naar `main` pushen
+- Mitigaties: MIT-34 (stap 1 tot 4: het token van de run mag alleen `contents: read` en `packages: write`, checkout staat vast op een commit, geen trigger op een pull request, en er is geen eigen token meer; T-103). MIT-33 (stap 2: Dependabot stelt een nieuwe versie van de action voor)
+- Restrisico: stap 5 blijft: wie naar `main` kan pushen, publiceert een image en kan hem uitrollen. De image is nog niet gescand of ondertekend; dat zijn de volgende stappen in de pipeline (Week 8). Het pakket is openbaar, maar er staan geen geheimen in en de code is ook openbaar
+- Status: open
+- Sinds: 19a34dd
 
 ## Mitigaties
 
@@ -710,7 +726,7 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 - Houdt tegen: MC-28 stap 1 tot 5
 - Wat: één functie, `events.event()`, schrijft per gebeurtenis een JSON-regel naar stderr: tijd (UTC), soort, IP-adres, en als dat bekend is het account. Dat is het "when, where, who and what" van de OWASP Logging Cheat Sheet. Lokaal in `docker compose logs`; op Azure zet Container Apps hem in een Log Analytics-workspace, 30 dagen en dan weg, zonder verschil in de code (sinds d547182, T-102 na de uitrol). 21 soorten, op de plekken waar de app al beslist: registreren, inloggen en de blokkades, codes en herstelcodes, wachtwoord vergeten, uitloggen, een verlopen sessie, tweestapsverificatie aan en opnieuw, een nieuw wachtwoord, herauthenticatie, account verwijderen, een geweigerd CSRF-token, de limiet op notities en een notitie die niet ontsleutelt. JSON escapet regeleindes en stuurtekens, dus invoer maakt geen valse regel (log injection). Een gebruikersnaam komt er alleen in als het account bestaat; anders staat er `"known": false` (sinds f977f6d, T-100). Eerst gold de naamregel van MIT-22, maar een wachtwoord als `Zomervakantie2026` voldoet daar ook aan. Een blokkade staat er één keer in, op het moment dat hij begint (`lockout_started`, met de soort teller), en niet bij elke geweigerde poging; anders kon een script de log vullen (sinds f977f6d, T-101). Wachtwoorden, codes, geheimen en de sessiecookie nooit (T-93, T-94). Overgenomen uit BOK-SECENGINEER
 - Waar: `app/events.py`; aanroepen in `app/auth.py`, `app/account.py`, `app/csrf.py` en `app/notes.py`; op Azure `terraform/logs.tf`
-- Status: gebouwd; op Azure nog niet uitgerold
+- Status: gebouwd; op Azure uitgerold op 2026-10-18 (T-102)
 - Sinds: 6992001; naam en blokkade sinds f977f6d; bewaard op Azure sinds d547182
 
 ### MIT-32 .env alleen voor de eigenaar
@@ -722,7 +738,14 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 
 ### MIT-33 Dependabot
 - Houdt tegen: MC-11 stap 1 en 3
-- Wat: `.github/dependabot.yml` laat GitHub elke week een pull request openen als er een nieuwe versie is van een pip-pakket, de base-image in de Dockerfile, de image in `compose.yaml` of een Terraform-provider. Alles staat vast (MIT-03), dus zonder dit komen ook patches niet vanzelf binnen. Er is geen pipeline voor nodig; in de BoK hoort het bij CI/CD (Week 8). Of Dependabot ook de `@sha256`-digest bijwerkt, staat niet in de documentatie van GitHub (gelezen op 17-10-2026); dat blijkt bij de eerste pull request (T-97)
+- Wat: `.github/dependabot.yml` laat GitHub elke week een pull request openen als er een nieuwe versie is van een pip-pakket, de base-image in de Dockerfile, de image in `compose.yaml`, een Terraform-provider of een GitHub Action (die sinds 19a34dd). Alles staat vast (MIT-03), dus zonder dit komen ook patches niet vanzelf binnen. Er is geen pipeline voor nodig; in de BoK hoort het bij CI/CD (Week 8). Of Dependabot ook de `@sha256`-digest bijwerkt, staat niet in de documentatie van GitHub (gelezen op 17-10-2026); dat blijkt bij de eerste pull request (T-97)
 - Waar: `.github/dependabot.yml`
 - Status: gebouwd
 - Sinds: 19999a9
+
+### MIT-34 De image-pipeline met minimale rechten
+- Houdt tegen: MC-30 stap 1 tot 4
+- Wat: `.github/workflows/image.yml` bouwt bij elke push naar `main` de image en publiceert hem op ghcr.io. Standaard heeft de workflow geen rechten (`permissions: {}`); de job krijgt alleen `contents: read` en `packages: write`, zoals GitHub aanraadt. Inloggen bij ghcr.io gaat met het token van de run, via stdin; een eigen token (classic) is niet meer nodig. `actions/checkout` staat vast op een volledige commit-hash, en verder gebruikt de workflow gewone `docker`-opdrachten, geen actions van derden. Er is geen trigger op `pull_request`. De tags zijn de commit en de inhoud van `app/` (de tree-hash van git), nooit `latest`; `setup.py azure` zoekt de image op die tweede tag en kijkt anoniem of hij openbaar is (T-103)
+- Waar: `.github/workflows/image.yml`; het zoeken in `azure()` van `scripts/setup.py`
+- Status: gebouwd
+- Sinds: 19a34dd; tag op de inhoud van `app/` sinds 7d8f7b5
