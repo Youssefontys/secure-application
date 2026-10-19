@@ -66,7 +66,7 @@ De details staan in de entries (MC-28, MIT-31; A-11, C-05 en F-05 in de architec
 Een IP-adres en een gebruikersnaam zijn persoonsgegevens (A-11). Daarom:
 - staat er alleen in wat voor het spoor nodig is: geen notities, geen wachtwoord, geen sessiecookie;
 - hoort er een bewaartermijn bij: op Azure 30 dagen, en dan echt weg. Zonder `immediate_data_purge_on_30_days_enabled` kan het 31 dagen worden, zegt Microsoft.
-- hoort er een doel bij; dat komt bij de AVG-stap. De OWASP Logging Cheat Sheet noemt ook pseudonimiseren als mogelijkheid.
+- hoort er een doel bij: aanvallen opmerken en achteraf nagaan. Dat staat nog niet in een privacyverklaring voor de gebruiker; die ontbreekt nog (zie `Laws.md`). De OWASP Logging Cheat Sheet noemt ook pseudonimiseren als mogelijkheid.
 
 ## Lokaal en op Azure
 

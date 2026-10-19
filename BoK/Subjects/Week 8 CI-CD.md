@@ -81,6 +81,7 @@ De details staan in de entries (MC-30, MC-11, MIT-34 tot MIT-36 en MIT-39; C-06,
 - **Wat misging:** azurerm 5.8.0 kon het verwijderen van de Container Apps-omgeving in Germany West Central niet volgen (`polling support for the Content-Type "" was not implemented`); Azure verwijderde hem wel. Een onderbroken `apply` liet daarna een private DNS-zone buiten de state; `terraform import` nam hem op, zonder iets in Azure te veranderen.
 - **Gemeten na de uitrol:** HTTPS met een geldig certificaat, HTTP met een 301 naar HTTPS, HSTS, CSP, `no-store` en een sessiecookie met `Secure`. De schema-job draaide en slaagde. De log komt in Log Analytics, met het adres van de bezoeker (T-102, T-104), en de identiteit van de app heeft geen rol op de vault van de eigenaar (T-86).
 - **Opnieuw opgebouwd (18-10-2026, 's avonds):** alles op Azure weggehaald, ook de state-opslag, en met `python scripts/deployment.py azure` vanaf nul opnieuw neergezet: eerst de nieuwe bootstrap met minimale rollen en zonder accountsleutels (MIT-38, T-109), daarna Terraform met de Engelse image. De app draaide daarna de image van de laatste commit, met HSTS, CSP, `no-store` en een 301 van HTTP naar HTTPS.
+- **Weer weggehaald (19-10-2026):** met `python scripts/deployment.py undo`, na de TLS-meting (T-113). Alleen `NetworkWatcherRG` bleef staan; die maakt Azure zelf bij een netwerk, en hij kost niets. Vóór de hacking week rol ik opnieuw uit.
 
 ### De regio, vergeleken (18-10-2026)
 
