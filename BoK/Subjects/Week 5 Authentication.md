@@ -4,7 +4,7 @@ Inloggen vraagt nu twee factoren: het wachtwoord en een code van 6 cijfers uit e
 
 De details staan in de entries (UC-02 tot UC-05, UC-07 tot UC-09; MC-02 tot MC-05, MC-12, MC-13, MC-15 tot MC-21; MIT-05 tot MIT-16) en de tests (T-08, T-09, T-11 tot T-15, T-23, T-24, T-28 tot T-62). Dit bestand vat ze samen.
 
-Systeemauthenticatie is in deze stap niet veranderd: de app logt bij de database in met een wachtwoord uit de omgeving en zonder TLS (AU-03). Certificaten of mTLS tussen app en database zijn een mogelijke volgende stap.
+Systeemauthenticatie is in deze stap niet veranderd: de app logt bij de database in met een wachtwoord uit de omgeving (AU-03). Sinds de uitrol van 18-10-2026 is dat op Azure het wachtwoord van de eigen app-rol uit Key Vault, met TLS 1.3 en `verify-full`; lokaal nog zonder TLS. Inloggen met een managed identity in plaats van een wachtwoord, of mTLS, is een mogelijke volgende stap.
 
 ## Authenticatie en autorisatie
 
@@ -19,7 +19,7 @@ De ene helft vangt geen fouten van de andere op. MC-02, andermans notitie openen
 **Wat hier nog niet onder valt.** Deze stap gaat over autorisatie in de app. Twee lagen eronder breiden dit onderdeel uit:
 
 - **In de database, sinds Week 7.** De app logt in met een eigen rol die alleen mag lezen en schrijven in de eigen tabellen (MIT-27, AZ-05), niet meer als eigenaar.
-- **In de cloud, bij de Azure-aanvulling.** Wie bij Key Vault en de database mag (rollen in Azure), en hoe de app zich bij de database aanmeldt: met managed identity in plaats van een wachtwoord (systeemauthenticatie, AU-03).
+- **In de cloud, sinds de uitrol van 18-10-2026.** Wie bij Key Vault, de log en de state mag: per identiteit alleen de rol die nodig is (AZ-10 tot AZ-15). De app meldt zich bij de database nog aan met een wachtwoord, niet met een managed identity (AU-03).
 
 ## Wat er beter wordt
 
@@ -60,13 +60,13 @@ De ene helft vangt geen fouten van de andere op. MC-02, andermans notitie openen
 - **Het TOTP-geheim stond leesbaar in de database (MC-17).** Een databaselek leverde wachtwoord en geheim samen. Sinds Week 6 is het versleuteld (MIT-17), zie `Week 6 Encryption.md`.
 - **Een gestolen sessiecookie (MC-04)** werkt tot de gebruiker uitlogt of zijn gegevens wijzigt, en anders tot 8 uur (MIT-29, sinds 2f1236e; eerst 31 dagen). De tweede factor helpt daar niet: de cookie is van na de code.
 - **Uitloggen logt alle apparaten uit.** Zonder sessies op de server bij te houden kan het niet preciezer.
-- **Buitensluiten (MC-18).** Op een gedeeld netwerk delen gebruikers één IP-adres; de hackstand verkleint dat probleem, maar lost het niet op. Achter een proxy krijgt de app het echte clientadres via `ProxyFix` met `TRUSTED_PROXIES`, zonder de poort die Azure kan meesturen (T-72). Dat aantal moet op Azure gemeten worden: te laag en iedereen telt als het adres van de proxy, te hoog en een aanvaller kiest zelf zijn adres.
+- **Buitensluiten (MC-18).** Op een gedeeld netwerk delen gebruikers één IP-adres; de hackstand verkleint dat probleem, maar lost het niet op. Achter een proxy krijgt de app het echte clientadres via `ProxyFix` met `TRUSTED_PROXIES`, zonder de poort die Azure kan meesturen (T-72). Op Azure gemeten: met 1 staat het adres van de bezoeker in de log, niet dat van de proxy (T-104). Te laag en iedereen telt als het adres van de proxy, te hoog en een aanvaller kiest zelf zijn adres.
 - **Verspreid raden (MC-03).** Wie vanaf heel veel adressen raadt, wordt per account niet begrensd; dat is bewust, anders kan iedereen met een gebruikersnaam een account blokkeren. De tweede factor vangt dit op.
 - **De bewaarde herstelcode (MC-19, MC-21)** is zo veilig als de plek waar hij ligt; met het wachtwoord of met de telefoon erbij is het account over. De gebruiker merkt het pas bij het volgende inloggen, want er is geen e-mail.
 - **De eerste instelling (MC-20).** Wie het wachtwoord heeft van een account dat de tweede factor nog niet heeft ingesteld, kan zijn eigen app koppelen ("trust on first use"). Daartegen helpt een tweede kanaal, zoals een bevestigde e-mail.
 - **Wie het wachtwoord én de telefoon heeft, komt ook door de herauthenticatie.** Die beschermt tegen iemand met alleen de sessie, of de sessie en het wachtwoord.
-- **CSRF (MC-05) voor notities en uitloggen.** Wachtwoord wijzigen en account verwijderen vragen nu het wachtwoord, en dat kent een andere site niet. Notities aanmaken, aanpassen en verwijderen en uitloggen kunnen nog wel via een andere site.
-- **Autorisatie in de database en in de cloud** komt later; zie "Authenticatie en autorisatie" hierboven.
+- **CSRF (MC-05) voor notities en uitloggen** was na deze stap nog open: notities aanmaken, aanpassen en verwijderen en uitloggen konden via een andere site. Sinds Week 7 heeft elk formulier een CSRF-token (MIT-20).
+- **Autorisatie in de database en in de cloud** kwam later: de eigen databaserol in Week 7 (MIT-27) en de rollen in Azure bij de uitrol (AZ-10 tot AZ-15); zie "Authenticatie en autorisatie" hierboven.
 - **Wachtwoorden stonden leesbaar opgeslagen (MC-01).** Sinds Week 6 staat er alleen een Argon2id-hash (MIT-19), zie `Week 6 Encryption.md`.
 - **Geen blocklist (MC-03).** Een veelgebruikt wachtwoord van 12 tekens of meer wordt nog geaccepteerd. NIST eist een vergelijking met veelgebruikte en gelekte wachtwoorden; die is gepland, met een lijst in de repo in plaats van een externe dienst.
 

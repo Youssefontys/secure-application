@@ -151,7 +151,7 @@ Bewust niet: rechten per rij (row-level security), een audit-log in de database 
 - **De melding "al in gebruik" verraadt namen (MC-09).** De limiet op registreren maakt een lijst opbouwen wel trager: 10 namen per uur per adres.
 - **Wie veel adressen heeft, omzeilt de limiet op registreren.** Per adres 10 accounts per uur, elk met 25 notities.
 - **Een sessie waaruit niet is uitgelogd, werkt nog tot 8 uur.** Op een gedeelde computer is uitloggen dus nog steeds nodig.
-- **Dependabot stelt alleen voor.** Iemand moet de pull request bekijken en samenvoegen. Of hij ook de digests van de images bijwerkt, laat de eerste pull request zien (T-97).
+- **Dependabot stelt alleen voor.** Iemand moet de pull request bekijken en samenvoegen. Dat hij pull requests opent, liet T-97 zien; of hij ook de digests van de images bijwerkt, bleek daar nog niet, want die waren al de nieuwste.
 - **De app-rol mag nog alles wat de app mag (MC-08).** Na een overname kan een aanvaller alle rijen lezen, wijzigen en wissen, bijvoorbeeld tweestapsverificatie uitzetten. Notities en geheimen blijven wel versleuteld.
 - **Lokaal staan beide databasewachtwoorden in `.env`.** Wie de ontwikkelmachine heeft, heeft ze allebei. De scheiding helpt tegen een overname van de app, niet tegen een overname van de machine.
 - **Een bestaand volume krijgt de rol niet.** `db/schema.sql` draait alleen in een leeg volume. Wie de stack al had: `docker compose down -v` (wist de lokale data) en daarna `python scripts/deployment.py`.

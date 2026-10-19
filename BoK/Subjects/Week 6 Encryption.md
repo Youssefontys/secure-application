@@ -6,7 +6,7 @@ Wie de database leest, vindt geen bruikbaar geheim meer:
 
 De versleutelde gegevens kan de app terug ontsleutelen met een sleutel die buiten de database staat. Van een wachtwoord bestaat alleen een hash die niet terug te rekenen is.
 
-De gekozen focus is **databaseversleuteling op kolomniveau, in de app**. Ook key management en secrets horen bij deze week: hoe dat nu geregeld is, staat onder "Key management en secrets". Key Vault is de volgende laag en komt bij de Azure-aanvulling (zie "Later").
+De gekozen focus is **databaseversleuteling op kolomniveau, in de app**. Ook key management en secrets horen bij deze week: hoe dat nu geregeld is, staat onder "Key management en secrets". Key Vault is de volgende laag; die staat sinds de uitrol van 18-10-2026, zie "Key management op Azure".
 
 De details staan in de entries (MC-01, MC-17, MC-22, MC-23; MIT-17 tot MIT-19) en de tests (T-10, T-34, T-63 tot T-70). Dit bestand vat ze samen.
 
@@ -114,7 +114,7 @@ Per gegeven waar het staat en waar het hoort:
 - **Een notitie is gebonden aan de eigenaar, niet aan de notitie.** Wie de database kan wijzigen, kan titels en inhoud tussen notities van dezelfde gebruiker verwisselen. Tussen gebruikers of tussen titel en inhoud lukt dat niet (T-67).
 - **Sleutel kwijt is geheimen en notities kwijt.** Tweestapsverificatie is opnieuw in te stellen via de herstelcode, want die is gehasht en niet versleuteld, en werkt dus nog. De notities zijn dan echt weg. Lokaal is dat geen probleem; op Azure bewaakt Key Vault de sleutel.
 - **Een nieuwe sleutel is voorbereid, niet gebouwd.** De versie `v1:` staat erin, maar ontsleutelen met een oude sleutel naast een nieuwe moet nog worden geschreven.
-- **Elke registratie kost 19 MiB en een berekening (MC-10).** Inloggen is begrensd (MIT-10), registreren nog niet.
+- **Elke registratie kost 19 MiB en een berekening (MC-10).** Inloggen is begrensd (MIT-10), en sinds 5d0f1d0 ook registreren: 10 per uur per adres (MIT-30).
 
 ## Keuzes
 
@@ -173,7 +173,7 @@ Trivy 0.75.0 vond op 17-10-2026 zeven punten in `terraform/`, met per punt een b
 
 | Punt | Ernst | Besluit |
 |---|---|---|
-| AZU-0013: Key Vault blokkeert het netwerk niet standaard (2 keer, sinds MIT-27 twee vaults) | CRITICAL | Bewust nog open. Lezen kan alleen met een Entra-token en een rol. Een firewall vraagt een vast adres voor wie Terraform draait, en eerst een test of Container Apps de geheimen dan nog ophaalt. Bij de eerste uitrol |
+| AZU-0013: Key Vault blokkeert het netwerk niet standaard (2 keer, sinds MIT-27 twee vaults) | CRITICAL | Bewust nog open. Lezen kan alleen met een Entra-token en een rol. Een firewall vraagt een vast adres voor wie Terraform draait, en eerst een test of Container Apps de geheimen dan nog ophaalt. Na de uitrol van 18-10-2026 nog steeds open: `terraform/keyvault.tf` heeft geen netwerkregels |
 | AZU-0017: geheimen zonder vervaldatum (4 keer) | LOW | Bewust. Zonder automatische rotatie zet een vervaldatum de app op een dag stil, en de gegevenssleutel mag niet vervallen |
 | AZU-0019, AZU-0024: verbindingen en checkpoints niet gelogd | MEDIUM | Bij Logging en monitoring, samen met waar de logs naartoe gaan |
 | AZU-0021: verbindingen niet begrensd | MEDIUM | Bij Logging en monitoring; de app heeft zelf poginglimieten (MIT-10) |
