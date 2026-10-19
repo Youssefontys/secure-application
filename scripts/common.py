@@ -15,7 +15,7 @@ for stream in (sys.stdout, sys.stderr):
 
 REPO = Path(__file__).resolve().parent.parent
 ENV = REPO / ".env"
-# Deze geheimen moeten in .env staan; ontbreekt er een of is hij leeg, dan maakt setup hem aan.
+# Deze geheimen moeten in .env staan; ontbreekt er een of is hij leeg, dan maakt deploy_local.py hem aan.
 SECRETS = ("POSTGRES_PASSWORD", "APP_DB_PASSWORD", "FLASK_SECRET_KEY", "DATA_ENCRYPTION_KEY")
 # Wat er per doel op de machine moet staan, en waarvoor.
 NEEDS = {

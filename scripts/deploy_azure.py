@@ -78,7 +78,8 @@ def run():
     print(f"\n📦 De image van app/ zoals in je laatste commit: {image}")
     if not image_public(repo, tag):
         stop("Die image staat nog niet op ghcr.io, of hij is niet openbaar.\n"
-             "   💡 Push je laatste commit en wacht tot de GitHub Action Image groen is, een paar minuten:\n"
+             "   💡 Zet je laatste commit met een pull request op main en wacht tot de GitHub Action Image\n"
+             "      daarna groen is, een paar minuten:\n"
              f"      https://github.com/{repo}/actions\n"
              "   Daarna opnieuw: python scripts/deployment.py azure", icon="⏳")
     print("   ✅ Staat klaar, en Container Apps mag hem ophalen")
@@ -109,5 +110,5 @@ def run():
                          cwd=REPO, capture_output=True, text=True).stdout.strip()
     print(f"\n🎉 Klaar! De app staat op {url}")
     print("⏳ Terraform heeft de schema-job gestart; geeft inloggen de eerste minuut een fout, probeer het dan zo nog eens.")
-    print("💡 Bijwerken: push naar main, wacht tot de Action Image groen is, en draai dit script opnieuw.")
+    print("💡 Bijwerken: merge een pull request naar main, wacht tot de Action Image groen is, en draai dit script opnieuw.")
     print("💡 Alles weer weg, zodat het niets meer kost: python scripts/deployment.py undo\n")

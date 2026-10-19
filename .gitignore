@@ -1,4 +1,4 @@
-# De echte geheimen (A-05, A-06, A-09). Het sjabloon zonder waarden is .env.example.
+# De echte geheimen (A-05, A-06, A-09, A-10). Het sjabloon zonder waarden is .env.example.
 .env
 
 # Bytecode die Python maakt als je de code buiten de container draait.

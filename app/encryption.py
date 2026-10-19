@@ -1,4 +1,4 @@
-# Versleuteling van gegevens die de app terug moet kunnen lezen, zoals het TOTP-geheim (MIT-17).
+# Versleuteling van gegevens die de app terug moet kunnen lezen: het TOTP-geheim en de notities (MIT-17, MIT-18).
 
 import base64
 import os
