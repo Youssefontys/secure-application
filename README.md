@@ -14,7 +14,7 @@ Every feature that is added has an entry in `BoK/`: the use case, the misuse cas
 - `db/` - the database schema and the password of the app role, run by the database container on first start
 - `BoK/Architecture/` - components, data flows, trust boundaries and the authentication and authorization points
 - `BoK/Threat Analysis/` - use cases, misuse cases, mitigations, attack trees, the tests that go with them, and a risk matrix (likelihood × impact, before and after the mitigations), with a use case diagram and misuse case diagrams in `diagrams/`
-- `BoK/Subjects/` - per BoK subject (week) what was built, why it is safe and what it does not solve
+- `BoK/Subjects/` - per BoK subject (week) what was built, why it is safe and what it does not solve; `Standards.md` maps the app on the OWASP Top 10 Proactive Controls, ASVS 5.0, the CSA Cloud Controls Matrix and EN 40000
 - `compose.yaml` - app and database for local use, with a ZAP profile in comments for later
 - `.github/dependabot.yml` - weekly update proposals for the pinned packages, images, Terraform providers and GitHub Actions
 - `.github/workflows/image.yml` - on every pull request to `main`, builds the image, makes its SBoM and scans it without publishing (the job `check`, required by a ruleset on `main`); on every push to `main`, does the same and then publishes the image to ghcr.io, tagged with the commit
