@@ -138,12 +138,12 @@ Bewust niet: rechten per rij (row-level security), een audit-log in de database 
 | C1 Implement Access Control | Eigenaarscontrole op notities (MIT-15), herauthenticatie (MIT-16), standaard dicht (MIT-24), een databaserol met minimale rechten (MIT-27) |
 | C2 Use Cryptography to Protect Data | AES-256-GCM voor het TOTP-geheim en de notities, Argon2id voor wachtwoorden (Week 6) |
 | C3 Validate all Input & Handle Exceptions | Parameterized queries (MIT-02), lengtegrenzen (MIT-04), invoer en configuratie (MIT-22, MIT-23), veilig falen (MIT-25) |
-| C4 Address Security from the Start | Elke feature begint bij de misuse cases in de BoK; de uitgewerkte dreigingsanalyse en het ontwerp (Week 3 en 5) volgen aan het eind |
+| C4 Address Security from the Start | Elke feature begint bij de misuse cases in de BoK; sinds 19-10-2026 ook de risicomatrix en de use case- en misuse case-diagrammen (`Threat Analysis/`) |
 | C5 Secure By Default Configurations | `HTTPS_ONLY` standaard aan, de hackstand standaard uit, `TRUSTED_PROXIES` standaard 0, geen root (MIT-23, MIT-26) |
 | C6 Keep your Components Secure | Alles vastgezet, ook wat er meekomt en de base-images op digest (MIT-03); in de pipeline maakt Trivy van elke image een SBoM en scant die, ook bij elke pull request (MIT-35, MIT-36, MIT-39, Week 8) |
 | C7 Secure Digital Identities | Verplichte 2FA, poginglimieten, sessieversie, Argon2id (Week 5 en 6) |
 | C8 Leverage Browser Security Features | CSP, `frame-ancestors`, `nosniff`, `Referrer-Policy`, `HttpOnly`, `SameSite`, `Secure` (MIT-21, MIT-23) |
-| C9 Implement Security Logging and Monitoring | Elke security-gebeurtenis een JSON-regel (MIT-31, Week 6 Logging), onverwachte fouten met traceback (MIT-25) |
+| C9 Implement Security Logging and Monitoring | Elke security-gebeurtenis een JSON-regel (MIT-31, Week 6 Logging), onverwachte fouten met traceback (MIT-25); op Azure een mail bij een blokkade (MIT-37) |
 | C10 Stop Server Side Request Forgery | Niet van toepassing: de app doet geen verzoeken naar adressen die een gebruiker kiest |
 
 ## Wat het niet oplost
