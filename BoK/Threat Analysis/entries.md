@@ -238,8 +238,8 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
   - OR  2. Een kwaadaardige nieuwe versie van een pakket komt bij de volgende build vanzelf mee
   - OR  3. Een kwetsbaarheid in de base images (`python:3.15-slim`, `postgres:18`), bijvoorbeeld in de Debian-systeembibliotheken
   - OR  4. Een image-tag wijst bij een volgende build naar een andere image dan eerder (tags zijn niet vast)
-- Mitigaties: MIT-03 (stap 2, en stap 4 sinds 7bfd435). MIT-33 (stap 1 en 3: Dependabot stelt elke week nieuwe versies voor). MIT-35 (stap 1 en 3: de pipeline publiceert geen image met een bekend lek van HIGH of CRITICAL waarvoor een oplossing is; T-105). MIT-36 (de SBoM: welke pakketten en versies in elke image zitten; T-106). MIT-39 (stap 1 en 3: sinds bc6c669 draait dezelfde scan bij elke pull request, en een ruleset op `main` houdt de merge tegen als hij faalt; T-110, T-111)
-- Restrisico: een lek zonder oplossing houdt de image niet tegen, en een lek dat pas na de build bekend wordt, ziet de scan pas bij de volgende pull request of push; een draaiende image wordt niet opnieuw gescand. Dependabot stelt alleen voor; iemand moet de pull request bekijken en samenvoegen. Dat hij pull requests opent, liet T-97 zien; of hij ook de digests van de images bijwerkt, bleek daar nog niet, want die waren al de nieuwste. Minder pakketten helpt wel: sinds 29d201d doet `cryptography` ook Argon2id, en zijn `argon2-cffi` en `argon2-cffi-bindings` weg
+- Mitigaties: MIT-03 (stap 2, en stap 4 sinds 7bfd435). MIT-33 (stap 1 en 3: Dependabot stelt elke week nieuwe versies voor). MIT-35 (stap 1 en 3: de pipeline publiceert geen image met een bekend lek van HIGH of CRITICAL waarvoor een oplossing is; T-105). MIT-36 (de SBoM: welke pakketten en versies in elke image zitten; T-106). MIT-39 (stap 1 en 3: sinds bc6c669 draait dezelfde scan bij elke pull request, en een ruleset op `main` houdt de merge tegen als hij faalt; T-110, T-111). MIT-41 (stap 1 en 3, ook zonder oplossing: sinds e6a3888 houdt elk lek van HIGH of CRITICAL tegen tot er een beslissing in `vex/openvex.json` staat; T-114 tot T-116)
+- Restrisico: sinds e6a3888 houdt ook een lek zonder oplossing tegen, tenzij de VEX het voor die versie uitsluit; maar een verklaring kan fout zijn, want de check ziet alleen of er een reden staat (MIT-41). Een lek van MEDIUM of LOW houdt niet tegen. Een lek dat pas na de build bekend wordt, ziet de scan pas bij de volgende pull request of push; een draaiende image wordt niet opnieuw gescand. Dependabot stelt alleen voor; iemand moet de pull request bekijken en samenvoegen. Dat hij pull requests opent, liet T-97 zien; of hij ook de digests van de images bijwerkt, bleek daar nog niet, want die waren al de nieuwste. Minder pakketten helpt wel: sinds 29d201d doet `cryptography` ook Argon2id, en zijn `argon2-cffi` en `argon2-cffi-bindings` weg
 - Status: open
 - Sinds: baseline
 
@@ -281,10 +281,11 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 - Stappen:
   - OR  1. Na een overname draait de aanvaller als root in de container: hij kan de code van de app aanpassen en gereedschap installeren, en een uitbraak uit de container begint met rootrechten
   - OR  2. De ontwikkelserver van Flask belasten; Flask waarschuwt bij het starten zelf dat die niet voor productie bedoeld is
-- Mitigaties: MIT-26 (stap 1: de app draait als de gewone gebruiker `app` en mag de code niet aanpassen; stap 2: Gunicorn met twee workers in plaats van de ontwikkelserver)
+  - OR  3. Na een overname alsnog root worden via een programma met een setuid-bit, zoals mount, su of passwd, bijvoorbeeld met een lek in mount (CVE-2026-76642, T-114)
+- Mitigaties: MIT-26 (stap 1: de app draait als de gewone gebruiker `app` en mag de code niet aanpassen; stap 2: Gunicorn met twee workers in plaats van de ontwikkelserver). MIT-42 (stap 3: sinds e6a3888 heeft geen programma in de image een setuid- of setgid-bit; T-116)
 - Restrisico: wie de app overneemt, kan nog alles wat de app mag, zoals de geheimen in de omgeving lezen (MC-22) en de database gebruiken (MC-08). Het bestandssysteem van de container is niet alleen-lezen
 - Status: gebouwd
-- Sinds: baseline; dicht sinds 13a2eb4
+- Sinds: baseline; dicht sinds 13a2eb4; stap 3 sinds e6a3888
 
 ### MC-15 De code van de tweede stap raden
 - Aanvallersdoel: inloggen als een gebruiker met tweestapsverificatie
@@ -519,9 +520,9 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
   - OR  3. Een pull request vanuit een fork die de workflow aanpast en zo een image publiceert
   - OR  4. Een lang geldig token met `write:packages` stelen en daarmee een image onder dezelfde naam publiceren
   - OR  5. Met een overgenomen GitHub-account naar `main` pushen
-  - OR  6. Een pull request die de check zelf aanpast, bijvoorbeeld `--exit-code 1` weghaalt, zodat die groen wordt en de ruleset de merge toelaat
+  - OR  6. Een pull request die de check zelf aanpast, bijvoorbeeld `--exit-code 1` weghaalt, of een verklaring in `vex/openvex.json` zet, zodat die groen wordt en de ruleset de merge toelaat
 - Mitigaties: MIT-34 (stap 1 tot 4: het token van de run mag alleen `contents: read` en `packages: write`, checkout staat vast op een commit, een pull request publiceert niets, en er is geen eigen token meer; T-103). MIT-33 (stap 2: Dependabot stelt een nieuwe versie van de action voor). MIT-39 (stap 3: bij een pull request draait alleen de job `check`, met leesrechten; stap 5 deels: rechtstreeks pushen naar `main` houdt de ruleset tegen; T-110, T-112)
-- Restrisico: stap 5 blijft: wie het account heeft, kan een pull request mergen of de ruleset uitzetten, en publiceert zo een image die hij kan uitrollen. Stap 6 blijft ook: bij een pull request draait de workflow uit die pull request; alleen wie mergt, ziet een gewijzigde check in de wijzigingen. De image wordt sinds 29e42cc gescand op bekende lekken (MIT-35), en heeft sinds 1d6f21a een SBoM (MIT-36), maar is niet ondertekend; dat is een volgende stap in de pipeline (Week 8). Het pakket is openbaar, maar er staan geen geheimen in en de code is ook openbaar
+- Restrisico: stap 5 blijft: wie het account heeft, kan een pull request mergen of de ruleset uitzetten, en publiceert zo een image die hij kan uitrollen. Stap 6 blijft ook: bij een pull request draait de workflow uit die pull request; alleen wie mergt, ziet een gewijzigde check, of een nieuwe verklaring in de VEX, in de wijzigingen. De stap VEX controleren eist bij elke verklaring een reden, maar ziet niet of die klopt (MIT-41). De image wordt sinds 29e42cc gescand op bekende lekken (MIT-35), en heeft sinds 1d6f21a een SBoM (MIT-36), maar is niet ondertekend; dat is een volgende stap in de pipeline (Week 8). Het pakket is openbaar, maar er staan geen geheimen in en de code is ook openbaar
 - Status: open
 - Sinds: 19a34dd
 
@@ -782,10 +783,10 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 
 ### MIT-35 Een scan op bekende lekken vóór het publiceren
 - Houdt tegen: MC-11 stap 1 en 3
-- Wat: de workflow scant de SBoM van de gebouwde image (MIT-36) met Trivy 0.76.0 (tot bc6c669 0.75.0), vast op versie en digest, vóór het pushen. Een lek van HIGH of CRITICAL waarvoor al een oplossing is (`--ignore-unfixed`), stopt de job; dan staat er geen nieuwe image op ghcr.io, en kan `deployment.py azure` hem ook niet uitrollen. De eerste scan vond vier keer HIGH, allemaal in de eigen kopieën van urllib3, msgpack en setuptools die pip meeneemt; sinds b31d334 gaat pip na het installeren uit de image, want de app en de schema-job gebruiken hem niet (T-105). Sinds bc6c669 draait dezelfde scan ook bij elke pull request, en houdt hij dan de merge tegen (MIT-39)
+- Wat: de workflow scant de SBoM van de gebouwde image (MIT-36) met Trivy 0.76.0 (tot bc6c669 0.75.0), vast op versie en digest, vóór het pushen. Een lek van HIGH of CRITICAL stopt de job; dan staat er geen nieuwe image op ghcr.io, en kan `deployment.py azure` hem ook niet uitrollen. Tot e6a3888 alleen een lek waarvoor al een oplossing was (`--ignore-unfixed`); sinds e6a3888 ook een zonder oplossing, tenzij de VEX het voor die versie uitsluit (MIT-41). De eerste scan vond vier keer HIGH, allemaal in de eigen kopieën van urllib3, msgpack en setuptools die pip meeneemt; sinds b31d334 gaat pip na het installeren uit de image, want de app en de schema-job gebruiken hem niet (T-105). Sinds bc6c669 draait dezelfde scan ook bij elke pull request, en houdt hij dan de merge tegen (MIT-39)
 - Waar: de stap Scannen op bekende lekken in `.github/workflows/image.yml`; `RUN` in `app/Dockerfile`
 - Status: bewezen (T-105; gemeten op 2026-10-18; met Trivy 0.76.0 T-110, gemeten op 2026-10-19)
-- Sinds: 29e42cc; pip uit de image sinds b31d334; op de SBoM sinds 1d6f21a; Trivy 0.76.0 sinds bc6c669
+- Sinds: 29e42cc; pip uit de image sinds b31d334; op de SBoM sinds 1d6f21a; Trivy 0.76.0 sinds bc6c669; ook zonder oplossing sinds e6a3888
 
 ### MIT-36 Een SBoM van elke image
 - Houdt tegen: MC-11 stap 1 en 3, deels: zonder lijst weet je niet of een nieuw lek in jouw image zit
@@ -821,3 +822,17 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 - Waar: de ingress in `terraform/app.tf`; `HTTPS_ONLY` in de configuratie van de app
 - Status: bewezen (T-113; gemeten op 2026-10-19)
 - Sinds: 75c9967
+
+### MIT-41 Triage met VEX: elk lek van HIGH of CRITICAL vraagt een beslissing
+- Houdt tegen: MC-11 stap 1 en 3 als er nog geen oplossing is: zo'n lek gaat niet meer ongezien door
+- Wat: de scan van MIT-35 laat `--ignore-unfixed` los en leest `vex/openvex.json` (OpenVEX 0.2.0). Elke melding van HIGH of CRITICAL stopt de job, tenzij de VEX voor dat pakket en die versie zegt dat de image niet geraakt wordt, met de reden erbij. De triageflow in `vex/README.md` zegt hoe je beslist: bijwerken, weghalen, afschermen, of een verklaring; een lek in CISA KEV, of met een EPSS-score van 0,1 of hoger, gaat voor. Op de image van 368a30d: 44 meldingen van HIGH, 8 lekken, geen in KEV, en een EPSS-score van hooguit 0,005. Bij 5 zit de lekke code niet in de image of draait hij nooit; bij de 3 in mount houdt een maatregel het tegen (MIT-42) (T-114). OpenVEX, geen CycloneDX-VEX: die wijst naar het `serialNumber` van één SBoM, en dat is bij elke build anders (T-114). Trivy filtert ook een `not_affected` zonder reden weg, en een verklaring zonder versie geldt voor elke versie (T-115). Daarom controleert een stap met jq vóór de scan dat elke verklaring een geldige justification en een uitleg heeft, of bij `affected` een actie, en een PURL met versie (T-116). De weggefilterde meldingen staan apart in de log (`--show-suppressed`). Gekozen in deelvraag 2 van het onderzoek (SBoM in CI/CD)
+- Waar: `vex/openvex.json` en `vex/README.md`; de stappen VEX controleren en Scannen op bekende lekken in `.github/workflows/image.yml`
+- Status: bewezen (T-114, T-115, T-116; gemeten op 2026-10-19)
+- Sinds: e6a3888
+
+### MIT-42 Geen setuid- of setgid-bits in de image
+- Houdt tegen: MC-14 stap 3
+- Wat: de Dockerfile haalt na `useradd` van elk programma de setuid- en setgid-bit weg (`find / -xdev -type f -perm /6000 -exec chmod a-s {} +`). Ervoor waren het er 11, waaronder mount, su en passwd (T-114); erna 0, de app draait als `app`, en de regressietest slaagt (T-116). Zo draait mount met de rechten van `app`, niet als root, en dat dekt de drie lekken in mount af die de scan vond (MIT-41). Aanleiding: de triage van deelvraag 2
+- Waar: de `RUN` met `useradd` in `app/Dockerfile`
+- Status: bewezen (T-116; gemeten op 2026-10-19)
+- Sinds: e6a3888
