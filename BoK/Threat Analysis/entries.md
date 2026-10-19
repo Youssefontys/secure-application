@@ -209,8 +209,8 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 - Stappen:
   - AND 1. Veel namen proberen te registreren
   - AND 2. Het antwoord "That username is already taken" onderscheidt bestaande namen
-- Mitigaties: geen voor registreren (geen limiet). Bij inloggen rekent de app ook voor een onbekende naam een Argon2id-hash (MIT-19), zodat de responstijd geen tweede manier wordt (T-70)
-- Restrisico: onbeperkt opsporen via registreren; de melding zelf is bij zelfgekozen namen niet te vermijden
+- Mitigaties: MIT-30, deels: sinds 5d0f1d0 telt ook een registratie met een bezette naam mee voor de limiet van 10 per uur per adres, want de teller loopt vóór het opslaan (volgens de code van `register()` in `app/auth.py`; gevonden bij de risicomatrix van 19-10-2026). Bij inloggen rekent de app ook voor een onbekende naam een Argon2id-hash (MIT-19), zodat de responstijd geen tweede manier wordt (T-70)
+- Restrisico: vanaf veel adressen blijft opsporen via registreren makkelijk, en in de hackstand mag een adres 60 namen per uur proberen; de melding zelf is bij zelfgekozen namen niet te vermijden
 - Status: open
 - Sinds: baseline
 
@@ -405,7 +405,7 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
   - OR  1. De omgeving van de app-container lezen (`docker compose exec app printenv`); tot 13a2eb4 draaide de app als root (MC-14)
   - OR  2. `.env` op de ontwikkelmachine of in een backup daarvan lezen
   - OR  3. De app overnemen (MC-11), die de sleutel in het geheugen heeft
-- Mitigaties: MIT-32 (stap 2, deels: andere gebruikers van de machine lezen `.env` niet meer). Gepland bij de Azure-aanvulling: de sleutel in Key Vault, met alleen de managed identity van de app als lezer, en eventueel een tweede sleutel (KEK) in Key Vault die deze sleutel versleutelt
+- Mitigaties: MIT-32 (stap 2, deels: andere gebruikers van de machine lezen `.env` niet meer). Op Azure staat de sleutel sinds 75c9967 in Key Vault (C-07), en alleen de identiteit van de app mag hem lezen (AZ-10, T-86); in Container Apps staat hij alleen als verwijzing. Een tweede sleutel (KEK) die deze sleutel versleutelt, is er niet
 - Restrisico: de sleutel staat lokaal leesbaar in `.env` en in de omgeving van de container. Ook met Key Vault heeft de draaiende app hem, dus wie de app overneemt, heeft hem ook
 - Status: open
 - Sinds: 776931a
@@ -746,7 +746,7 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 - Sinds: 2f1236e
 
 ### MIT-30 Limiet op registreren en op notities
-- Houdt tegen: MC-10 stap 2 en 3
+- Houdt tegen: MC-10 stap 2 en 3; MC-09 deels, want ook een bezette naam telt mee
 - Wat: elke registratie telt per adres in `auth_throttle`, ook een gelukte, want ook die kost een Argon2id-berekening van 19 MiB: 10 per uur, daarna een uur op slot, bij herhaling oplopend tot 4 uur; in de hackstand 60 per uur en 5 minuten (T-91). De teller staat vlak voor het hashen, dus een ongeldige naam of een te kort wachtwoord telt niet. Per account hooguit 25 notities, geteld en toegevoegd in één statement (T-92); gelijktijdige verzoeken kunnen er samen een paar overheen, hooguit één per worker, want een slot zou elke notitie trager maken voor een grens die alleen de groei afremt. Overgenomen uit BOK-SECENGINEER (10 per uur en 25 notities; de hackstand daar was 30 per uur)
 - Waar: `POLICIES` en `IP_MODES` in `app/throttle.py`; `register()` in `app/auth.py`; `index()` in `app/notes.py`
 - Status: bewezen (T-91, T-92; gemeten op 2026-10-17)
