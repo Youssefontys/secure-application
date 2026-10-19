@@ -1,0 +1,232 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://github.com/Youssefontys/secure-application/blob/main/vex/openvex.json",
+  "author": "Youssefontys",
+  "role": "Maintainer of the secure-application image",
+  "timestamp": "2026-10-19T19:00:00Z",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "CVE-2026-76642"
+      },
+      "products": [
+        {
+          "@id": "pkg:deb/debian/bsdutils@2.41.5-0%2Bdeb13u1"
+        },
+        {
+          "@id": "pkg:deb/debian/libblkid1@2.41.5-0%2Bdeb13u1"
+        },
+        {
+          "@id": "pkg:deb/debian/liblastlog2-2@2.41.5-0%2Bdeb13u1"
+        },
+        {
+          "@id": "pkg:deb/debian/libmount1@2.41.5-0%2Bdeb13u1"
+        },
+        {
+          "@id": "pkg:deb/debian/libsmartcols1@2.41.5-0%2Bdeb13u1"
+        },
+        {
+          "@id": "pkg:deb/debian/libuuid1@2.41.5-0%2Bdeb13u1"
+        },
+        {
+          "@id": "pkg:deb/debian/login@4.16.0-2%2Breally2.41.5-0%2Bdeb13u1"
+        },
+        {
+          "@id": "pkg:deb/debian/mount@2.41.5-0%2Bdeb13u1"
+        },
+        {
+          "@id": "pkg:deb/debian/util-linux@2.41.5-0%2Bdeb13u1"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "inline_mitigations_already_exist",
+      "impact_statement": "The flaw lets an unprivileged user reach privileged mount operations through the setuid mount(8). The image removes every setuid and setgid bit, so mount runs with the rights of the caller, and /etc/fstab has no entries. The app runs as the unprivileged user app and never starts mount."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-78408"
+      },
+      "products": [
+        {
+          "@id": "pkg:deb/debian/bsdutils@2.41.5-0%2Bdeb13u1"
+        },
+        {
+          "@id": "pkg:deb/debian/libblkid1@2.41.5-0%2Bdeb13u1"
+        },
+        {
+          "@id": "pkg:deb/debian/liblastlog2-2@2.41.5-0%2Bdeb13u1"
+        },
+        {
+          "@id": "pkg:deb/debian/libmount1@2.41.5-0%2Bdeb13u1"
+        },
+        {
+          "@id": "pkg:deb/debian/libsmartcols1@2.41.5-0%2Bdeb13u1"
+        },
+        {
+          "@id": "pkg:deb/debian/libuuid1@2.41.5-0%2Bdeb13u1"
+        },
+        {
+          "@id": "pkg:deb/debian/login@4.16.0-2%2Breally2.41.5-0%2Bdeb13u1"
+        },
+        {
+          "@id": "pkg:deb/debian/mount@2.41.5-0%2Bdeb13u1"
+        },
+        {
+          "@id": "pkg:deb/debian/util-linux@2.41.5-0%2Bdeb13u1"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "The flaw is in nsenter --join-cgroup run by a privileged operator. Nothing in the container runs nsenter: the only processes are gunicorn and its workers as the user app, and the app starts no other programs."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-78409"
+      },
+      "products": [
+        {
+          "@id": "pkg:deb/debian/bsdutils@2.41.5-0%2Bdeb13u1"
+        },
+        {
+          "@id": "pkg:deb/debian/libblkid1@2.41.5-0%2Bdeb13u1"
+        },
+        {
+          "@id": "pkg:deb/debian/liblastlog2-2@2.41.5-0%2Bdeb13u1"
+        },
+        {
+          "@id": "pkg:deb/debian/libmount1@2.41.5-0%2Bdeb13u1"
+        },
+        {
+          "@id": "pkg:deb/debian/libsmartcols1@2.41.5-0%2Bdeb13u1"
+        },
+        {
+          "@id": "pkg:deb/debian/libuuid1@2.41.5-0%2Bdeb13u1"
+        },
+        {
+          "@id": "pkg:deb/debian/login@4.16.0-2%2Breally2.41.5-0%2Bdeb13u1"
+        },
+        {
+          "@id": "pkg:deb/debian/mount@2.41.5-0%2Bdeb13u1"
+        },
+        {
+          "@id": "pkg:deb/debian/util-linux@2.41.5-0%2Bdeb13u1"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "inline_mitigations_already_exist",
+      "impact_statement": "The flaw needs an fstab entry with X-mount.subdir that an unprivileged user may mount. /etc/fstab in the image has no entries, and mount has no setuid bit."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-78410"
+      },
+      "products": [
+        {
+          "@id": "pkg:deb/debian/bsdutils@2.41.5-0%2Bdeb13u1"
+        },
+        {
+          "@id": "pkg:deb/debian/libblkid1@2.41.5-0%2Bdeb13u1"
+        },
+        {
+          "@id": "pkg:deb/debian/liblastlog2-2@2.41.5-0%2Bdeb13u1"
+        },
+        {
+          "@id": "pkg:deb/debian/libmount1@2.41.5-0%2Bdeb13u1"
+        },
+        {
+          "@id": "pkg:deb/debian/libsmartcols1@2.41.5-0%2Bdeb13u1"
+        },
+        {
+          "@id": "pkg:deb/debian/libuuid1@2.41.5-0%2Bdeb13u1"
+        },
+        {
+          "@id": "pkg:deb/debian/login@4.16.0-2%2Breally2.41.5-0%2Bdeb13u1"
+        },
+        {
+          "@id": "pkg:deb/debian/mount@2.41.5-0%2Bdeb13u1"
+        },
+        {
+          "@id": "pkg:deb/debian/util-linux@2.41.5-0%2Bdeb13u1"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "inline_mitigations_already_exist",
+      "impact_statement": "The flaw needs a restricted bind mount from fstab and the setuid mount(8). /etc/fstab in the image has no entries, and mount has no setuid bit."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-54369"
+      },
+      "products": [
+        {
+          "@id": "pkg:deb/debian/libacl1@2.3.2-2%2Bb1"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "The flaw needs a privileged program that calls the libacl path functions on a path an attacker controls. The app processes do not load libacl, and no process in the container runs as root."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-69720"
+      },
+      "products": [
+        {
+          "@id": "pkg:deb/debian/libncursesw6@6.5%2B20250216-2"
+        },
+        {
+          "@id": "pkg:deb/debian/libtinfo6@6.5%2B20250216-2"
+        },
+        {
+          "@id": "pkg:deb/debian/ncurses-base@6.5%2B20250216-2"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The flaw is in the infocmp program, which is in ncurses-bin, not in these libraries or the terminal data."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-69720"
+      },
+      "products": [
+        {
+          "@id": "pkg:deb/debian/ncurses-bin@6.5%2B20250216-2"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "The flaw is in the infocmp program. It is in the image, but nothing runs it: the app starts no other programs."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-16742"
+      },
+      "products": [
+        {
+          "@id": "pkg:deb/debian/libsystemd0@257.13-1~deb13u1"
+        },
+        {
+          "@id": "pkg:deb/debian/libudev1@257.13-1~deb13u1"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The flaw is in systemd-homed. These two packages contain only the libsystemd and libudev libraries; systemd-homed is not in the image."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-9538"
+      },
+      "products": [
+        {
+          "@id": "pkg:deb/debian/perl-base@5.40.1-6%2Bdeb13u1"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The flaw is in the Perl module Archive::Tar. perl-base does not contain that module, and no other Perl modules are installed."
+    }
+  ]
+}

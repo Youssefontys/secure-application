@@ -16,7 +16,10 @@ COPY . .
 
 # Een gewone gebruiker zonder shell en zonder schrijfrecht op de code: wie de app
 # overneemt, is geen root en kan de code niet aanpassen (MC-14).
-RUN useradd --system --no-create-home --shell /usr/sbin/nologin app
+# Daarna van elk programma de setuid- en setgid-bit weg, zodat ook mount, su en passwd met de rechten
+# van die gebruiker draaien en niet als root (MIT-42); de VEX-verklaringen voor mount steunen hierop.
+RUN useradd --system --no-create-home --shell /usr/sbin/nologin app \
+ && find / -xdev -type f -perm /6000 -exec chmod a-s {} +
 USER app
 
 EXPOSE 5000
