@@ -7,7 +7,7 @@ name: DV3-proef-psycopg
 on:
   push:
     branches: ["lab/**"]
-    paths: ["lab/psycopg/*.py", ".github/workflows/dv3-psycopg.yml"]
+    paths: ["lab/psycopg/*.py", "tests/regress.py", ".github/workflows/dv3-psycopg.yml"]
   workflow_dispatch:
 
 # Standaard geen rechten; de job leest alleen de code.
