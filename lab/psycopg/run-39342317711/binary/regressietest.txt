@@ -1,0 +1,209 @@
+== verplichte tweestapsverificatie
+ok  login zonder 2FA                                           302 /account/2fa
+ok    sessiecookie met SameSite=Lax en HttpOnly                (True, True)
+ok  / voor het instellen                                       302 /account/2fa
+ok  /account voor het instellen                                302 /account/2fa
+ok  notitie aanmaken voor het instellen                        302 /account/2fa
+ok  instelpagina                                               200 no-store
+ok  verversen houdt hetzelfde geheim                           BVJFC7MWFCK4KYB3X7PUJE233EIU4Q7H
+ok  qr.svg tijdens instellen                                   200
+ok  foute code bij instellen                                   400
+ok  aanzetten: herstelcode getoond                             200 39 no-store
+ok    Verder gaat naar de notities                             /
+ok  daarna /                                                   200
+ok  qr.svg na aanzetten                                        404
+ok  instelpagina na aanzetten                                  302 /account
+ok  uitloggen vanaf de instelpagina kan                        302 /login
+== inloggen
+ok  wachtwoord                                                 302 /login/2fa
+ok  halve login: /                                             302 /login
+ok  foute code                                                 400
+ok  code met Arabisch-Indische cijfers                         400
+ok  juiste code                                                302 /
+ok  login fout wachtwoord                                      (400, None, None)
+ok  GET /login als ingelogd                                    302 /
+ok  GET /register als ingelogd                                 302 /
+ok  register dubbel                                            409
+== sterkte-eis (MIT-13)
+ok  registreren met 11 tekens                                  400
+ok  registreren met 12 tekens                                  302
+ok  registreren met 64 tekens                                  302
+ok  registreren met 65 tekens                                  400
+ok    melding                                                  Choose a password of 12 to 64 characters.
+ok  wijzigen naar 11 tekens                                    400
+ok  wijzigen naar 65 tekens                                    400
+ok  wijzigen, twee verschillende                               400
+ok  inloggen zonder eis (oud wachtwoord blijft werken)         302 /login/2fa
+== notities
+ok  notitie leeg                                               400
+ok  titel 16                                                   400
+ok  notitie 251                                                400
+ok  aanmaken (15/250)                                          302 /
+ok  edit GET                                                   200
+ok  edit leeg                                                  400
+ok  edit                                                       302 /
+ok  bewerkt zichtbaar                                          True
+ok  eigenaar (MIT-15): bram opent notitie van anna             404
+ok    bram past notitie van anna aan                           404
+ok    bram verwijdert notitie van anna                         404
+ok    notitie van anna ongewijzigd                             True
+ok    onbekend id                                              404
+ok  delete                                                     302 /
+ok  profiel                                                    200
+== sessies
+ok  herauthenticatie (MIT-16): wijzigen zonder huidig wachtwoord 400
+ok    met een fout huidig wachtwoord                           Your current password is incorrect.
+ok    het juiste wachtwoord zonder code (MIT-16)               400
+ok    het juiste wachtwoord met een foute code                 Incorrect or already used code.
+ok    het wachtwoord is nog het oude                           302 /login/2fa
+ok  wachtwoord wijzigen, met wachtwoord en code                302 /account
+ok    eigen sessie blijft                                      200
+ok    andere sessie vervalt                                    302 /login
+ok  logout                                                     302 /login
+ok    oude sessie na logout                                    302 /login
+== opnieuw instellen, nieuwe herstelcode
+ok  nieuwe herstelcode met foute code                          400
+ok    met een goede code maar zonder wachtwoord (MC-29)        400
+ok  nieuwe herstelcode met wachtwoord en code                  200 no-store
+ok    Verder gaat terug naar het profiel                       /account
+ok  opnieuw instellen met foute code                           400
+ok    met een goede code maar zonder wachtwoord (MC-29)        (400, 't')
+ok  opnieuw instellen met wachtwoord en code                   302 /account/2fa
+ok    daarna /                                                 302 /account/2fa
+ok    andere sessie vervalt                                    302 /login
+ok    nieuw ingesteld                                          200
+== herstelcode
+ok  codepagina heeft herstellink                               True
+ok  foute herstelcode                                          400
+ok  herstelcode van vóór het opnieuw instellen                 400
+ok  juiste herstelcode                                         302 /account/2fa
+ok    melding                                                  True
+ok    daarna / zonder 2FA                                      302 /account/2fa
+ok    andere sessie vervalt                                    302 /login
+ok    database: hash weg, 2FA uit                              true,false
+== wachtwoord vergeten (MIT-14)
+ok  link op de inlogpagina                                     True
+ok  formulier                                                  200
+ok  te kort nieuw wachtwoord                                   (400, 'Choose a password of 12 to 64 characters.')
+ok  twee verschillende                                         (400, 'The two passwords do not match.')
+ok  foute herstelcode                                          (400, 'Username, recovery code or code is incorrect.')
+ok  onbekende naam: zelfde antwoord                            (400, 'Username, recovery code or code is incorrect.')
+ok  juiste herstelcode, foute code                             (400, 'Username, recovery code or code is incorrect.')
+ok  juist: nieuwe herstelcode                                  (200, 39, 'no-store', True)
+ok    andere sessie vervalt                                    302 /login
+ok    nieuwe herstelcode staat in dezelfde UPDATE              t
+ok    oud wachtwoord                                           400
+ok    nieuw wachtwoord                                         302 /login/2fa
+ok    oude herstelcode opnieuw                                 (400, 'Username, recovery code or code is incorrect.')
+ok  twee gelijktijdig met dezelfde codes                       [200, 400]
+ok    daarna inloggen met het winnende wachtwoord              302 /login/2fa
+ok  5 foute herstelcodes, de 6e poging geweigerd (per naam per adres) ([400, 400, 400, 400, 400, 429], '900')
+ok    onbekende naam: precies hetzelfde                        ([400, 400, 400, 400, 400, 429], '900')
+ok  juiste herstelcode, 5 foute codes, de 6e geweigerd         ([400, 400, 400, 400, 400, 429], '900')
+ok    ook de codestap bij inloggen op slot (MIT-06)            429
+== limieten
+ok  5 foute wachtwoorden, de 6e poging geweigerd               ([400, 400, 400, 400, 400, 429], '900')
+ok    oude teller opgeruimd, verse blijft                      vers
+ok  juist wachtwoord tijdens blokkade                          429
+ok  5 foute codes, de 6e geweigerd                             ([400, 400, 400, 400, 400, 429], '900', 'Too many failed attempts')
+ok  juiste code tijdens blokkade                               429
+ok  5 foute herstelcodes, de 6e geweigerd                      ([400, 400, 400, 400, 400, 429], '900')
+ok  twee gelijktijdig met dezelfde code                        [302, 400]
+ok  40 tegelijk: precies 5 gecontroleerd, de rest geweigerd    [400, 400, 400, 400, 400, 429, 429, 429, 429, 429, 429, 429, 429, 429, 429, 429, 429, 429, 429, 429, 429, 429, 429, 429, 429, 429, 429, 429, 429, 429, 429, 429, 429, 429, 429, 429, 429, 429, 429, 429]
+ok    verdubbelteller maar één keer omhoog                     1
+ok  IPv4 achter IPv6, IPv6 per /64, gewoon IPv4                203.0.113.7 2001:db8::/64 192.0.2.1
+ok    met de poort erachter, zoals Azure het meestuurt         203.0.113.9 2001:db8::/64 2001:db8::/64
+== hackstand (MC-18)
+ok  hackweek: 100 per adres, demoaccount zonder teller per naam, 5 min op slot ['100', '2', '100', '5', '5']
+ok    hackweek: 60 nieuwe accounts per uur per adres, 5 min op slot ['60', '60', '5', '5']
+ok    typfout in de stand: de app start niet                   (True, True)
+ok    zonder instelling streng                                 ['20', '2']
+== configuratie is invoer (MIT-23)
+ok  TRUSTED_PROXIES 0 en 1 starten                             ('start', 'start')
+ok    -1 en 2 starten niet                                     ("TRUSTED_PROXIES moet 0 of 1 zijn, niet '-1'.", "TRUSTED_PROXIES moet 0 of 1 zijn, niet '2'.")
+ok    HTTPS_ONLY=ja start niet                                 HTTPS_ONLY moet 0 of 1 zijn, niet 'ja'.
+ok    te korte FLASK_SECRET_KEY start niet                     FLASK_SECRET_KEY moet minstens 32 tekens zijn.
+ok  zonder HTTPS_ONLY: cookie alleen over HTTPS (standaard veilig) True
+== invoercontrole (MIT-22)
+ok  registreren als '<script>alert(1)</script'                 (400, 'Choose a username of 3 to 20 characters: letters, digits and _.')
+ok  registreren als 'ab'                                       (400, 'Choose a username of 3 to 20 characters: letters, digits and _.')
+ok  registreren als 'aaaaaaaaaaaaaaaaaaaaa'                    (400, 'Choose a username of 3 to 20 characters: letters, digits and _.')
+ok  registreren als 'met spatie'                               (400, 'Choose a username of 3 to 20 characters: letters, digits and _.')
+ok  registreren als 'anna-b'                                   (400, 'Choose a username of 3 to 20 characters: letters, digits and _.')
+ok    3 en 20 tekens, met _ en cijfers                         [302, 302]
+ok    inloggen met een ongeldige naam: zelfde antwoord als onbekend (400, 'Incorrect username or password.')
+ok  verzoek van 17 KiB: 413, niet ingelezen                    413
+== standaard dicht (MIT-24)
+ok  alle 10 niet-publieke routes sturen een anonieme bezoeker naar /login []
+ok    publiek zijn alleen inloggen, registreren, de herstelroutes, uitloggen en static ['auth.forgot_password', 'auth.login', 'auth.login_code', 'auth.login_recover', 'auth.logout', 'auth.register', 'static']
+== beveiligingsheaders (MIT-21)
+ok  headers op /login                                          ("default-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'", 'DENY', 'nosniff', 'same-origin')
+ok  headers op /                                               ("default-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'", 'DENY', 'nosniff', 'same-origin')
+ok  headers op /bestaat-niet                                   ("default-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'", 'DENY', 'nosniff', 'same-origin')
+ok    lokaal op HTTP geen HSTS                                 None
+== CSRF-token (MIT-20)
+ok  notitie aanmaken zonder token: 400, niets aangemaakt       (400, '0')
+ok    met een fout token: 400                                  400
+ok    met het token van een andere sessie: 400                 400
+ok    uitloggen zonder token: 400, nog ingelogd                (400, 200)
+ok    met het eigen token: aangemaakt                          302 /
+ok    inloggen zonder token: 400                               400
+== alleen POST voert uit
+ok  3 keer HEAD /login: gewoon 200, telt niet als poging       ([200, 200, 200], '0')
+== versleuteling (MIT-17)
+ok  TOTP-geheim versleuteld opgeslagen                         (True, False, True)
+ok    twee accounts, twee verschillende waarden                True
+ok  versleuteld geheim van dora in de rij van eva: geweigerd   400
+ok    dora logt gewoon in                                      302 /login/2fa
+ok  half ingesteld geheim dat niet ontsleutelt: opnieuw beginnen 302 /account/2fa
+ok    nieuw geheim, en instellen lukt                          (200, 200)
+== wachtwoorden gehasht (MIT-19)
+ok  Argon2id met de OWASP-instelling, zonder het wachtwoord    (True, False)
+ok    zelfde wachtwoord, andere hash (eigen salt)              True
+ok    hash met oude instelling: inloggen lukt                  302 /login/2fa
+ok    en daarna staat er een nieuwe hash                       True
+ok    onbekende naam rekent ook: zelfde orde van responstijd   True
+      (mediaan bekend 47 ms, onbekend 46 ms)
+== notities versleuteld (MIT-18)
+ok  titel en inhoud versleuteld opgeslagen                     (2, False, False)
+ok    de eigenaar leest ze gewoon                              True
+ok    notitie van dora in de rij van eva: niet te lezen        (2, False)
+ok    titel en inhoud omgewisseld: niet te lezen               2
+== account verwijderen
+ok  verwijderen zonder wachtwoord                              400
+ok    5 foute wachtwoorden, de 6e poging geweigerd             ([400, 400, 400, 400, 400, 429], '900')
+ok    het account bestaat nog                                  1
+ok    ook het juiste wachtwoord tijdens de blokkade            429
+ok    het juiste wachtwoord zonder code (MIT-16)               (400, '1')
+ok  account verwijderen, met wachtwoord en code                302 /login
+ok    andere sessie                                            302 /login
+ok    login daarna                                             400
+ok    notities zonder eigenaar                                 0
+== cache, sessieduur en limieten (MIT-28 tot MIT-30)
+ok  no-store op pagina's, ook ingelogd en bij een 404          ['no-store', 'no-store', 'no-store', 'no-store']
+ok    statische bestanden mogen in de cache                    True
+ok  sessie van 7 uur werkt, van 9 uur en 30 dagen niet         [200, '302 /login', '302 /login']
+ok  registreren: 10 per uur per adres, de 11e 429              ([302, 302, 302, 302, 302, 302, 302, 302, 302, 302, 429], '3600')
+ok    met een melding                                          Too many new accounts from this address. Try again in 60 minutes.
+ok    geen 11e account                                         10
+ok  notities: 25 per account, de 26e geweigerd                 (25, 400)
+ok    met een melding, en de teller op de pagina               ('You have reached the maximum of 25 notes. Delete one first.', True)
+== databaserol (MIT-27)
+ok  de app logt in als notities_app, geen superuser            ['notities_app', False]
+ok    het wachtwoord van de eigenaar staat niet in de omgeving van de app (True, False)
+ok    alleen lezen en schrijven mag                            {'SELECT count(*) FROM users': 'mag', 'CREATE TABLE proef (x int)': 'geweigerd', 'DROP TABLE notes': 'geweigerd', 'TRUNCATE notes': 'geweigerd', 'ALTER TABLE users ADD COLUMN x int': 'geweigerd', 'CREATE ROLE indringer': 'geweigerd', "COPY (SELECT 1) TO PROGRAM 'true'": 'geweigerd'}
+ok  tracebacks in de log                                       0
+== security-events (MIT-31)
+ok  een naam die geen account is, komt niet in de log          (False, True)
+ok    26 pogingen, 21 geweigerd: één regel per blokkade        (21, ['password_account_ip', 'password_ip'])
+ok  alle 21 soorten uit de code staan in de log                []
+ok    elke regel heeft tijd, soort en adres                    True
+ok    geen wachtwoord, TOTP-geheim of herstelcode in de log    (True, [])
+ok    een naam met een regeleinde komt er niet in, en maakt geen valse regel (False, False)
+== veilig falen (MIT-25)
+ok  404 met de eigen pagina                                    (404, True)
+ok    405 met Allow-header                                     (405, True)
+ok  database weg: 500 met een korte melding, zonder details    (500, True, False, False)
+ok    in de log: de fout, met het regeleinde als \n            (1, True, False)
+
+ALLES GOED: 182 controles

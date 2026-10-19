@@ -1,0 +1,94 @@
+{
+ "variant": "libpq",
+ "regressietest": {
+  "uitkomst": "ALLES GOED: 182 controles",
+  "seconden": 314,
+  "controles": 182
+ },
+ "geladen": {
+  "bestanden": 62,
+  "per_herkomst": {
+   "deb": 27,
+   "cpython": 32,
+   "pypi:cffi": 1,
+   "pypi:cryptography": 1,
+   "pypi:MarkupSafe": 1
+  },
+  "debian_pakketten": [
+   "libbz2-1.0",
+   "libc-bin",
+   "libc6",
+   "libcom-err2",
+   "libffi8",
+   "libgcc-s1",
+   "libgssapi-krb5-2",
+   "libk5crypto3",
+   "libkeyutils1",
+   "libkrb5-3",
+   "libkrb5support0",
+   "libldap2",
+   "liblzma5",
+   "libmpdec4",
+   "libpq5",
+   "libsasl2-2",
+   "libssl3t64",
+   "libuuid1",
+   "libzstd1",
+   "zlib1g"
+  ],
+  "openssl": [
+   "OpenSSL 3.5.7 9 Jun 2026",
+   "OpenSSL 4.0.3 29 Sep 2026"
+  ],
+  "libpq": 170011,
+  "debian_totaal": 98
+ },
+ "snelheid": {
+  "implementatie": "python",
+  "libpq": 170011,
+  "verbinden_50": {
+   "ms": [
+    269.0,
+    272.5,
+    272.3,
+    268.9,
+    269.3
+   ],
+   "mediaan": 269.3
+  },
+  "select_1_5000": {
+   "ms": [
+    344.2,
+    367.3,
+    390.6,
+    439.2,
+    340.6
+   ],
+   "mediaan": 367.3
+  },
+  "1000_rijen_200": {
+   "ms": [
+    1227.9,
+    1234.2,
+    1186.5,
+    1232.6,
+    1206.7
+   ],
+   "mediaan": 1227.9
+  }
+ },
+ "image_mb": 155.0,
+ "sbom_componenten": 112,
+ "scan": {
+  "meldingen": 195,
+  "lekken": 83,
+  "per_ernst": {
+   "LOW": 82,
+   "HIGH": 44,
+   "MEDIUM": 68,
+   "UNKNOWN": 1
+  },
+  "rem_exit": 0,
+  "rem_over": []
+ }
+}
