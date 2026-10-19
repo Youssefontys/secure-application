@@ -1,34 +1,43 @@
-# Bouwt bij elke push naar main de image, maakt de SBoM, scant die, en zet de image op ghcr.io, met het token van deze run.
+# Bouwt de image, maakt de SBoM en scant die: bij elke pull request naar main in de job check, die niets publiceert en
+# die een ruleset op main verplicht maakt (MIT-39), en bij elke push naar main opnieuw in de job image, die de image na
+# een schone scan op ghcr.io zet met het token van de run.
 # Een pakket dat zo ontstaat, krijgt de zichtbaarheid van de repo; Container Apps haalt het dus zonder inloggen op.
 # Twee tags, nooit latest (MIT-03): de commit, en de inhoud van app/ (de tree-hash van git). deployment.py azure zoekt op de
 # tweede: een commit die alleen Terraform of de BoK verandert, heeft zo geen nieuwe build nodig.
 name: Image
 
 on:
+  pull_request:
+    branches: [main]
   push:
     branches: [main]
   workflow_dispatch:
 
-# Standaard geen rechten; de job krijgt alleen wat hij nodig heeft.
+# Standaard geen rechten; elke job krijgt alleen wat hij nodig heeft.
 permissions: {}
 
+env:
+  # Vast op versie en digest (MIT-03); Dependabot ziet een image in een run-regel niet, dus die werk je zelf bij.
+  TRIVY: aquasec/trivy:0.76.0@sha256:2416d1f74045b57274df1a340eee6b510cacd73c66a6ccb8da092b117eb7d222
+
 jobs:
-  image:
+  # De rem bij een pull request, alleen met leesrechten: bij een pull request vanuit een fork geeft GitHub sowieso niet meer.
+  # De stappen met een & staan in de job image nog een keer, met een *: zo scant de check precies wat er gepubliceerd wordt.
+  check:
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-24.04
     permissions:
       contents: read
-      packages: write
-    env:
-      # Vast op versie en digest (MIT-03); Dependabot ziet een image in een run-regel niet, dus die werk je zelf bij.
-      TRIVY: aquasec/trivy:0.75.0@sha256:af6acf9a6b85dfe389a1941505c0ce9efef52a4719635e1a962f022a3d855daa
     steps:
       # Vast op een commit, niet op een tag die kan verschuiven (MIT-03); Dependabot houdt hem bij (MIT-33).
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - &checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
       # ghcr.io wil kleine letters; het label koppelt het pakket aan deze repo.
-      - name: Bouwen
+      - &bouwen
+        name: Bouwen
         run: |
           image="ghcr.io/${GITHUB_REPOSITORY,,}"
           docker build --label "org.opencontainers.image.source=https://github.com/$GITHUB_REPOSITORY" \
@@ -38,23 +47,40 @@ jobs:
       # De SBoM (MIT-36): alle onderdelen van de image als CycloneDX, alleen de lijst, zonder lekken of VEX. Trivy leest de
       # image als tar-bestand, zonder de Docker-socket, dus kan het de image die straks gepusht wordt niet veranderen.
       # Trivy noemt het hoofdonderdeel naar het tar-bestand; jq zet er de naam en tag van de image voor in de plaats.
-      - name: SBoM maken
+      - &sbom
+        name: SBoM maken
         run: |
           docker save "$IMAGE:$GITHUB_SHA" -o "$RUNNER_TEMP/image.tar"
           docker run --rm -v "$RUNNER_TEMP:/scan" "$TRIVY" image --input /scan/image.tar --format cyclonedx --output /scan/sbom.json --quiet
           jq --arg name "$IMAGE:$GITHUB_SHA" '.metadata.component.name = $name' "$RUNNER_TEMP/sbom.json" > sbom.cdx.json
 
       # Bij de run bewaard, ook als de scan hierna een lek vindt; GitHub houdt hem 90 dagen, het maximum voor een openbare repo.
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - &bewaren
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: sbom-${{ github.sha }}
           path: sbom.cdx.json
           retention-days: 90
 
-      # De rem (MIT-35), op de SBoM: een bekend lek van HIGH of CRITICAL waarvoor al een oplossing is, stopt de job vóór
-      # het publiceren.
-      - name: Scannen op bekende lekken
+      # De rem (MIT-35), op de SBoM: een bekend lek van HIGH of CRITICAL waarvoor al een oplossing is, laat de job falen.
+      # Bij een pull request houdt de ruleset dan de merge tegen, bij een push stopt de job vóór het publiceren.
+      - &scannen
+        name: Scannen op bekende lekken
         run: docker run --rm -v "$PWD:/scan" "$TRIVY" sbom /scan/sbom.cdx.json --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 --no-progress
+
+  # Bij een push naar main, of met de hand: dezelfde stappen, en pas na een schone scan naar ghcr.io.
+  image:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - *checkout
+      - *bouwen
+      - *sbom
+      - *bewaren
+      - *scannen
 
       # Het token via stdin en een omgevingsvariabele, niet in de opdracht zelf.
       - name: Pushen naar ghcr.io
