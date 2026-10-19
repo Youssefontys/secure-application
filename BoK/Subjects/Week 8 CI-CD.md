@@ -2,7 +2,7 @@
 
 Vier stappen van de pipeline staan. Bij elke push naar `main` bouwt GitHub Actions de image en zet hem op ghcr.io (MIT-34): het token van de run mag alleen dat, `actions/checkout` staat vast op een commit, en een eigen token is niet meer nodig. Trivy maakt van elke image een SBoM (MIT-36), en scant die: een bekend lek van HIGH of CRITICAL houdt de image tegen (MIT-35), sinds deelvraag 2 van het onderzoek ook als er nog geen oplossing is, tot er een beslissing in de VEX staat (MIT-41). De eerste scan vond vier lekken, allemaal in pip, dat nu uit de image gaat. Sinds deelvraag 1 van het onderzoek draaien dezelfde stappen ook bij elke pull request, zonder te publiceren, en maakt een ruleset op `main` die check verplicht (MIT-39): een bekend lek komt dan niet eens meer op `main`. Tests van de app draaien nog niet; die komen er stap voor stap bij.
 
-De details staan in de entries (MC-30, MC-11, MC-14, MIT-34 tot MIT-36, MIT-39, MIT-41 en MIT-42; C-06, C-11, A-12, A-14, A-18, F-06, F-07, F-12, B-04, B-06 en AZ-16 in de architectuur) en de tests T-103, T-105, T-106, T-110 tot T-112 en T-114 tot T-116. De triageflow staat in `vex/README.md`.
+De details staan in de entries (MC-30, MC-11, MC-14, MIT-34 tot MIT-36, MIT-39, MIT-41 en MIT-42; C-06, C-11, A-12, A-14, A-18, F-06, F-07, F-12, B-04, B-06 en AZ-16 in de architectuur) en de tests T-103, T-105, T-106, T-110 tot T-112 en T-114 tot T-117. De triageflow staat in `vex/README.md`.
 
 ## De dreiging
 
