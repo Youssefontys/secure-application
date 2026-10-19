@@ -58,12 +58,19 @@ def scan(out, trivy):
     # Eerst de databases bijwerken; daarna scant alles op dezelfde database.
     run(["docker", "run", "--rm", *tcache, trivy, "image", "--download-db-only", "--quiet"])
     run(["docker", "run", "--rm", *gcache, GRYPE, "db", "update", "-q"])
+    # Een scan die faalt, is ook een uitkomst (Trivy weigerde in run 39333438742 een SBoM met rpm en deb): de fout gaat
+    # naar scan-<scanner>-<sbom>.fout.txt, en de meting gaat door.
+    meta = {"fouten": {}}
     for s in SBOMS:
-        run(["docker", "run", "--rm", *w, *tcache, trivy, "sbom", f"/w/sbom-{s}.json", "--skip-db-update",
-             "--format", "json", "--output", f"/w/scan-trivy-{s}.json", "--quiet"])
-        run(["docker", "run", "--rm", *w, *gcache, "-e", "GRYPE_DB_AUTO_UPDATE=false", GRYPE, f"sbom:/w/sbom-{s}.json",
-             "-o", "json", "--file", f"/w/scan-grype-{s}.json", "-q"])
-    meta = {"trivy": json.loads((out / "scan-trivy-trivy.json").read_text(encoding="utf-8")).get("CreatedAt")}
+        for sc, cmd in (("trivy", [*w, *tcache, trivy, "sbom", f"/w/sbom-{s}.json", "--skip-db-update", "--format", "json",
+                                   "--output", f"/w/scan-trivy-{s}.json", "--quiet"]),
+                        ("grype", [*w, *gcache, "-e", "GRYPE_DB_AUTO_UPDATE=false", GRYPE, f"sbom:/w/sbom-{s}.json",
+                                   "-o", "json", "--file", f"/w/scan-grype-{s}.json", "-q"])):
+            p = subprocess.run(["docker", "run", "--rm", *cmd], capture_output=True, text=True)
+            if p.returncode != 0:
+                (out / f"scan-{sc}-{s}.fout.txt").write_text(p.stderr, encoding="utf-8")
+                meta["fouten"][f"{sc} op {s}"] = p.stderr.strip().splitlines()[-1][-300:] if p.stderr.strip() else str(p.returncode)
+    meta["trivy"] = json.loads((out / "scan-trivy-trivy.json").read_text(encoding="utf-8")).get("CreatedAt")
     p = subprocess.run(["docker", "run", "--rm", *gcache, GRYPE, "db", "status", "-o", "json"], capture_output=True, text=True)
     meta["grype_db"] = p.stdout.strip()[:400]
     return meta
@@ -164,6 +171,9 @@ def analyse(out, truth, meta):
             "verborgen_gezien": extra}
     for s in SBOMS:
         for sc in SCANNERS:
+            if not (out / f"scan-{sc}-{s}.json").exists():
+                res["scans"][f"{sc} op {s}"] = {"fout": meta["fouten"].get(f"{sc} op {s}", "geen uitvoer")}
+                continue
             f = findings(out / f"scan-{sc}-{s}.json", sc)
             res["scans"][f"{sc} op {s}"] = {
                 "meldingen": len(f), "lekken": len({i for i, _, _ in f}),
@@ -171,7 +181,7 @@ def analyse(out, truth, meta):
                 "op_verborgen": sorted({f"{i} {p} {sev}" for i, p, sev in f if p not in deb_names
                                         and norm_name("pypi", p) not in {n for n, _ in pypi}})[:60]}
     ids = {k: {i for i, _, _ in findings(out / f"scan-{k.split(' op ')[0]}-{k.split(' op ')[1]}.json", k.split(' op ')[0])}
-           for k in res["scans"]}
+           for k in res["scans"] if "fout" not in res["scans"][k]}
     keys = list(ids)
     res["overlap"] = {f"{a} | {b}": [len(ids[a] & ids[b]), len(ids[a] | ids[b])] for i, a in enumerate(keys) for b in keys[i + 1:]}
     loaded = collections.Counter()
@@ -200,17 +210,21 @@ def main():
     digest = run(["docker", "image", "inspect", "--format", "{{index .RepoDigests 0}}", image]).stdout.strip()
     run(["docker", "save", image, "-o", str(out / "img.tar")])
     generate(out, trivy)
+    # De scans lezen alleen de SBoM's; de tar (ruim 170 MB) hoort niet in het artifact.
+    (out / "img.tar").unlink()
     meta = scan(out, trivy)
     meta.update(image=image, digest=digest, trivy=trivy, syft=SYFT, grype=GRYPE, scan_trivy_db=meta.pop("trivy"))
     truth = inside(out, image)
     res = analyse(out, truth, meta)
-    (out / "img.tar").unlink()
     print(json.dumps({k: res[k] for k in ("waarheid", "geladen")}, indent=1, ensure_ascii=False))
     for s, v in res["sboms"].items():
         print(f"SBoM {s:10} {v['componenten']:4} componenten {v['soorten']}; deb {v['deb_gevonden']}/{res['waarheid']['deb']}, "
               f"pypi {v['pypi_gevonden']}/{res['waarheid']['pypi']}; verborgen gezien: {v['verborgen_gezien']}")
     for k, v in res["scans"].items():
-        print(f"{k:22} {v['meldingen']:4} meldingen, {v['lekken']:4} lekken {v['per_ernst']}")
+        if "fout" in v:
+            print(f"{k:22} FOUT: {v['fout']}")
+        else:
+            print(f"{k:22} {v['meldingen']:4} meldingen, {v['lekken']:4} lekken {v['per_ernst']}")
 
 
 main()

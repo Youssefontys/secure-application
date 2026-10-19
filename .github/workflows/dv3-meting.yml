@@ -39,5 +39,7 @@ jobs:
         if: always()
         with:
           name: dv3-meting
-          path: ${{ runner.temp }}/meting
+          path: |
+            ${{ runner.temp }}/meting
+            !${{ runner.temp }}/meting/img.tar
           retention-days: 90
