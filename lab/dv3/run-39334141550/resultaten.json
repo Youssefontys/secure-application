@@ -1,0 +1,209 @@
+{
+ "meta": {
+  "fouten": {
+   "trivy op syft-sbom": "2026-10-19T22:21:43Z\tFATAL\tFatal error\trun error: sbom scan error: scan error: scan failed: failed analysis: SBOM decode error: failed to decode: failed to aggregate packages: multiple types of OS packages in SBOM are not supported ([\"deb\" \"rpm\"])"
+  },
+  "grype_db": "{\n \"schemaVersion\": \"v6.1.10\",\n \"from\": \"https://grype.anchore.io/databases/v6/vulnerability-db_v6.1.10_2026-10-19T00:32:50Z_1792391955.tar.zst?checksum=sha256%3A13a192236b248579678bbf06cefb2a07a5dcbd00da110cfb5c3e26eb68a7ce58\",\n \"built\": \"2026-10-19T06:39:15Z\",\n \"path\": \"/cache/6/vulnerability.db\",\n \"valid\": true\n}",
+  "image": "ghcr.io/youssefontys/secure-application:c0a21baff0b568ab7f269de19a225888b44a8bbf",
+  "digest": "ghcr.io/youssefontys/secure-application@sha256:a547522af61ef6183c78249bb021cc7cf6e4b388a945e453262a48aed93dbfeb",
+  "trivy": "aquasec/trivy:0.76.0@sha256:2416d1f74045b57274df1a340eee6b510cacd73c66a6ccb8da092b117eb7d222",
+  "syft": "anchore/syft:v1.54.1@sha256:3eb5379ba7b409c3f4069b686110527af0c47df993fa5c10d13e7cf34f49b1aa",
+  "grype": "anchore/grype:v0.120.1@sha256:e4a44ef45d285b829ce6efe2642980329661bd2d18eab5fc539138d4adaebbbe",
+  "scan_trivy_db": "2026-10-19T22:21:38.466681332Z"
+ },
+ "waarheid": {
+  "deb": 88,
+  "pypi": 14,
+  "python": "3.15.0",
+  "ssl_van_python": "OpenSSL 3.5.7 9 Jun 2026",
+  "openssl_in_cryptography": "OpenSSL 4.0.3 29 Sep 2026",
+  "libpq_in_psycopg": 180006,
+  "wheel_sboms": {
+   "cryptography-50.0.2.dist-info/sboms/cryptography-rust.cyclonedx.json": 39,
+   "cryptography-50.0.2.dist-info/sboms/sbom.json": 1,
+   "psycopg_binary-3.3.6.dist-info/sboms/auditwheel.cdx.json": 7
+  }
+ },
+ "sboms": {
+  "trivy": {
+   "componenten": 103,
+   "soorten": {
+    "operating-system": 1,
+    "deb": 88,
+    "pypi": 14
+   },
+   "deb_gevonden": 88,
+   "deb_gemist": [],
+   "deb_extra": [],
+   "pypi_gevonden": 14,
+   "pypi_gemist": [],
+   "pypi_extra": [],
+   "verborgen_gezien": []
+  },
+  "syft": {
+   "componenten": 104,
+   "soorten": {
+    "deb": 88,
+    "pypi": 14,
+    "generic": 1,
+    "operating-system": 1
+   },
+   "deb_gevonden": 88,
+   "deb_gemist": [],
+   "deb_extra": [],
+   "pypi_gevonden": 14,
+   "pypi_gemist": [],
+   "pypi_extra": [],
+   "verborgen_gezien": [
+    "generic:python@3.15.0"
+   ]
+  },
+  "syft-sbom": {
+   "componenten": 114,
+   "soorten": {
+    "deb": 88,
+    "pypi": 15,
+    "rpm": 9,
+    "generic": 1,
+    "operating-system": 1
+   },
+   "deb_gevonden": 88,
+   "deb_gemist": [],
+   "deb_extra": [],
+   "pypi_gevonden": 14,
+   "pypi_gemist": [],
+   "pypi_extra": [],
+   "verborgen_gezien": [
+    "generic:python@3.15.0",
+    "rpm:cyrus-sasl-lib@2.1.26-24.el7_9",
+    "rpm:keyutils-libs@1.5.8-3.el7",
+    "rpm:krb5-libs@1.15.1-55.el7_9",
+    "rpm:libcom_err@1.42.9-19.el7",
+    "rpm:libselinux@2.5-15.el7",
+    "rpm:pcre@8.32-17.el7"
+   ]
+  }
+ },
+ "scans": {
+  "trivy op trivy": {
+   "meldingen": 164,
+   "lekken": 71,
+   "per_ernst": {
+    "HIGH": 44,
+    "LOW": 61,
+    "MEDIUM": 58,
+    "UNKNOWN": 1
+   },
+   "op_verborgen": []
+  },
+  "grype op trivy": {
+   "meldingen": 18,
+   "lekken": 18,
+   "per_ernst": {
+    "NEGLIGIBLE": 10,
+    "HIGH": 4,
+    "MEDIUM": 4
+   },
+   "op_verborgen": []
+  },
+  "trivy op syft": {
+   "meldingen": 20,
+   "lekken": 20,
+   "per_ernst": {
+    "MEDIUM": 4,
+    "LOW": 12,
+    "HIGH": 4
+   },
+   "op_verborgen": []
+  },
+  "grype op syft": {
+   "meldingen": 160,
+   "lekken": 68,
+   "per_ernst": {
+    "HIGH": 55,
+    "NEGLIGIBLE": 46,
+    "MEDIUM": 49,
+    "LOW": 10
+   },
+   "op_verborgen": [
+    "CVE-2025-15367 python MEDIUM"
+   ]
+  },
+  "trivy op syft-sbom": {
+   "fout": "2026-10-19T22:21:43Z\tFATAL\tFatal error\trun error: sbom scan error: scan error: scan failed: failed analysis: SBOM decode error: failed to decode: failed to aggregate packages: multiple types of OS packages in SBOM are not supported ([\"deb\" \"rpm\"])"
+  },
+  "grype op syft-sbom": {
+   "meldingen": 160,
+   "lekken": 68,
+   "per_ernst": {
+    "HIGH": 55,
+    "NEGLIGIBLE": 46,
+    "MEDIUM": 49,
+    "LOW": 10
+   },
+   "op_verborgen": [
+    "CVE-2025-15367 python MEDIUM"
+   ]
+  }
+ },
+ "overlap": {
+  "trivy op trivy | grype op trivy": [
+   18,
+   71
+  ],
+  "trivy op trivy | trivy op syft": [
+   20,
+   71
+  ],
+  "trivy op trivy | grype op syft": [
+   67,
+   72
+  ],
+  "trivy op trivy | grype op syft-sbom": [
+   67,
+   72
+  ],
+  "grype op trivy | trivy op syft": [
+   18,
+   20
+  ],
+  "grype op trivy | grype op syft": [
+   18,
+   68
+  ],
+  "grype op trivy | grype op syft-sbom": [
+   18,
+   68
+  ],
+  "trivy op syft | grype op syft": [
+   18,
+   70
+  ],
+  "trivy op syft | grype op syft-sbom": [
+   18,
+   70
+  ],
+  "grype op syft | grype op syft-sbom": [
+   68,
+   68
+  ]
+ },
+ "geladen": {
+  "bestanden": 70,
+  "per_herkomst": {
+   "deb": 18,
+   "cpython": 32,
+   "pypi:cffi": 1,
+   "pypi:cryptography": 1,
+   "pypi:MarkupSafe": 1,
+   "pypi:psycopg-binary (meegeleverde bibliotheek)": 15,
+   "pypi:psycopg-binary": 2
+  },
+  "met_versie": [
+   "libcrypto.so.3 {'openssl': ['OpenSSL 3.5.7 9 Jun 2026']}",
+   "_rust.abi3t.so {'openssl': ['OpenSSL 4.0.3 29 Sep 2026']}",
+   "libcrypto-2d1629ee.so.3 {'openssl': ['OpenSSL 3.5.8 25 Aug 2026']}",
+   "libpcre-9513aab5.so.1.2.0 {'pcre': ['8.32 2012-11-30']}"
+  ]
+ }
+}

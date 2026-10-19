@@ -1,0 +1,929 @@
+{
+ "python": "3.15.0",
+ "ssl_van_python": "OpenSSL 3.5.7 9 Jun 2026",
+ "dpkg": [
+  [
+   "adduser",
+   "3.152",
+   "adduser"
+  ],
+  [
+   "apt",
+   "3.0.3",
+   "apt"
+  ],
+  [
+   "base-files",
+   "13.8+deb13u7",
+   "base-files"
+  ],
+  [
+   "base-passwd",
+   "3.6.7",
+   "base-passwd"
+  ],
+  [
+   "bash",
+   "5.2.37-2+b10",
+   "bash"
+  ],
+  [
+   "bsdutils",
+   "1:2.41.5-0+deb13u1",
+   "util-linux"
+  ],
+  [
+   "ca-certificates",
+   "20250419",
+   "ca-certificates"
+  ],
+  [
+   "coreutils",
+   "9.7-3",
+   "coreutils"
+  ],
+  [
+   "dash",
+   "0.5.12-12",
+   "dash"
+  ],
+  [
+   "debconf",
+   "1.5.91",
+   "debconf"
+  ],
+  [
+   "debian-archive-keyring",
+   "2025.1",
+   "debian-archive-keyring"
+  ],
+  [
+   "debianutils",
+   "5.23.2",
+   "debianutils"
+  ],
+  [
+   "diffutils",
+   "1:3.10-4",
+   "diffutils"
+  ],
+  [
+   "dpkg",
+   "1.22.22",
+   "dpkg"
+  ],
+  [
+   "findutils",
+   "4.10.0-3",
+   "findutils"
+  ],
+  [
+   "gcc-14-base",
+   "14.2.0-19",
+   "gcc-14"
+  ],
+  [
+   "grep",
+   "3.11-4",
+   "grep"
+  ],
+  [
+   "gzip",
+   "1.13-1+deb13u1",
+   "gzip"
+  ],
+  [
+   "hostname",
+   "3.25",
+   "hostname"
+  ],
+  [
+   "init-system-helpers",
+   "1.69~deb13u1",
+   "init-system-helpers"
+  ],
+  [
+   "libacl1",
+   "2.3.2-2+b1",
+   "acl"
+  ],
+  [
+   "libapt-pkg7.0",
+   "3.0.3",
+   "apt"
+  ],
+  [
+   "libattr1",
+   "1:2.5.2-3",
+   "attr"
+  ],
+  [
+   "libaudit-common",
+   "1:4.0.2-2+deb13u1",
+   "audit"
+  ],
+  [
+   "libaudit1",
+   "1:4.0.2-2+deb13u1",
+   "audit"
+  ],
+  [
+   "libblkid1",
+   "2.41.5-0+deb13u1",
+   "util-linux"
+  ],
+  [
+   "libbsd0",
+   "0.12.2-2",
+   "libbsd"
+  ],
+  [
+   "libbz2-1.0",
+   "1.0.8-6",
+   "bzip2"
+  ],
+  [
+   "libc-bin",
+   "2.41-12+deb13u4",
+   "glibc"
+  ],
+  [
+   "libc6",
+   "2.41-12+deb13u4",
+   "glibc"
+  ],
+  [
+   "libcap-ng0",
+   "0.8.5-4+b1",
+   "libcap-ng"
+  ],
+  [
+   "libcap2",
+   "1:2.75-10+deb13u1+b3",
+   "libcap2"
+  ],
+  [
+   "libcrypt1",
+   "1:4.4.38-1",
+   "libxcrypt"
+  ],
+  [
+   "libdb5.3t64",
+   "5.3.28+dfsg2-9",
+   "db5.3"
+  ],
+  [
+   "libdebconfclient0",
+   "0.280",
+   "cdebconf"
+  ],
+  [
+   "libffi8",
+   "3.4.8-2",
+   "libffi"
+  ],
+  [
+   "libgcc-s1",
+   "14.2.0-19",
+   "gcc-14"
+  ],
+  [
+   "libgdbm6t64",
+   "1.24-2",
+   "gdbm"
+  ],
+  [
+   "libgmp10",
+   "2:6.3.0+dfsg-3",
+   "gmp"
+  ],
+  [
+   "libhogweed6t64",
+   "3.10.1-1",
+   "nettle"
+  ],
+  [
+   "liblastlog2-2",
+   "2.41.5-0+deb13u1",
+   "util-linux"
+  ],
+  [
+   "liblz4-1",
+   "1.10.0-4",
+   "lz4"
+  ],
+  [
+   "liblzma5",
+   "5.8.1-1+deb13u2",
+   "xz-utils"
+  ],
+  [
+   "libmd0",
+   "1.1.0-2+b1",
+   "libmd"
+  ],
+  [
+   "libmount1",
+   "2.41.5-0+deb13u1",
+   "util-linux"
+  ],
+  [
+   "libmpdec4",
+   "4.0.1-5",
+   "mpdecimal"
+  ],
+  [
+   "libncursesw6",
+   "6.5+20250216-2",
+   "ncurses"
+  ],
+  [
+   "libnettle8t64",
+   "3.10.1-1",
+   "nettle"
+  ],
+  [
+   "libpam-modules",
+   "1.7.0-5",
+   "pam"
+  ],
+  [
+   "libpam-modules-bin",
+   "1.7.0-5",
+   "pam"
+  ],
+  [
+   "libpam-runtime",
+   "1.7.0-5",
+   "pam"
+  ],
+  [
+   "libpam0g",
+   "1.7.0-5",
+   "pam"
+  ],
+  [
+   "libpcre2-8-0",
+   "10.46-1~deb13u3",
+   "pcre2"
+  ],
+  [
+   "libreadline8t64",
+   "8.2-6",
+   "readline"
+  ],
+  [
+   "libseccomp2",
+   "2.6.0-2",
+   "libseccomp"
+  ],
+  [
+   "libselinux1",
+   "3.8.1-1",
+   "libselinux"
+  ],
+  [
+   "libsemanage-common",
+   "3.8.1-1",
+   "libsemanage"
+  ],
+  [
+   "libsemanage2",
+   "3.8.1-1",
+   "libsemanage"
+  ],
+  [
+   "libsepol2",
+   "3.8.1-1",
+   "libsepol"
+  ],
+  [
+   "libsmartcols1",
+   "2.41.5-0+deb13u1",
+   "util-linux"
+  ],
+  [
+   "libsqlite3-0",
+   "3.46.1-7+deb13u2",
+   "sqlite3"
+  ],
+  [
+   "libssl3t64",
+   "3.5.7-1~deb13u3",
+   "openssl"
+  ],
+  [
+   "libstdc++6",
+   "14.2.0-19",
+   "gcc-14"
+  ],
+  [
+   "libsystemd0",
+   "257.13-1~deb13u1",
+   "systemd"
+  ],
+  [
+   "libtinfo6",
+   "6.5+20250216-2",
+   "ncurses"
+  ],
+  [
+   "libudev1",
+   "257.13-1~deb13u1",
+   "systemd"
+  ],
+  [
+   "libuuid1",
+   "2.41.5-0+deb13u1",
+   "util-linux"
+  ],
+  [
+   "libxxhash0",
+   "0.8.3-2",
+   "xxhash"
+  ],
+  [
+   "libzstd1",
+   "1.5.7+dfsg-1",
+   "libzstd"
+  ],
+  [
+   "login",
+   "1:4.16.0-2+really2.41.5-0+deb13u1",
+   "util-linux"
+  ],
+  [
+   "login.defs",
+   "1:4.17.4-2",
+   "shadow"
+  ],
+  [
+   "mawk",
+   "1.3.4.20250131-1",
+   "mawk"
+  ],
+  [
+   "mount",
+   "2.41.5-0+deb13u1",
+   "util-linux"
+  ],
+  [
+   "ncurses-base",
+   "6.5+20250216-2",
+   "ncurses"
+  ],
+  [
+   "ncurses-bin",
+   "6.5+20250216-2",
+   "ncurses"
+  ],
+  [
+   "netbase",
+   "6.5",
+   "netbase"
+  ],
+  [
+   "openssl",
+   "3.5.7-1~deb13u3",
+   "openssl"
+  ],
+  [
+   "openssl-provider-legacy",
+   "3.5.7-1~deb13u3",
+   "openssl"
+  ],
+  [
+   "passwd",
+   "1:4.17.4-2",
+   "shadow"
+  ],
+  [
+   "perl-base",
+   "5.40.1-6+deb13u1",
+   "perl"
+  ],
+  [
+   "readline-common",
+   "8.2-6",
+   "readline"
+  ],
+  [
+   "sed",
+   "4.9-2+deb13u1",
+   "sed"
+  ],
+  [
+   "sqv",
+   "1.3.0-3+b2",
+   "rust-sequoia-sqv"
+  ],
+  [
+   "sysvinit-utils",
+   "3.14-4",
+   "sysvinit"
+  ],
+  [
+   "tar",
+   "1.35+dfsg-3.1",
+   "tar"
+  ],
+  [
+   "tzdata",
+   "2026c-0+deb13u1",
+   "tzdata"
+  ],
+  [
+   "util-linux",
+   "2.41.5-0+deb13u1",
+   "util-linux"
+  ],
+  [
+   "zlib1g",
+   "1:1.3.dfsg+really1.3.1-1+b1",
+   "zlib"
+  ]
+ ],
+ "dists": [
+  [
+   "Flask",
+   "3.1.3"
+  ],
+  [
+   "Jinja2",
+   "3.1.6"
+  ],
+  [
+   "MarkupSafe",
+   "3.0.4"
+  ],
+  [
+   "Werkzeug",
+   "3.1.9"
+  ],
+  [
+   "blinker",
+   "1.9.0"
+  ],
+  [
+   "cffi",
+   "2.1.1"
+  ],
+  [
+   "click",
+   "8.5.0"
+  ],
+  [
+   "cryptography",
+   "50.0.2"
+  ],
+  [
+   "gunicorn",
+   "26.2.0"
+  ],
+  [
+   "itsdangerous",
+   "2.2.0"
+  ],
+  [
+   "psycopg",
+   "3.3.6"
+  ],
+  [
+   "psycopg-binary",
+   "3.3.6"
+  ],
+  [
+   "pycparser",
+   "3.11"
+  ],
+  [
+   "segno",
+   "1.6.6"
+  ]
+ ],
+ "openssl_in_cryptography": "OpenSSL 4.0.3 29 Sep 2026",
+ "libpq_in_psycopg": 180006,
+ "wheel_sboms": {
+  "cryptography-50.0.2.dist-info/sboms/cryptography-rust.cyclonedx.json": [
+   "asn1@0.24.1 pkg:cargo/asn1@0.24.1",
+   "asn1_derive@0.24.1 pkg:cargo/asn1_derive@0.24.1",
+   "base64@0.23.0 pkg:cargo/base64@0.23.0",
+   "bitflags@2.13.1 pkg:cargo/bitflags@2.13.1",
+   "cc@1.4.0 pkg:cargo/cc@1.4.0",
+   "cfg-if@1.0.4 pkg:cargo/cfg-if@1.0.4",
+   "cryptography-cffi@0.50.2 pkg:cargo/cryptography-cffi@0.50.2",
+   "cryptography-crypto@0.50.2 pkg:cargo/cryptography-crypto@0.50.2",
+   "cryptography-keepalive@0.50.2 pkg:cargo/cryptography-keepalive@0.50.2",
+   "cryptography-key-parsing@0.50.2 pkg:cargo/cryptography-key-parsing@0.50.2",
+   "cryptography-openssl@0.50.2 pkg:cargo/cryptography-openssl@0.50.2",
+   "cryptography-x509-verification@0.50.2 pkg:cargo/cryptography-x509-verification@0.50.2",
+   "cryptography-x509@0.50.2 pkg:cargo/cryptography-x509@0.50.2",
+   "find-msvc-tools@0.1.9 pkg:cargo/find-msvc-tools@0.1.9",
+   "foreign-types-shared@0.1.1 pkg:cargo/foreign-types-shared@0.1.1",
+   "foreign-types@0.3.2 pkg:cargo/foreign-types@0.3.2",
+   "heck@0.5.0 pkg:cargo/heck@0.5.0",
+   "itoa@1.0.18 pkg:cargo/itoa@1.0.18",
+   "libc@0.2.189 pkg:cargo/libc@0.2.189",
+   "once_cell@1.21.4 pkg:cargo/once_cell@1.21.4",
+   "openssl-macros@0.1.1 pkg:cargo/openssl-macros@0.1.1",
+   "openssl-sys@0.9.117 pkg:cargo/openssl-sys@0.9.117",
+   "openssl@0.10.81 pkg:cargo/openssl@0.10.81",
+   "pem@4.0.0 pkg:cargo/pem@4.0.0",
+   "pkg-config@0.3.33 pkg:cargo/pkg-config@0.3.33",
+   "portable-atomic@1.14.0 pkg:cargo/portable-atomic@1.14.0",
+   "proc-macro2@1.0.107 pkg:cargo/proc-macro2@1.0.107",
+   "pyo3-build-config@0.29.2 pkg:cargo/pyo3-build-config@0.29.2",
+   "pyo3-ffi@0.29.2 pkg:cargo/pyo3-ffi@0.29.2",
+   "pyo3-macros-backend@0.29.2 pkg:cargo/pyo3-macros-backend@0.29.2",
+   "pyo3-macros@0.29.2 pkg:cargo/pyo3-macros@0.29.2",
+   "pyo3@0.29.2 pkg:cargo/pyo3@0.29.2",
+   "quote@1.0.47 pkg:cargo/quote@1.0.47",
+   "self_cell@1.3.0 pkg:cargo/self_cell@1.3.0",
+   "shlex@2.0.1 pkg:cargo/shlex@2.0.1",
+   "syn@2.0.119 pkg:cargo/syn@2.0.119",
+   "target-lexicon@0.13.5 pkg:cargo/target-lexicon@0.13.5",
+   "unicode-ident@1.0.24 pkg:cargo/unicode-ident@1.0.24",
+   "vcpkg@0.2.15 pkg:cargo/vcpkg@0.2.15"
+  ],
+  "cryptography-50.0.2.dist-info/sboms/sbom.json": [
+   "openssl@4.0.3 pkg:generic/openssl@4.0.3"
+  ],
+  "psycopg_binary-3.3.6.dist-info/sboms/auditwheel.cdx.json": [
+   "cyrus-sasl-lib@2.1.26-24.el7_9 pkg:rpm/centos/cyrus-sasl-lib@2.1.26-24.el7_9",
+   "keyutils-libs@1.5.8-3.el7 pkg:rpm/centos/keyutils-libs@1.5.8-3.el7",
+   "krb5-libs@1.15.1-55.el7_9 pkg:rpm/centos/krb5-libs@1.15.1-55.el7_9",
+   "libcom_err@1.42.9-19.el7 pkg:rpm/centos/libcom_err@1.42.9-19.el7",
+   "libselinux@2.5-15.el7 pkg:rpm/centos/libselinux@2.5-15.el7",
+   "pcre@8.32-17.el7 pkg:rpm/centos/pcre@8.32-17.el7",
+   "psycopg_binary@3.3.6 pkg:pypi/psycopg_binary@3.3.6"
+  ]
+ },
+ "geladen": [
+  {
+   "bestand": "/usr/lib/locale/C.utf8/LC_CTYPE",
+   "van": "deb:libc-bin",
+   "versies": {}
+  },
+  {
+   "bestand": "/usr/lib/x86_64-linux-gnu/gconv/gconv-modules.cache",
+   "van": "deb:libc6",
+   "versies": {}
+  },
+  {
+   "bestand": "/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2",
+   "van": "deb:libc6",
+   "versies": {}
+  },
+  {
+   "bestand": "/usr/lib/x86_64-linux-gnu/libbz2.so.1.0.4",
+   "van": "deb:libbz2-1.0",
+   "versies": {}
+  },
+  {
+   "bestand": "/usr/lib/x86_64-linux-gnu/libc.so.6",
+   "van": "deb:libc6",
+   "versies": {}
+  },
+  {
+   "bestand": "/usr/lib/x86_64-linux-gnu/libcrypto.so.3",
+   "van": "deb:libssl3t64",
+   "versies": {
+    "openssl": [
+     "OpenSSL 3.5.7 9 Jun 2026"
+    ]
+   }
+  },
+  {
+   "bestand": "/usr/lib/x86_64-linux-gnu/libdl.so.2",
+   "van": "deb:libc6",
+   "versies": {}
+  },
+  {
+   "bestand": "/usr/lib/x86_64-linux-gnu/libffi.so.8.1.4",
+   "van": "deb:libffi8",
+   "versies": {}
+  },
+  {
+   "bestand": "/usr/lib/x86_64-linux-gnu/libgcc_s.so.1",
+   "van": "deb:libgcc-s1",
+   "versies": {}
+  },
+  {
+   "bestand": "/usr/lib/x86_64-linux-gnu/liblzma.so.5.8.1",
+   "van": "deb:liblzma5",
+   "versies": {}
+  },
+  {
+   "bestand": "/usr/lib/x86_64-linux-gnu/libm.so.6",
+   "van": "deb:libc6",
+   "versies": {}
+  },
+  {
+   "bestand": "/usr/lib/x86_64-linux-gnu/libmpdec.so.4.0.1",
+   "van": "deb:libmpdec4",
+   "versies": {}
+  },
+  {
+   "bestand": "/usr/lib/x86_64-linux-gnu/libpthread.so.0",
+   "van": "deb:libc6",
+   "versies": {}
+  },
+  {
+   "bestand": "/usr/lib/x86_64-linux-gnu/libresolv.so.2",
+   "van": "deb:libc6",
+   "versies": {}
+  },
+  {
+   "bestand": "/usr/lib/x86_64-linux-gnu/libssl.so.3",
+   "van": "deb:libssl3t64",
+   "versies": {}
+  },
+  {
+   "bestand": "/usr/lib/x86_64-linux-gnu/libuuid.so.1.3.0",
+   "van": "deb:libuuid1",
+   "versies": {}
+  },
+  {
+   "bestand": "/usr/lib/x86_64-linux-gnu/libz.so.1.3.1",
+   "van": "deb:zlib1g",
+   "versies": {}
+  },
+  {
+   "bestand": "/usr/lib/x86_64-linux-gnu/libzstd.so.1.5.7",
+   "van": "deb:libzstd1",
+   "versies": {}
+  },
+  {
+   "bestand": "/usr/local/bin/python3.15",
+   "van": "cpython",
+   "versies": {}
+  },
+  {
+   "bestand": "/usr/local/lib/libpython3.15.so.1.0",
+   "van": "cpython",
+   "versies": {}
+  },
+  {
+   "bestand": "/usr/local/lib/python3.15/lib-dynload/_bisect.cpython-315-x86_64-linux-gnu.so",
+   "van": "cpython",
+   "versies": {}
+  },
+  {
+   "bestand": "/usr/local/lib/python3.15/lib-dynload/_blake2.cpython-315-x86_64-linux-gnu.so",
+   "van": "cpython",
+   "versies": {}
+  },
+  {
+   "bestand": "/usr/local/lib/python3.15/lib-dynload/_bz2.cpython-315-x86_64-linux-gnu.so",
+   "van": "cpython",
+   "versies": {}
+  },
+  {
+   "bestand": "/usr/local/lib/python3.15/lib-dynload/_ctypes.cpython-315-x86_64-linux-gnu.so",
+   "van": "cpython",
+   "versies": {}
+  },
+  {
+   "bestand": "/usr/local/lib/python3.15/lib-dynload/_decimal.cpython-315-x86_64-linux-gnu.so",
+   "van": "cpython",
+   "versies": {}
+  },
+  {
+   "bestand": "/usr/local/lib/python3.15/lib-dynload/_hashlib.cpython-315-x86_64-linux-gnu.so",
+   "van": "cpython",
+   "versies": {}
+  },
+  {
+   "bestand": "/usr/local/lib/python3.15/lib-dynload/_heapq.cpython-315-x86_64-linux-gnu.so",
+   "van": "cpython",
+   "versies": {}
+  },
+  {
+   "bestand": "/usr/local/lib/python3.15/lib-dynload/_hmac.cpython-315-x86_64-linux-gnu.so",
+   "van": "cpython",
+   "versies": {}
+  },
+  {
+   "bestand": "/usr/local/lib/python3.15/lib-dynload/_interpreters.cpython-315-x86_64-linux-gnu.so",
+   "van": "cpython",
+   "versies": {}
+  },
+  {
+   "bestand": "/usr/local/lib/python3.15/lib-dynload/_json.cpython-315-x86_64-linux-gnu.so",
+   "van": "cpython",
+   "versies": {}
+  },
+  {
+   "bestand": "/usr/local/lib/python3.15/lib-dynload/_lzma.cpython-315-x86_64-linux-gnu.so",
+   "van": "cpython",
+   "versies": {}
+  },
+  {
+   "bestand": "/usr/local/lib/python3.15/lib-dynload/_math_integer.cpython-315-x86_64-linux-gnu.so",
+   "van": "cpython",
+   "versies": {}
+  },
+  {
+   "bestand": "/usr/local/lib/python3.15/lib-dynload/_pickle.cpython-315-x86_64-linux-gnu.so",
+   "van": "cpython",
+   "versies": {}
+  },
+  {
+   "bestand": "/usr/local/lib/python3.15/lib-dynload/_posixsubprocess.cpython-315-x86_64-linux-gnu.so",
+   "van": "cpython",
+   "versies": {}
+  },
+  {
+   "bestand": "/usr/local/lib/python3.15/lib-dynload/_queue.cpython-315-x86_64-linux-gnu.so",
+   "van": "cpython",
+   "versies": {}
+  },
+  {
+   "bestand": "/usr/local/lib/python3.15/lib-dynload/_random.cpython-315-x86_64-linux-gnu.so",
+   "van": "cpython",
+   "versies": {}
+  },
+  {
+   "bestand": "/usr/local/lib/python3.15/lib-dynload/_sha2.cpython-315-x86_64-linux-gnu.so",
+   "van": "cpython",
+   "versies": {}
+  },
+  {
+   "bestand": "/usr/local/lib/python3.15/lib-dynload/_socket.cpython-315-x86_64-linux-gnu.so",
+   "van": "cpython",
+   "versies": {}
+  },
+  {
+   "bestand": "/usr/local/lib/python3.15/lib-dynload/_ssl.cpython-315-x86_64-linux-gnu.so",
+   "van": "cpython",
+   "versies": {}
+  },
+  {
+   "bestand": "/usr/local/lib/python3.15/lib-dynload/_struct.cpython-315-x86_64-linux-gnu.so",
+   "van": "cpython",
+   "versies": {}
+  },
+  {
+   "bestand": "/usr/local/lib/python3.15/lib-dynload/_uuid.cpython-315-x86_64-linux-gnu.so",
+   "van": "cpython",
+   "versies": {}
+  },
+  {
+   "bestand": "/usr/local/lib/python3.15/lib-dynload/_zoneinfo.cpython-315-x86_64-linux-gnu.so",
+   "van": "cpython",
+   "versies": {}
+  },
+  {
+   "bestand": "/usr/local/lib/python3.15/lib-dynload/_zstd.cpython-315-x86_64-linux-gnu.so",
+   "van": "cpython",
+   "versies": {}
+  },
+  {
+   "bestand": "/usr/local/lib/python3.15/lib-dynload/binascii.cpython-315-x86_64-linux-gnu.so",
+   "van": "cpython",
+   "versies": {}
+  },
+  {
+   "bestand": "/usr/local/lib/python3.15/lib-dynload/fcntl.cpython-315-x86_64-linux-gnu.so",
+   "van": "cpython",
+   "versies": {}
+  },
+  {
+   "bestand": "/usr/local/lib/python3.15/lib-dynload/grp.cpython-315-x86_64-linux-gnu.so",
+   "van": "cpython",
+   "versies": {}
+  },
+  {
+   "bestand": "/usr/local/lib/python3.15/lib-dynload/math.cpython-315-x86_64-linux-gnu.so",
+   "van": "cpython",
+   "versies": {}
+  },
+  {
+   "bestand": "/usr/local/lib/python3.15/lib-dynload/select.cpython-315-x86_64-linux-gnu.so",
+   "van": "cpython",
+   "versies": {}
+  },
+  {
+   "bestand": "/usr/local/lib/python3.15/lib-dynload/unicodedata.cpython-315-x86_64-linux-gnu.so",
+   "van": "cpython",
+   "versies": {}
+  },
+  {
+   "bestand": "/usr/local/lib/python3.15/lib-dynload/zlib.cpython-315-x86_64-linux-gnu.so",
+   "van": "cpython",
+   "versies": {}
+  },
+  {
+   "bestand": "/usr/local/lib/python3.15/site-packages/_cffi_backend.cpython-315-x86_64-linux-gnu.so",
+   "van": "pypi:cffi",
+   "versies": {}
+  },
+  {
+   "bestand": "/usr/local/lib/python3.15/site-packages/cryptography/hazmat/bindings/_rust.abi3t.so",
+   "van": "pypi:cryptography",
+   "versies": {
+    "openssl": [
+     "OpenSSL 4.0.3 29 Sep 2026"
+    ]
+   }
+  },
+  {
+   "bestand": "/usr/local/lib/python3.15/site-packages/markupsafe/_speedups.cpython-315-x86_64-linux-gnu.so",
+   "van": "pypi:MarkupSafe",
+   "versies": {}
+  },
+  {
+   "bestand": "/usr/local/lib/python3.15/site-packages/psycopg_binary.libs/libcom_err-2abe824b.so.2.1",
+   "van": "pypi:psycopg-binary",
+   "versies": {}
+  },
+  {
+   "bestand": "/usr/local/lib/python3.15/site-packages/psycopg_binary.libs/libcrypt-bc2db45e.so.1",
+   "van": "pypi:psycopg-binary",
+   "versies": {}
+  },
+  {
+   "bestand": "/usr/local/lib/python3.15/site-packages/psycopg_binary.libs/libcrypto-2d1629ee.so.3",
+   "van": "pypi:psycopg-binary",
+   "versies": {
+    "openssl": [
+     "OpenSSL 3.5.8 25 Aug 2026"
+    ]
+   }
+  },
+  {
+   "bestand": "/usr/local/lib/python3.15/site-packages/psycopg_binary.libs/libgssapi_krb5-497db0c6.so.2.2",
+   "van": "pypi:psycopg-binary",
+   "versies": {}
+  },
+  {
+   "bestand": "/usr/local/lib/python3.15/site-packages/psycopg_binary.libs/libk5crypto-b1f99d5c.so.3.1",
+   "van": "pypi:psycopg-binary",
+   "versies": {}
+  },
+  {
+   "bestand": "/usr/local/lib/python3.15/site-packages/psycopg_binary.libs/libkeyutils-dfe70bd6.so.1.5",
+   "van": "pypi:psycopg-binary",
+   "versies": {}
+  },
+  {
+   "bestand": "/usr/local/lib/python3.15/site-packages/psycopg_binary.libs/libkrb5-fcafa220.so.3.3",
+   "van": "pypi:psycopg-binary",
+   "versies": {}
+  },
+  {
+   "bestand": "/usr/local/lib/python3.15/site-packages/psycopg_binary.libs/libkrb5support-d0bcff84.so.0.1",
+   "van": "pypi:psycopg-binary",
+   "versies": {}
+  },
+  {
+   "bestand": "/usr/local/lib/python3.15/site-packages/psycopg_binary.libs/liblber-a44a5afb.so.2.0.200",
+   "van": "pypi:psycopg-binary",
+   "versies": {}
+  },
+  {
+   "bestand": "/usr/local/lib/python3.15/site-packages/psycopg_binary.libs/libldap-7c3a4b12.so.2.0.200",
+   "van": "pypi:psycopg-binary",
+   "versies": {}
+  },
+  {
+   "bestand": "/usr/local/lib/python3.15/site-packages/psycopg_binary.libs/libpcre-9513aab5.so.1.2.0",
+   "van": "pypi:psycopg-binary",
+   "versies": {
+    "pcre": [
+     "8.32 2012-11-30"
+    ]
+   }
+  },
+  {
+   "bestand": "/usr/local/lib/python3.15/site-packages/psycopg_binary.libs/libpq-e9b5c9ac.so.5.18",
+   "van": "pypi:psycopg-binary",
+   "versies": {}
+  },
+  {
+   "bestand": "/usr/local/lib/python3.15/site-packages/psycopg_binary.libs/libsasl2-84219a89.so.3.0.0",
+   "van": "pypi:psycopg-binary",
+   "versies": {}
+  },
+  {
+   "bestand": "/usr/local/lib/python3.15/site-packages/psycopg_binary.libs/libselinux-0922c95c.so.1",
+   "van": "pypi:psycopg-binary",
+   "versies": {}
+  },
+  {
+   "bestand": "/usr/local/lib/python3.15/site-packages/psycopg_binary.libs/libssl-8bd944e8.so.3",
+   "van": "pypi:psycopg-binary",
+   "versies": {}
+  },
+  {
+   "bestand": "/usr/local/lib/python3.15/site-packages/psycopg_binary/_psycopg.cpython-315-x86_64-linux-gnu.so",
+   "van": "pypi:psycopg-binary",
+   "versies": {}
+  },
+  {
+   "bestand": "/usr/local/lib/python3.15/site-packages/psycopg_binary/pq.cpython-315-x86_64-linux-gnu.so",
+   "van": "pypi:psycopg-binary",
+   "versies": {}
+  }
+ ]
+}

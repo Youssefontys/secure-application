@@ -1,0 +1,1 @@
+2026-10-19T22:21:43Z	FATAL	Fatal error	run error: sbom scan error: scan error: scan failed: failed analysis: SBOM decode error: failed to decode: failed to aggregate packages: multiple types of OS packages in SBOM are not supported (["deb" "rpm"])
