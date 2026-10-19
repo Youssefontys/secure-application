@@ -6,6 +6,12 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
+# De libpq van Debian, vast op versie (MIT-03): psycopg laadt hem, Debian werkt hem bij en de scan ziet hem, met wat hij
+# meetrekt (MIT-43). Komt er een nieuwere versie, dan verdwijnt deze uit Debian en faalt de build: zet hem dan bij.
+RUN apt-get update \
+ && apt-get install --yes --no-install-recommends libpq5=17.11-0+deb13u1 \
+ && rm -rf /var/lib/apt/lists/*
+
 COPY requirements.txt .
 # Daarna pip zelf weg: de app en de schema-job gebruiken hem niet, en pip neemt eigen kopieën van
 # urllib3, msgpack en setuptools mee waarin Trivy bekende lekken vond (MC-11).
