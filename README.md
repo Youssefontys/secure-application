@@ -62,7 +62,7 @@ The baseline plus the first security features, each with an entry in `BoK/Threat
 - every known HIGH or CRITICAL vulnerability, also one without a fix, stops the check until there is a decision in the VEX (MIT-41), and no program in the image has a setuid or setgid bit (MIT-42); see `vex/README.md`
 - the Terraform state in its own storage with its own key, reachable only through Entra ID (MIT-38), and TLS on Azure checked against the NCSC guidelines (MIT-40); see `BoK/Subjects/Week 6 Encryption.md`
 
-On Azure the log is kept for 30 days in Log Analytics (MIT-31). Still open: only a lockout sends a mail (MC-28), the database role can still change every row the app can (MC-08), the running app holds the data key, locally from `.env` and on Azure from Key Vault (MC-22), and the pipeline does not test yet (MC-30). Deployed to Azure on 18 October 2026 and removed again on 19 October 2026; it goes back up before the hacking week.
+On Azure the log is kept for 30 days in Log Analytics (MIT-31). Still open: only a lockout sends a mail (MC-28), the database role can still change every row the app can (MC-08), the running app holds the data key, locally from `.env` and on Azure from Key Vault (MC-22), the pipeline does not test yet (MC-30), and the scan does not see what a wheel brings itself, such as the libraries inside psycopg-binary and the OpenSSL inside cryptography (MC-11). Deployed to Azure on 18 October 2026 and removed again on 19 October 2026; it goes back up before the hacking week.
 
 ## License
 
