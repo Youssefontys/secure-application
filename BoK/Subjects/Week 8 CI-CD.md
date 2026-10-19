@@ -2,7 +2,7 @@
 
 Vier stappen van de pipeline staan. Bij elke push naar `main` bouwt GitHub Actions de image en zet hem op ghcr.io (MIT-34): het token van de run mag alleen dat, `actions/checkout` staat vast op een commit, en een eigen token is niet meer nodig. Trivy maakt van elke image een SBoM (MIT-36), en scant die: een bekend lek waarvoor een oplossing is, houdt de image tegen (MIT-35). De eerste scan vond vier lekken, allemaal in pip, dat nu uit de image gaat. Sinds deelvraag 1 van het onderzoek draaien dezelfde stappen ook bij elke pull request, zonder te publiceren, en maakt een ruleset op `main` die check verplicht (MIT-39): een bekend lek komt dan niet eens meer op `main`. Tests van de app draaien nog niet; die komen er stap voor stap bij.
 
-De details staan in de entries (MC-30, MC-11, MIT-34 tot MIT-36 en MIT-39; C-06, C-11, A-12, A-14, F-06, F-07, F-12, B-04, B-06 en AZ-16 in de architectuur) en de tests T-103, T-105, T-106 en T-110.
+De details staan in de entries (MC-30, MC-11, MIT-34 tot MIT-36 en MIT-39; C-06, C-11, A-12, A-14, F-06, F-07, F-12, B-04, B-06 en AZ-16 in de architectuur) en de tests T-103, T-105, T-106 en T-110 tot T-112.
 
 ## De dreiging
 
@@ -44,7 +44,8 @@ De details staan in de entries (MC-30, MC-11, MIT-34 tot MIT-36 en MIT-39; C-06,
 | Een pull request publiceert niets | Bij een pull request draait alleen `check`, met `contents: read`; `image` draait daar niet | T-110: alleen `check` draaide, met `Contents: read` en `Metadata: read` |
 | De lijst klopt | De SBoM bevat het besturingssysteem, de Debian-pakketten en precies de 14 Python-pakketten uit `requirements.txt` | T-106: 103 onderdelen; een scan op de SBoM vindt hetzelfde als een scan op de image |
 | Een bekend lek gaat niet live | Trivy vóór het pushen; met een lek stopt de job | T-105: met pip 4 keer HIGH (exit 1), zonder pip 0 (exit 0) |
-| Een bekend lek komt niet op `main` | Dezelfde scan bij elke pull request, en de ruleset maakt die verplicht | T-110: een image zonder lek gaat door (Trivy 0.76.0). De tegenproef, een pull request met pip, volgt |
+| Een bekend lek komt niet op `main` | Dezelfde scan bij elke pull request, en de ruleset maakt die verplicht | T-110: een image zonder lek gaat door (Trivy 0.76.0). T-111: een pull request met pip faalt met 4 keer HIGH, en GitHub houdt de merge tegen |
+| Niemand komt om de check heen | De ruleset, met een lege bypass-lijst | T-112: een push rechtstreeks naar `main` geweigerd (`GH013`) |
 | Geen token dat kan uitlekken | Geen eigen token meer; dat van de run vervalt na de run | De stap met een token (classic) is weg uit `setup.py` (nu `deployment.py`) |
 
 ## Wat het niet oplost
@@ -119,6 +120,8 @@ Voor het verslag, lokaal in `screenshots/Week 8 CI-CD/` (niet in de repo).
 | De scan | `week8_voor_scan_1_vier_lekken` | `week8_na_scan_1_schoon` | `week8_code_image_1_workflow` |
 | De SBoM | `week8_voor_sbom_1_geen_lijst` | `week8_na_sbom_1_bij_de_run` | `week8_code_image_1_workflow` |
 | De check bij een pull request | `week8_voor_check_1_gemerged` | `week8_na_check_1_tegengehouden` | `week8_code_check_1_workflow` |
+| De log van de mislukte check | geen | `week8_na_check_2_log_vier_lekken` | `week8_code_check_1_workflow` |
+| Een pull request zonder lek | geen | `week8_na_check_3_schoon_door` | `week8_code_check_1_workflow` |
 | De ruleset op `main` | `week8_voor_ruleset_1_geen_regels` | `week8_na_ruleset_1_main` | geen: staat in de instellingen |
 
 ## Bronnen
