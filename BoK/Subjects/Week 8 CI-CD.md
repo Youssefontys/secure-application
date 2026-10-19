@@ -2,7 +2,7 @@
 
 Vier stappen van de pipeline staan. Bij elke push naar `main` bouwt GitHub Actions de image en zet hem op ghcr.io (MIT-34): het token van de run mag alleen dat, `actions/checkout` staat vast op een commit, en een eigen token is niet meer nodig. Trivy maakt van elke image een SBoM (MIT-36), en scant die: een bekend lek van HIGH of CRITICAL houdt de image tegen (MIT-35), sinds deelvraag 2 van het onderzoek ook als er nog geen oplossing is, tot er een beslissing in de VEX staat (MIT-41). De eerste scan vond vier lekken, allemaal in pip, dat nu uit de image gaat. Sinds deelvraag 1 van het onderzoek draaien dezelfde stappen ook bij elke pull request, zonder te publiceren, en maakt een ruleset op `main` die check verplicht (MIT-39): een bekend lek komt dan niet eens meer op `main`. Tests van de app draaien nog niet; die komen er stap voor stap bij.
 
-De details staan in de entries (MC-30, MC-11, MC-14, MIT-34 tot MIT-36, MIT-39, MIT-41 en MIT-42; C-06, C-11, A-12, A-14, A-18, F-06, F-07, F-12, B-04, B-06 en AZ-16 in de architectuur) en de tests T-103, T-105, T-106, T-110 tot T-112 en T-114 tot T-120. De triageflow staat in `vex/README.md`.
+De details staan in de entries (MC-30, MC-11, MC-14, MIT-34 tot MIT-36, MIT-39 en MIT-41 tot MIT-43; C-06, C-11, A-12, A-14, A-18, F-06, F-07, F-12, B-04, B-06 en AZ-16 in de architectuur) en de tests T-103, T-105, T-106, T-110 tot T-112 en T-114 tot T-123. De triageflow staat in `vex/README.md`.
 
 ## De dreiging
 
@@ -57,7 +57,7 @@ De details staan in de entries (MC-30, MC-11, MC-14, MIT-34 tot MIT-36, MIT-39, 
 - **Wie een pull request kan mergen, bepaalt de image,** en kan hem met `deployment.py azure` uitrollen. Als beheerder kan hij ook de ruleset uitzetten. Je GitHub-account, met tweestapsverificatie, is dus de sleutel.
 - **De check draait uit de pull request zelf.** Een pull request die de workflow aanpast, kan de check groen maken (MC-30, stap 6); alleen wie mergt, ziet dat in de wijzigingen.
 - **Nog geen tests.** Een image die stuk is, wordt gewoon gepubliceerd.
-- **De scan ziet niet alles.** Een lek dat pas later bekend wordt, ziet de scan pas bij de volgende pull request of push, een draaiende image wordt niet opnieuw gescand, en MEDIUM en LOW houden niet tegen. En hij ziet niets van wat buiten dpkg en pip om in de image zit: de 15 bibliotheken die psycopg-binary zelf meeneemt, de OpenSSL in `cryptography` en Python zelf, samen 52 van de 70 bestanden die de app laadt (T-118, deelvraag 3 van het onderzoek).
+- **De scan ziet niet alles.** Een lek dat pas later bekend wordt, ziet de scan pas bij de volgende pull request of push, een draaiende image wordt niet opnieuw gescand, en MEDIUM en LOW houden niet tegen. En hij ziet niets van wat buiten dpkg en pip om in de image zit: Python zelf en de OpenSSL in `cryptography` (T-118, deelvraag 3 van het onderzoek). De 15 bibliotheken die psycopg-binary meenam, zijn sinds MIT-43 weg; libpq komt nu uit Debian (T-121).
 - **Een verklaring in de VEX kan fout zijn.** De check ziet of er een reden staat, niet of die klopt; dat ziet alleen wie mergt.
 - **Elk nieuw lek van HIGH of CRITICAL houdt elke pull request tegen,** ook een die alleen de BoK verandert, tot er een beslissing is. Dat is de bedoeling, maar het kost werk.
 - **Niet ondertekend.** Of een image echt uit deze workflow komt, is niet na te gaan.
