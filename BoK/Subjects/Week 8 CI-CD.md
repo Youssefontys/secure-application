@@ -1,8 +1,8 @@
 # Week 8: CI/CD security checks
 
-Vier stappen van de pipeline staan. Bij elke push naar `main` bouwt GitHub Actions de image en zet hem op ghcr.io (MIT-34): het token van de run mag alleen dat, `actions/checkout` staat vast op een commit, en een eigen token is niet meer nodig. Trivy maakt van elke image een SBoM (MIT-36), en scant die: een bekend lek waarvoor een oplossing is, houdt de image tegen (MIT-35). De eerste scan vond vier lekken, allemaal in pip, dat nu uit de image gaat. Sinds deelvraag 1 van het onderzoek draaien dezelfde stappen ook bij elke pull request, zonder te publiceren, en maakt een ruleset op `main` die check verplicht (MIT-39): een bekend lek komt dan niet eens meer op `main`. Tests van de app draaien nog niet; die komen er stap voor stap bij.
+Vier stappen van de pipeline staan. Bij elke push naar `main` bouwt GitHub Actions de image en zet hem op ghcr.io (MIT-34): het token van de run mag alleen dat, `actions/checkout` staat vast op een commit, en een eigen token is niet meer nodig. Trivy maakt van elke image een SBoM (MIT-36), en scant die: een bekend lek van HIGH of CRITICAL houdt de image tegen (MIT-35), sinds deelvraag 2 van het onderzoek ook als er nog geen oplossing is, tot er een beslissing in de VEX staat (MIT-41). De eerste scan vond vier lekken, allemaal in pip, dat nu uit de image gaat. Sinds deelvraag 1 van het onderzoek draaien dezelfde stappen ook bij elke pull request, zonder te publiceren, en maakt een ruleset op `main` die check verplicht (MIT-39): een bekend lek komt dan niet eens meer op `main`. Tests van de app draaien nog niet; die komen er stap voor stap bij.
 
-De details staan in de entries (MC-30, MC-11, MIT-34 tot MIT-36 en MIT-39; C-06, C-11, A-12, A-14, F-06, F-07, F-12, B-04, B-06 en AZ-16 in de architectuur) en de tests T-103, T-105, T-106 en T-110 tot T-112.
+De details staan in de entries (MC-30, MC-11, MC-14, MIT-34 tot MIT-36, MIT-39, MIT-41 en MIT-42; C-06, C-11, A-12, A-14, A-18, F-06, F-07, F-12, B-04, B-06 en AZ-16 in de architectuur) en de tests T-103, T-105, T-106, T-110 tot T-112 en T-114 tot T-116. De triageflow staat in `vex/README.md`.
 
 ## De dreiging
 
@@ -30,7 +30,8 @@ De details staan in de entries (MC-30, MC-11, MIT-34 tot MIT-36 en MIT-39; C-06,
 - **Rechten:** standaard geen (`permissions: {}`); `check` krijgt alleen `contents: read`, `image` alleen `contents: read` en `packages: write`. Bij een pull request vanuit een fork krijgt het token volgens GitHub sowieso alleen leesrechten, en geen secrets.
 - **Bouwen en pushen** met de gewone `docker`-opdrachten, zonder actions van derden. Het token gaat via stdin naar `docker login`.
 - **De SBoM:** Trivy 0.76.0, vast op versie en digest, leest de image als tar-bestand en maakt er een CycloneDX-SBoM van: alleen de lijst, zonder lekken of VEX. jq zet de naam en tag van de image als hoofdonderdeel. De SBoM gaat als artifact bij de run, ook als de scan daarna een lek vindt.
-- **De scan:** tussen de SBoM en het pushen. Trivy scant de SBoM, niet de image zelf. Een lek van HIGH of CRITICAL waarvoor een oplossing is, stopt de job: dan komt er geen nieuwe image op ghcr.io, en kan `deployment.py azure` hem ook niet uitrollen. Bij een pull request faalt de check.
+- **De VEX:** `vex/openvex.json`, OpenVEX 0.2.0, per lek welke pakketten met welke versie de image niet raken, en waarom. Vóór de scan controleert een stap met jq dat elke verklaring een geldige reden heeft en een PURL met versie; Trivy zelf controleert dat niet (T-115).
+- **De scan:** tussen de SBoM en het pushen. Trivy scant de SBoM, niet de image zelf, met de VEX erbij. Een lek van HIGH of CRITICAL stopt de job, ook zonder oplossing, tenzij de VEX het voor die versie uitsluit; wat de VEX wegfiltert, staat apart in de log. Stopt de job, dan komt er geen nieuwe image op ghcr.io, en kan `deployment.py azure` hem ook niet uitrollen. Bij een pull request faalt de check.
 - **De ruleset op `main`:** een pull request is verplicht, de check `check` moet slagen, en de bypass-lijst is leeg, ook voor de beheerder. Goedkeuren door een tweede persoon is niet nodig: er is maar één beheerder.
 - **Twee tags:** de commit-hash, en `app-` met de tree-hash van `app/`. `deployment.py azure` rekent die tweede zelf uit met `git rev-parse HEAD:app`, en kijkt anoniem bij ghcr.io of de image er is en openbaar is, zoals Container Apps hem ophaalt. Een commit die alleen Terraform of de BoK verandert, heeft zo geen nieuwe build nodig.
 - **Dependabot** houdt `actions/checkout` bij, net als de pakketten en de images (MIT-33).
@@ -46,6 +47,9 @@ De details staan in de entries (MC-30, MC-11, MIT-34 tot MIT-36 en MIT-39; C-06,
 | Een bekend lek gaat niet live | Trivy vóór het pushen; met een lek stopt de job | T-105: met pip 4 keer HIGH (exit 1), zonder pip 0 (exit 0) |
 | Een bekend lek komt niet op `main` | Dezelfde scan bij elke pull request, en de ruleset maakt die verplicht | T-110: een image zonder lek gaat door (Trivy 0.76.0). T-111: een pull request met pip faalt met 4 keer HIGH, en GitHub houdt de merge tegen |
 | Niemand komt om de check heen | De ruleset, met een lege bypass-lijst | T-112: een push rechtstreeks naar `main` geweigerd (`GH013`) |
+| Een lek zonder oplossing gaat niet ongezien door | Geen `--ignore-unfixed` meer; alleen een verklaring in de VEX laat het door | T-114: 44 meldingen van HIGH, 8 lekken, alle zonder oplossing en eerder ongezien. T-116: met de VEX 0 over, de 44 apart in de log |
+| Een verklaring zonder reden telt niet | De stap VEX controleren, vóór de scan | T-116: vijf kapotte varianten geweigerd, de echte VEX door |
+| mount draait niet als root | Geen programma met een setuid- of setgid-bit (MIT-42) | T-116: 0, eerst 11; de regressietest slaagt |
 | Geen token dat kan uitlekken | Geen eigen token meer; dat van de run vervalt na de run | De stap met een token (classic) is weg uit `setup.py` (nu `deployment.py`) |
 
 ## Wat het niet oplost
@@ -53,7 +57,9 @@ De details staan in de entries (MC-30, MC-11, MIT-34 tot MIT-36 en MIT-39; C-06,
 - **Wie een pull request kan mergen, bepaalt de image,** en kan hem met `deployment.py azure` uitrollen. Als beheerder kan hij ook de ruleset uitzetten. Je GitHub-account, met tweestapsverificatie, is dus de sleutel.
 - **De check draait uit de pull request zelf.** Een pull request die de workflow aanpast, kan de check groen maken (MC-30, stap 6); alleen wie mergt, ziet dat in de wijzigingen.
 - **Nog geen tests.** Een image die stuk is, wordt gewoon gepubliceerd.
-- **De scan ziet niet alles.** Een lek zonder oplossing houdt de image niet tegen, een lek dat pas later bekend wordt, ziet de scan pas bij de volgende pull request of push, en een draaiende image wordt niet opnieuw gescand.
+- **De scan ziet niet alles.** Een lek dat pas later bekend wordt, ziet de scan pas bij de volgende pull request of push, een draaiende image wordt niet opnieuw gescand, en MEDIUM en LOW houden niet tegen.
+- **Een verklaring in de VEX kan fout zijn.** De check ziet of er een reden staat, niet of die klopt; dat ziet alleen wie mergt.
+- **Elk nieuw lek van HIGH of CRITICAL houdt elke pull request tegen,** ook een die alleen de BoK verandert, tot er een beslissing is. Dat is de bedoeling, maar het kost werk.
 - **Niet ondertekend.** Of een image echt uit deze workflow komt, is niet na te gaan.
 - **De SBoM blijft 90 dagen.** Daarna is hij weg bij GitHub; hij hangt nog niet aan de image zelf. Opnieuw scannen, als er later een lek bekend wordt, gebeurt nog niet.
 - **Het pakket is openbaar.** Iedereen kan de image ophalen; er staan geen geheimen in, en de code is ook openbaar.
@@ -64,9 +70,10 @@ De details staan in de entries (MC-30, MC-11, MIT-34 tot MIT-36 en MIT-39; C-06,
 - **Gewone `docker`-opdrachten, geen actions van derden.** Elke action is code van iemand anders, met het token van de run; met alleen `actions/checkout` is er één om vast te zetten en bij te houden.
 - **Een tag op de inhoud van `app/`.** Hetzelfde idee als een digest: dezelfde inhoud geeft dezelfde tag. Zo hoeft er niet na elke commit gebouwd te worden voordat je kunt uitrollen.
 - **Een openbaar pakket, geen inloggegevens voor Container Apps.** Dan staat er nergens een token voor de registry; de prijs is dat iedereen de image kan ophalen.
-- **Alleen een lek met een oplossing houdt tegen (`--ignore-unfixed`).** Dan stopt de job alleen als er iets te doen is. Volgens Trivy laat deze optie alleen lekken zien waarvoor een oplossing is.
+- **Elk lek houdt tegen, ook zonder oplossing.** Tot deelvraag 2 alleen een lek met een oplossing (`--ignore-unfixed`); volgens Trivy laat die optie alleen lekken zien waarvoor een oplossing is. Dat was ook een beslissing: alle andere accepteren zonder te kijken. Nu vraagt elk lek een beslissing (MIT-41).
 - **Scannen op de SBoM, niet op de image.** Dezelfde uitkomst (T-106), en zo wordt de SBoM echt gebruikt in plaats van alleen bewaard. Dezelfde SBoM kan later opnieuw gescand worden, zonder de image.
-- **Geen VEX.** De SBoM is alleen de lijst; wat een lek voor deze app betekent, is de tweede deelvraag van het onderzoek.
+- **OpenVEX, niet CycloneDX-VEX.** Een CycloneDX-VEX wijst via het `serialNumber` naar één SBoM, en Trivy geeft elke SBoM een nieuw nummer (T-114); een OpenVEX wijst naar het pakket, met een PURL. De SBoM blijft alleen de lijst.
+- **Een maatregel boven een verklaring.** Voor de lekken in mount was een verklaring alleen mogelijk geweest, met de lege `/etc/fstab`; zonder setuid-bit (MIT-42) hangt het niet meer af van een bestand dat iemand later vult.
 - **pip uit de image, geen nieuwe versies kiezen.** De vier lekken zaten in de eigen kopieën van pip; weghalen wat niet nodig is, was de kleinste oplossing.
 - **Trivy als image in een opdracht, niet als action.** Om dezelfde reden: geen actions van derden. De prijs: Dependabot houdt de versie van Trivy niet bij.
 - **Trivy, niet Syft met Grype.** Uit deelvraag 1 van het onderzoek: in een labmeting en een benchmark op GitHub-runners vond Trivy precies de vier lekken van pip, in één tool, en was het per run ruim een minuut sneller. Syft met Grype liet met de standaardinstellingen diezelfde lekken door.
@@ -107,9 +114,11 @@ Gemeten en opgezocht na de eerste uitrol, om te zien of een andere regio sneller
 2. Gedaan: de SBoM van elke image, als bewijs bij de build, en de scan daarop (MIT-36).
 3. Gedaan: deelvraag 1 van het onderzoek: welk formaat en welke tool, waar de SBoM gemaakt wordt, wie hem leest, en hoe een merge wordt tegengehouden. Het antwoord: CycloneDX 1.7 van het gebouwde image, gemaakt en gescand met Trivy, op de SBoM, met een ruleset.
 4. Gedaan (19-10-2026): daaruit een check bij elke pull request die de image bouwt, de SBoM maakt en scant, en niets publiceert, verplicht via een ruleset (MIT-39).
-5. In die check de image ook starten en testen, zodat een image die stuk is niet op `main` komt. Dat zijn dan ook de tests in de pipeline.
-6. SAST (statische code-analyse), als workflow-bestand, zodat het meegaat met een kopie van de repo.
-7. Uitrollen vanuit GitHub (CD), alleen de image, en alleen als er voor Azure is gekozen. `deployment.py azure` maakt dan een identiteit voor GitHub (OIDC, zonder secret) en zet drie repository-variabelen met de ID's; de deploy-job draait alleen als die variabelen er zijn, na het publiceren. In een fork of kopie zonder Azure wordt de job dus overgeslagen en mislukt hij niet. `deployment.py undo` haalt identiteit en variabelen weer weg. Niet nodig voor het onderzoek: een image met een bekend lek komt nu al niet op ghcr.io, en `deployment.py azure` rolt alleen een gepubliceerde image uit.
+5. Gedaan (19-10-2026): deelvraag 2 van het onderzoek: elk lek van HIGH of CRITICAL vraagt een beslissing, vastgelegd in de VEX (MIT-41), en geen setuid-bits meer in de image (MIT-42).
+6. De SBoM van de image op `main` elke dag opnieuw scannen, zodat een lek dat na de build bekend wordt niet op de volgende pull request wacht (MC-11).
+7. In de check van stap 4 de image ook starten en testen, zodat een image die stuk is niet op `main` komt. Dat zijn dan ook de tests in de pipeline.
+8. SAST (statische code-analyse), als workflow-bestand, zodat het meegaat met een kopie van de repo.
+9. Uitrollen vanuit GitHub (CD), alleen de image, en alleen als er voor Azure is gekozen. `deployment.py azure` maakt dan een identiteit voor GitHub (OIDC, zonder secret) en zet drie repository-variabelen met de ID's; de deploy-job draait alleen als die variabelen er zijn, na het publiceren. In een fork of kopie zonder Azure wordt de job dus overgeslagen en mislukt hij niet. `deployment.py undo` haalt identiteit en variabelen weer weg. Niet nodig voor het onderzoek: een image met een bekend lek komt nu al niet op ghcr.io, en `deployment.py azure` rolt alleen een gepubliceerde image uit.
 
 ## Screenshots
 
@@ -120,6 +129,7 @@ Voor het verslag, lokaal in `screenshots/Week 8 CI-CD/` (niet in de repo).
 | De image bouwen | `week8_voor_image_1_met_de_hand` | `week8_na_image_1_door_github` | `week8_code_image_1_workflow` |
 | De scan | `week8_voor_scan_1_vier_lekken` | `week8_na_scan_1_schoon` | `week8_code_image_1_workflow` |
 | De SBoM | `week8_voor_sbom_1_geen_lijst` | `week8_na_sbom_1_bij_de_run` | `week8_code_image_1_workflow` |
+| De scan met de VEX | `week8_voor_vex_1_ignore_unfixed` | `week8_na_vex_1_weggefilterd_in_de_log` | `week8_code_vex_1_openvex` |
 | De check bij een pull request | `week8_voor_check_1_gemerged` | `week8_na_check_1_tegengehouden` | `week8_code_check_1_workflow` |
 | De log van de mislukte check | geen | `week8_na_check_2_log_vier_lekken` | `week8_code_check_1_workflow` |
 | Een pull request zonder lek | geen | `week8_na_check_3_schoon_door` | `week8_code_check_1_workflow` |
@@ -135,6 +145,8 @@ Opgehaald en gecontroleerd op 18-10-2026.
 - Trivy, SBoM maken ("By default, `--format cyclonedx` represents SBOM and doesn't include vulnerabilities"): https://trivy.dev/latest/docs/supply-chain/sbom/
 - Trivy, een SBoM scannen ("Trivy can take the following SBOM formats as an input and scan for vulnerabilities"): https://trivy.dev/latest/docs/target/sbom/
 - Trivy, filtering (`--ignore-unfixed`: "To skip all unfixed vulnerabilities"): https://trivy.dev/latest/docs/configuration/filtering/
+- Trivy, VEX als bestand (OpenVEX via PURL, CycloneDX via BOM-Link met `serialNumber`), opgehaald op 19-10-2026: https://trivy.dev/latest/docs/supply-chain/vex/file/
+- OpenVEX, specificatie v0.2.0, opgehaald op 19-10-2026: https://github.com/openvex/spec/blob/main/OPENVEX-SPEC.md
 - GitHub, events die een workflow starten (bij `pull_request`: "The `GITHUB_TOKEN` has read-only permissions in pull requests from forked repositories"), opgehaald op 19-10-2026: https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows
 - GitHub, regels voor rulesets ("The pull request doesn't necessarily have to be approved, but it must be opened"), opgehaald op 19-10-2026: https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets
 - GitHub changelog, YAML-ankers in workflows (18-09-2025), opgehaald op 19-10-2026: https://github.blog/changelog/2025-09-18-actions-yaml-anchors-and-non-public-workflow-templates/

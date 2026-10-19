@@ -25,7 +25,7 @@ Geschreven voor ontwikkelaars: per control een werkwijze, niet een lijst eisen. 
 | C3 Input en exceptions | MIT-02, MIT-04, MIT-22, MIT-23, MIT-25 | |
 | C4 Security from the Start | De misuse cases bij elke feature, de risicomatrix en de diagrammen in `Threat Analysis/` | |
 | C5 Secure by Default | MIT-23, MIT-26 | |
-| C6 Components | MIT-03, MIT-33, MIT-35, MIT-36, MIT-39 | De enige hoge in de risicomatrix: een lek na de build (MC-11) |
+| C6 Components | MIT-03, MIT-33, MIT-35, MIT-36, MIT-39, MIT-41 | De enige hoge in de risicomatrix: een lek na de build (MC-11) |
 | C7 Digital Identities | MIT-05, MIT-06, MIT-09, MIT-10, MIT-12, MIT-19 | TOTP is niet bestand tegen phishing (MC-16) |
 | C8 Browser Security Features | MIT-21, MIT-23 | |
 | C9 Logging en Monitoring | MIT-31, MIT-37 | Alleen een blokkade geeft een mail (MC-28) |
@@ -52,7 +52,7 @@ is wel gemeten; dat zijn de tests in `Threat Analysis/tests.md`.
 | V12 Secure Communication | Ja | TLS 1.2 en 1.3 op Azure, getoetst aan het NCSC (MIT-40, T-113); naar de database TLS 1.3 met `verify-full` (F-03) | Lokaal geen TLS; het certificaat van Azure is RSA-2048 |
 | V13 Configuration | Ja | Configuratie gecontroleerd bij het starten (MIT-23), geen debugmodus (MIT-25), geheimen uit Key Vault, vaste versies (MIT-03) | |
 | V14 Data Protection | Ja | Geen pagina in de cache (MIT-28), notities versleuteld (MIT-18), geen wachtwoord of code in de log (MIT-31) | Hoeveel notities iemand heeft en wanneer, blijft leesbaar (MC-23) |
-| V15 Secure Coding and Architecture | Ja | Vaste versies, Dependabot, SBoM en scan bij elke pull request (MIT-03, MIT-33, MIT-35, MIT-36, MIT-39), Gunicorn als gewone gebruiker (MIT-26) | Een lek dat na de build bekend wordt (MC-11) |
+| V15 Secure Coding and Architecture | Ja | Vaste versies, Dependabot, SBoM en scan bij elke pull request (MIT-03, MIT-33, MIT-35, MIT-36, MIT-39), een beslissing per lek in de VEX (MIT-41), Gunicorn als gewone gebruiker zonder setuid-programma's (MIT-26, MIT-42) | Een lek dat na de build bekend wordt (MC-11) |
 | V16 Security Logging and Error Handling | Ja | Elke security-gebeurtenis als JSON-regel (MIT-31), veilig falen (MIT-25), een mail bij een blokkade (MIT-37) | Alleen een blokkade geeft een mail (MC-28) |
 | V17 WebRTC | Nee | Geen WebRTC | |
 
@@ -73,7 +73,7 @@ de nummering afwijken.
 | IAM, Identity & Access Management | Entra ID, managed identities en rollen | Per identiteit alleen de rol die nodig is (AZ-10 tot AZ-15; IAM-05); verplichte 2FA in de app, en een tweede stap voor de beheerder bij Azure (IAM-14) | De beheerder is Owner op de subscription (MC-31) |
 | IVS, Infrastructure & Virtualization Security | Het netwerk, de hosts en de ingress | De database zonder openbaar adres, alleen bereikbaar uit het eigen netwerk (F-03; IVS-03, IVS-06) | |
 | LOG, Logging & Monitoring | Log Analytics bewaart de log; de app kan er niet bij | De security-events (MIT-31); de app heeft geen rol op de workspace (AZ-13); een alert bij een blokkade (MIT-37) | Andere aanvallen geven geen alert (MC-28) |
-| TVM, Threat & Vulnerability Management | Updates van het platform | Dependabot en de scan op bekende lekken (MIT-33, MIT-35, MIT-39); de pentest is de hacking week | De draaiende image wordt niet opnieuw gescand (MC-11) |
+| TVM, Threat & Vulnerability Management | Updates van het platform | Dependabot, de scan op bekende lekken en een beslissing per lek (MIT-33, MIT-35, MIT-39, MIT-41); de pentest is de hacking week | De draaiende image wordt niet opnieuw gescand (MC-11) |
 | BCR, Business Continuity & Operational Resilience | Een backup van de database, 7 dagen (`backup_retention_days`); de vaults 90 dagen terug te halen | `deployment.py` zet alles opnieuw neer (Week 8) | Geen backup in een tweede regio; nooit een terugzetting getest |
 
 Niet van toepassing op deze app, maar bij Azure of bij een organisatie: DCS (de datacenters), HRS (personeel), GRC,
@@ -92,7 +92,7 @@ overgeslagen.
 | Eis uit bijlage I, deel II | In deze app |
 |---|---|
 | 1. Componenten vastleggen, met een SBoM in een gangbaar, machineleesbaar formaat, minstens de directe afhankelijkheden | Een CycloneDX-SBoM van elke image, met alle onderdelen (MIT-36, T-106) |
-| 2. Kwetsbaarheden zonder vertraging aanpakken, ook met beveiligingsupdates | Dependabot elke week, en de scan bij elke pull request en vóór het publiceren (MIT-33, MIT-35, MIT-39) |
+| 2. Kwetsbaarheden zonder vertraging aanpakken, ook met beveiligingsupdates | Dependabot elke week, de scan bij elke pull request en vóór het publiceren, en een beslissing per lek, ook zonder oplossing (MIT-33, MIT-35, MIT-39, MIT-41) |
 | 4. Opgeloste kwetsbaarheden openbaar maken | Nog niet |
 | 5. Een beleid voor gecoördineerde melding van kwetsbaarheden | Nog niet: een `SECURITY.md` staat op de lijst vóór de hacking week |
 

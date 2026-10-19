@@ -74,7 +74,7 @@ De details staan in de entries (MC-04, MC-05, MC-07, MC-08, MC-10, MC-11, MC-14,
   - HTTP-fouten krijgen de eigen foutpagina, met behoud van status en headers. Die pagina toont een grote robot die het heeft begeven, met de statuscode op zijn borst; een inline SVG zonder `style`-attributen, met de opmaak en animatie in `style.css`, zodat de CSP streng blijft.
   - Een onverwachte fout geeft "Something went wrong". De fout zelf gaat met traceback naar stderr: lokaal `docker compose logs`, op Azure de log van Container Apps.
   - Het pad gaat als repr de log in, dus een regeleinde in de URL wordt `\n`.
-- **Gewone gebruiker (MIT-26).** De image maakt de systeemgebruiker `app` zonder shell en draait daaronder, met Gunicorn en twee workers. De code is van root, dus de app kan hem lezen maar niet aanpassen.
+- **Gewone gebruiker (MIT-26).** De image maakt de systeemgebruiker `app` zonder shell en draait daaronder, met Gunicorn en twee workers. De code is van root, dus de app kan hem lezen maar niet aanpassen. Sinds deelvraag 2 (Week 8) heeft ook geen programma meer een setuid- of setgid-bit, zodat wie de app overneemt niet via mount, su of passwd alsnog root wordt (MIT-42).
 - **Databaserol (MIT-27).**
   - `db/schema.sql` maakt de rol `notities_app`, geen superuser en nergens eigenaar van. Hij krijgt `SELECT`, `INSERT`, `UPDATE` en `DELETE` op de drie tabellen en `USAGE` op de twee sequences: precies wat de app doet.
   - Lokaal zet `db/app-password.sh` het wachtwoord bij de eerste start van een leeg volume. Het komt uit `APP_DB_PASSWORD` in `.env`, dat `scripts/deployment.py` aanmaakt. De app krijgt alleen dat wachtwoord.
