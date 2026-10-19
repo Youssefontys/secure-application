@@ -13,7 +13,7 @@ Every feature that is added has an entry in `BoK/`: the use case, the misuse cas
 - `app/` - the notes application, one file per part: `app.py` creates the app, `db.py` talks to the database, `auth.py` handles logging in (including the second step), `account.py` the profile, `notes.py` the notes, `totp.py` the TOTP calculation, `throttle.py` the login limits, `passwords.py` the rule for a new password and the Argon2id hashing, `encryption.py` the encryption of the TOTP secret and the notes, `csrf.py` the CSRF token of every form. The website (HTML, CSS, JS) is in `app/web/`
 - `db/` - the database schema and the password of the app role, run by the database container on first start
 - `BoK/Architecture/` - components, data flows, trust boundaries and the authentication and authorization points
-- `BoK/Threat Analysis/` - use cases, misuse cases, mitigations, attack trees, the tests that go with them, and a risk matrix (likelihood × impact, before and after the mitigations)
+- `BoK/Threat Analysis/` - use cases, misuse cases, mitigations, attack trees, the tests that go with them, and a risk matrix (likelihood × impact, before and after the mitigations), with a use case diagram and misuse case diagrams in `diagrams/`
 - `BoK/Subjects/` - per BoK subject (week) what was built, why it is safe and what it does not solve
 - `compose.yaml` - app and database for local use, with a ZAP profile in comments for later
 - `.github/dependabot.yml` - weekly update proposals for the pinned packages, images, Terraform providers and GitHub Actions
