@@ -12,6 +12,9 @@ Analysis ernaar kan verwijzen en een diagram dezelfde namen gebruikt.
 - `trust-boundaries.md`: de grenzen tussen vertrouwde en niet-vertrouwde zones.
 - `auth-points.md`: elk punt waar iets wordt vastgesteld (authenticatie) of
   toegestaan (autorisatie), en wat daar ontbreekt.
+- `diagram/`: de architectuur op Azure als SVG, met de onderdelen, datastromen en
+  trust boundaries. `make_architecture.py` tekent hem opnieuw en controleert dat elk
+  ID in de tabellen hierboven bestaat.
 
 ## Regels
 
