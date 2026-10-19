@@ -594,7 +594,7 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 ### MIT-08 Het geheim alleen tijdens het instellen, en niet in een cache
 - Houdt tegen: MC-17 stap 3, en het later terugkijken uit stap 2
 - Wat: de QR-code (`/account/2fa/qr.svg`) en de sleutel zijn alleen op te vragen zolang tweestapsverificatie nog niet aan staat; daarna geeft de QR-route een 404. Beide worden verstuurd met `Cache-Control: no-store`. De QR-code komt van een eigen route en staat niet inline in de pagina
-- Waar: `setup_2fa()`, `qr_2fa()` en `no_store()` in `app/account.py`
+- Waar: `setup_2fa()` en `qr_2fa()` in `app/account.py`; `Cache-Control: no-store` in `security_headers()` in `app/app.py`, sinds MIT-28 op elke pagina
 - Status: bewezen (T-36; gemeten op 2026-10-15)
 - Sinds: 18e1424
 
@@ -636,7 +636,7 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 ### MIT-14 Wachtwoord vergeten met twee van de drie factoren
 - Houdt tegen: MC-21 stap 1b, 2a, 3a en 3b; maakt een vergeten wachtwoord op te lossen zonder het account te verliezen
 - Wat: `/login/forgot` vraagt gebruikersnaam, herstelcode, een code uit de app en twee keer het nieuwe wachtwoord. Wachtwoord en telefoon is gewoon inloggen, wachtwoord en herstelcode is telefoon kwijt (MIT-11), herstelcode en telefoon is wachtwoord vergeten; één factor is nooit genoeg. De route is bereikbaar zonder wachtwoord, dus een foute herstelcode telt alleen per IP-adres en per naam per adres, met dezelfde tellers als inloggen (MIT-10), en een juiste herstelcode telt daar als geslaagde poging: een blokkade per account zou iedereen die een naam kent de herstelroutes laten blokkeren (MC-18). Een onbekende naam krijgt dezelfde melding en dezelfde blokkade; het enige verschil in werk is één vergelijking van 64 tekens. Pas als de herstelcode klopt, wordt de code uit de app gecontroleerd met `check_code()`, dus met de blokkade per account en het eenmalige gebruik van de codestap (MIT-06, MIT-07). Nieuw wachtwoord, verbruik van de oude herstelcode, de nieuwe herstelcode en een hogere sessieversie zitten in één UPDATE met de oude hash in de WHERE, dus van twee gelijktijdige verzoeken wint er één. Daarna is de gebruiker niet ingelogd, zoals het OWASP Forgot Password Cheat Sheet aanraadt, maar krijgt meteen een nieuwe herstelcode, met `Cache-Control: no-store`. Het nieuwe wachtwoord valt onder de sterkte-eis (MIT-13)
-- Waar: `forgot_password()` en `hash_recovery_code()` in `app/auth.py`; `no_store()` in `app/account.py`
+- Waar: `forgot_password()` en `hash_recovery_code()` in `app/auth.py`; `Cache-Control: no-store` in `security_headers()` in `app/app.py`
 - Status: bewezen (T-54, T-57; gemeten op 2026-10-16)
 - Sinds: 428858e; nieuwe herstelcode in dezelfde UPDATE sinds 3f7eb20
 
