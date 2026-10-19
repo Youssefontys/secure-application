@@ -1,14 +1,15 @@
 # Week 8: CI/CD security checks
 
-Drie stappen van de pipeline staan. Bij elke push naar `main` bouwt GitHub Actions de image en zet hem op ghcr.io (MIT-34): het token van de run mag alleen dat, `actions/checkout` staat vast op een commit, en een eigen token is niet meer nodig. Trivy maakt van elke image een SBoM (MIT-36), en scant die: een bekend lek waarvoor een oplossing is, houdt de image tegen (MIT-35). De eerste scan vond vier lekken, allemaal in pip, dat nu uit de image gaat. Tests draaien nog niet; die komen er stap voor stap bij.
+Vier stappen van de pipeline staan. Bij elke push naar `main` bouwt GitHub Actions de image en zet hem op ghcr.io (MIT-34): het token van de run mag alleen dat, `actions/checkout` staat vast op een commit, en een eigen token is niet meer nodig. Trivy maakt van elke image een SBoM (MIT-36), en scant die: een bekend lek waarvoor een oplossing is, houdt de image tegen (MIT-35). De eerste scan vond vier lekken, allemaal in pip, dat nu uit de image gaat. Sinds deelvraag 1 van het onderzoek draaien dezelfde stappen ook bij elke pull request, zonder te publiceren, en maakt een ruleset op `main` die check verplicht (MIT-39): een bekend lek komt dan niet eens meer op `main`. Tests van de app draaien nog niet; die komen er stap voor stap bij.
 
-De details staan in de entries (MC-30, MC-11, MIT-34 tot MIT-36; C-06, A-12, A-14, F-06, F-07 en B-04 in de architectuur) en de tests T-103, T-105 en T-106.
+De details staan in de entries (MC-30, MC-11, MIT-34 tot MIT-36 en MIT-39; C-06, C-11, A-12, A-14, F-06, F-07, F-12, B-04, B-06 en AZ-16 in de architectuur) en de tests T-103, T-105, T-106 en T-110.
 
 ## De dreiging
 
 - **Wat op Azure draait, komt uit de pipeline.** Wie de image kan vervangen, draait eigen code met de rechten en geheimen van de app (MC-30).
 - **Een workflow die meer mag dan nodig,** een action op een tag die verschuift, of een lang geldig token met `write:packages`: elk is een weg naar een andere image.
 - **Bekende lekken in de pakketten en de base-image** blijven ongemerkt staan zolang niemand scant (MC-11).
+- **Een pull request kan alles aanpassen,** ook de Dockerfile en de workflow zelf. Wat er bij een pull request draait, is dus code van wie hem opent (B-06).
 
 ## Wat er beter wordt
 
@@ -20,15 +21,17 @@ De details staan in de entries (MC-30, MC-11, MIT-34 tot MIT-36; C-06, A-12, A-1
 | De tag | Zelf kiezen | De commit, en de inhoud van `app/` (de tree-hash van git), nooit `latest` |
 | Weten wat er in de image zit | Nergens vastgelegd | Een CycloneDX-SBoM van elke image, 90 dagen bij de run |
 | Bekende lekken in de image | Niemand keek; er zaten vier keer HIGH in, in pip | Trivy vóór het publiceren; 0, want pip gaat na het installeren uit de image |
+| Een pull request | Er draaide niets; een pull request met pip werd gewoon gemerged (pull request #2, 19-10-2026) | De job `check` bouwt, maakt de SBoM en scant; faalt hij, dan houdt de ruleset de merge tegen |
 | Uitrollen | Vijf stappen van de routekaart in `setup.py` (nu `deployment.py`) | `python scripts/deployment.py azure`: het zoekt de image bij je laatste commit en draait Terraform |
 
 ## Hoe het werkt
 
-- **De workflow:** `.github/workflows/image.yml`. Hij draait bij een push naar `main`, en met de hand (`workflow_dispatch`); niet bij een pull request.
-- **Rechten:** standaard geen (`permissions: {}`); de job krijgt alleen `contents: read` en `packages: write`.
+- **De workflow:** `.github/workflows/image.yml`, met twee jobs. Bij een pull request naar `main` draait `check`; bij een push naar `main`, en met de hand (`workflow_dispatch`), draait `image`. Beide doen dezelfde stappen. Die staan één keer in het bestand, met YAML-ankers (`&` en `*`), zodat de check precies scant wat er gepubliceerd wordt; alleen `image` pusht daarna.
+- **Rechten:** standaard geen (`permissions: {}`); `check` krijgt alleen `contents: read`, `image` alleen `contents: read` en `packages: write`. Bij een pull request vanuit een fork krijgt het token volgens GitHub sowieso alleen leesrechten, en geen secrets.
 - **Bouwen en pushen** met de gewone `docker`-opdrachten, zonder actions van derden. Het token gaat via stdin naar `docker login`.
-- **De SBoM:** Trivy 0.75.0, vast op versie en digest, leest de image als tar-bestand en maakt er een CycloneDX-SBoM van: alleen de lijst, zonder lekken of VEX. jq zet de naam en tag van de image als hoofdonderdeel. De SBoM gaat als artifact bij de run, ook als de scan daarna een lek vindt.
-- **De scan:** tussen de SBoM en het pushen. Trivy scant de SBoM, niet de image zelf. Een lek van HIGH of CRITICAL waarvoor een oplossing is, stopt de job: dan komt er geen nieuwe image op ghcr.io, en kan `deployment.py azure` hem ook niet uitrollen.
+- **De SBoM:** Trivy 0.76.0, vast op versie en digest, leest de image als tar-bestand en maakt er een CycloneDX-SBoM van: alleen de lijst, zonder lekken of VEX. jq zet de naam en tag van de image als hoofdonderdeel. De SBoM gaat als artifact bij de run, ook als de scan daarna een lek vindt.
+- **De scan:** tussen de SBoM en het pushen. Trivy scant de SBoM, niet de image zelf. Een lek van HIGH of CRITICAL waarvoor een oplossing is, stopt de job: dan komt er geen nieuwe image op ghcr.io, en kan `deployment.py azure` hem ook niet uitrollen. Bij een pull request faalt de check.
+- **De ruleset op `main`:** een pull request is verplicht, de check `check` moet slagen, en de bypass-lijst is leeg, ook voor de beheerder. Goedkeuren door een tweede persoon is niet nodig: er is maar één beheerder.
 - **Twee tags:** de commit-hash, en `app-` met de tree-hash van `app/`. `deployment.py azure` rekent die tweede zelf uit met `git rev-parse HEAD:app`, en kijkt anoniem bij ghcr.io of de image er is en openbaar is, zoals Container Apps hem ophaalt. Een commit die alleen Terraform of de BoK verandert, heeft zo geen nieuwe build nodig.
 - **Dependabot** houdt `actions/checkout` bij, net als de pakketten en de images (MIT-33).
 
@@ -38,16 +41,18 @@ De details staan in de entries (MC-30, MC-11, MIT-34 tot MIT-36; C-06, A-12, A-1
 |---|---|---|
 | Het token mag niet meer dan nodig | `permissions: {}`, en per job alleen `contents: read` en `packages: write` | T-103: de log van de run toont `Contents: read`, `Metadata: read` en `Packages: write` |
 | Een action kan niet verschuiven | `actions/checkout` op een volledige commit-hash, niet op een tag; GitHub raadt dat zelf aan | T-103: opgehaald op `3d3c42e5` |
-| Een pull request publiceert niets | Geen trigger op `pull_request` | In de workflow |
+| Een pull request publiceert niets | Bij een pull request draait alleen `check`, met `contents: read`; `image` draait daar niet | T-110: alleen `check` draaide, met `Contents: read` en `Metadata: read` |
 | De lijst klopt | De SBoM bevat het besturingssysteem, de Debian-pakketten en precies de 14 Python-pakketten uit `requirements.txt` | T-106: 103 onderdelen; een scan op de SBoM vindt hetzelfde als een scan op de image |
 | Een bekend lek gaat niet live | Trivy vóór het pushen; met een lek stopt de job | T-105: met pip 4 keer HIGH (exit 1), zonder pip 0 (exit 0) |
+| Een bekend lek komt niet op `main` | Dezelfde scan bij elke pull request, en de ruleset maakt die verplicht | T-110: een image zonder lek gaat door (Trivy 0.76.0). De tegenproef, een pull request met pip, volgt |
 | Geen token dat kan uitlekken | Geen eigen token meer; dat van de run vervalt na de run | De stap met een token (classic) is weg uit `setup.py` (nu `deployment.py`) |
 
 ## Wat het niet oplost
 
-- **Wie naar `main` kan pushen, bepaalt de image,** en kan hem met `deployment.py azure` uitrollen. Je GitHub-account, met tweestapsverificatie, is dus de sleutel.
+- **Wie een pull request kan mergen, bepaalt de image,** en kan hem met `deployment.py azure` uitrollen. Als beheerder kan hij ook de ruleset uitzetten. Je GitHub-account, met tweestapsverificatie, is dus de sleutel.
+- **De check draait uit de pull request zelf.** Een pull request die de workflow aanpast, kan de check groen maken (MC-30, stap 6); alleen wie mergt, ziet dat in de wijzigingen.
 - **Nog geen tests.** Een image die stuk is, wordt gewoon gepubliceerd.
-- **De scan ziet niet alles.** Een lek zonder oplossing houdt de image niet tegen, een lek dat pas later bekend wordt, ziet de scan pas bij de volgende push, en een draaiende image wordt niet opnieuw gescand.
+- **De scan ziet niet alles.** Een lek zonder oplossing houdt de image niet tegen, een lek dat pas later bekend wordt, ziet de scan pas bij de volgende pull request of push, en een draaiende image wordt niet opnieuw gescand.
 - **Niet ondertekend.** Of een image echt uit deze workflow komt, is niet na te gaan.
 - **De SBoM blijft 90 dagen.** Daarna is hij weg bij GitHub; hij hangt nog niet aan de image zelf. Opnieuw scannen, als er later een lek bekend wordt, gebeurt nog niet.
 - **Het pakket is openbaar.** Iedereen kan de image ophalen; er staan geen geheimen in, en de code is ook openbaar.
@@ -63,6 +68,9 @@ De details staan in de entries (MC-30, MC-11, MIT-34 tot MIT-36; C-06, A-12, A-1
 - **Geen VEX.** De SBoM is alleen de lijst; wat een lek voor deze app betekent, is de tweede deelvraag van het onderzoek.
 - **pip uit de image, geen nieuwe versies kiezen.** De vier lekken zaten in de eigen kopieën van pip; weghalen wat niet nodig is, was de kleinste oplossing.
 - **Trivy als image in een opdracht, niet als action.** Om dezelfde reden: geen actions van derden. De prijs: Dependabot houdt de versie van Trivy niet bij.
+- **Trivy, niet Syft met Grype.** Uit deelvraag 1 van het onderzoek: in een labmeting en een benchmark op GitHub-runners vond Trivy precies de vier lekken van pip, in één tool, en was het per run ruim een minuut sneller. Syft met Grype liet met de standaardinstellingen diezelfde lekken door.
+- **Eén workflow met twee jobs, en YAML-ankers.** Twee workflows met dezelfde stappen kunnen uit elkaar lopen; één job voor beide zou bij een pull request ook `packages: write` krijgen. Dependabot leest de ankers ook (`aliases: true` in zijn parser).
+- **Een lege bypass-lijst.** Anders is de rem met één klik te omzeilen, ook door jezelf, per ongeluk, zoals bij pull request #2.
 - **Nog geen uitrol vanuit GitHub (CD).** Dat vraagt een identiteit in Azure die de pipeline mag gebruiken, met rechten op de resource group. Eerst de checks.
 
 ## De eerste uitrol (18-10-2026)
@@ -95,10 +103,11 @@ Gemeten en opgezocht na de eerste uitrol, om te zien of een andere regio sneller
 
 1. Gedaan: een scan van de image op bekende lekken, met een rem vóór het publiceren (MIT-35).
 2. Gedaan: de SBoM van elke image, als bewijs bij de build, en de scan daarop (MIT-36).
-3. Eerst deelvraag 1 van het onderzoek: welk formaat en welke tool, waar de SBoM gemaakt wordt, wie hem leest, en hoe een merge wordt tegengehouden. Tot die beantwoord is, blijft de pipeline zo kaal als nu, zodat de screenshots laten zien wat het onderzoek veranderde.
-4. Daaruit: een workflow bij elke pull request die de image bouwt, start en test, de SBoM maakt en scant, en niets publiceert, als verplichte check. Dat zijn ook de tests in de pipeline.
-5. SAST (statische code-analyse), als workflow-bestand, zodat het meegaat met een kopie van de repo.
-6. Uitrollen vanuit GitHub (CD), alleen de image, en alleen als er voor Azure is gekozen. `deployment.py azure` maakt dan een identiteit voor GitHub (OIDC, zonder secret) en zet drie repository-variabelen met de ID's; de deploy-job draait alleen als die variabelen er zijn, na het publiceren. In een fork of kopie zonder Azure wordt de job dus overgeslagen en mislukt hij niet. `deployment.py undo` haalt identiteit en variabelen weer weg. Niet nodig voor het onderzoek: een image met een bekend lek komt nu al niet op ghcr.io, en `deployment.py azure` rolt alleen een gepubliceerde image uit.
+3. Gedaan: deelvraag 1 van het onderzoek: welk formaat en welke tool, waar de SBoM gemaakt wordt, wie hem leest, en hoe een merge wordt tegengehouden. Het antwoord: CycloneDX 1.7 van het gebouwde image, gemaakt en gescand met Trivy, op de SBoM, met een ruleset.
+4. Gedaan (19-10-2026): daaruit een check bij elke pull request die de image bouwt, de SBoM maakt en scant, en niets publiceert, verplicht via een ruleset (MIT-39).
+5. In die check de image ook starten en testen, zodat een image die stuk is niet op `main` komt. Dat zijn dan ook de tests in de pipeline.
+6. SAST (statische code-analyse), als workflow-bestand, zodat het meegaat met een kopie van de repo.
+7. Uitrollen vanuit GitHub (CD), alleen de image, en alleen als er voor Azure is gekozen. `deployment.py azure` maakt dan een identiteit voor GitHub (OIDC, zonder secret) en zet drie repository-variabelen met de ID's; de deploy-job draait alleen als die variabelen er zijn, na het publiceren. In een fork of kopie zonder Azure wordt de job dus overgeslagen en mislukt hij niet. `deployment.py undo` haalt identiteit en variabelen weer weg. Niet nodig voor het onderzoek: een image met een bekend lek komt nu al niet op ghcr.io, en `deployment.py azure` rolt alleen een gepubliceerde image uit.
 
 ## Screenshots
 
@@ -109,6 +118,8 @@ Voor het verslag, lokaal in `screenshots/Week 8 CI-CD/` (niet in de repo).
 | De image bouwen | `week8_voor_image_1_met_de_hand` | `week8_na_image_1_door_github` | `week8_code_image_1_workflow` |
 | De scan | `week8_voor_scan_1_vier_lekken` | `week8_na_scan_1_schoon` | `week8_code_image_1_workflow` |
 | De SBoM | `week8_voor_sbom_1_geen_lijst` | `week8_na_sbom_1_bij_de_run` | `week8_code_image_1_workflow` |
+| De check bij een pull request | `week8_voor_check_1_gemerged` | `week8_na_check_1_tegengehouden` | `week8_code_check_1_workflow` |
+| De ruleset op `main` | `week8_voor_ruleset_1_geen_regels` | `week8_na_ruleset_1_main` | geen: staat in de instellingen |
 
 ## Bronnen
 
@@ -120,6 +131,10 @@ Opgehaald en gecontroleerd op 18-10-2026.
 - Trivy, SBoM maken ("By default, `--format cyclonedx` represents SBOM and doesn't include vulnerabilities"): https://trivy.dev/latest/docs/supply-chain/sbom/
 - Trivy, een SBoM scannen ("Trivy can take the following SBOM formats as an input and scan for vulnerabilities"): https://trivy.dev/latest/docs/target/sbom/
 - Trivy, filtering (`--ignore-unfixed`: "To skip all unfixed vulnerabilities"): https://trivy.dev/latest/docs/configuration/filtering/
+- GitHub, events die een workflow starten (bij `pull_request`: "The `GITHUB_TOKEN` has read-only permissions in pull requests from forked repositories"), opgehaald op 19-10-2026: https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows
+- GitHub, regels voor rulesets ("The pull request doesn't necessarily have to be approved, but it must be opened"), opgehaald op 19-10-2026: https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets
+- GitHub changelog, YAML-ankers in workflows (18-09-2025), opgehaald op 19-10-2026: https://github.blog/changelog/2025-09-18-actions-yaml-anchors-and-non-public-workflow-templates/
+- Dependabot, de parser van workflows (`YAML.safe_load(content, aliases: true, ...)`), gelezen op 19-10-2026: https://github.com/dependabot/dependabot-core/blob/main/github_actions/lib/dependabot/github_actions/workflow_file.rb
 - Microsoft, regio's die geen nieuwe klanten aannemen: https://learn.microsoft.com/azure/azure-resource-manager/troubleshooting/error-region-access-policy
 - Azure Retail Prices API (PostgreSQL B1ms en opslag, Container Apps, Log Analytics per regio): https://prices.azure.com/api/retail/prices
 - Azure Speed Test (ping per regio vanuit de browser): https://www.azurespeed.com/Azure/Latency
