@@ -1,0 +1,43 @@
+# Onderzoek, deelvraag 3: drie SBoM's van dezelfde image, elk gescand met Trivy en met Grype, naast wat er echt in de
+# draaiende image zit. Op een runner van GitHub, niet lokaal. Alleen op labbranches (lab/...); de pipeline op main
+# verandert hier niet door. De scripts staan in lab/dv3/.
+name: DV3-meting
+
+on:
+  push:
+    branches: ["lab/**"]
+  workflow_dispatch:
+
+# Standaard geen rechten; de job leest alleen de code, en de image op ghcr.io is openbaar.
+permissions: {}
+
+# Met pipefail: een fout vóór tee laat de stap dan falen.
+defaults:
+  run:
+    shell: bash
+
+env:
+  # De image van main na deelvraag 2 (c0a21ba), dezelfde als in de BoK (T-117).
+  IMAGE: ghcr.io/youssefontys/secure-application:c0a21baff0b568ab7f269de19a225888b44a8bbf
+
+jobs:
+  meting:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Meten
+        run: |
+          { echo '```'; python3 lab/dv3/meet.py "$IMAGE" "$RUNNER_TEMP/meting"; echo '```'; } | tee -a "$GITHUB_STEP_SUMMARY"
+
+      # De SBoM's, de scans, binnen.json en resultaten.json; ook als de meting halverwege faalt.
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: dv3-meting
+          path: ${{ runner.temp }}/meting
+          retention-days: 90
