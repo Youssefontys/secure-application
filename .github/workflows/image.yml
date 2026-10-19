@@ -62,11 +62,28 @@ jobs:
           path: sbom.cdx.json
           retention-days: 90
 
-      # De rem (MIT-35), op de SBoM: een bekend lek van HIGH of CRITICAL waarvoor al een oplossing is, laat de job falen.
-      # Bij een pull request houdt de ruleset dan de merge tegen, bij een push stopt de job vóór het publiceren.
+      # Trivy filtert ook een not_affected zonder reden weg (T-115). Daarom eerst zelf: elke verklaring in de VEX heeft een
+      # geldige justification en een uitleg, of bij affected een actie, en noemt pakketten met versie (MIT-41).
+      - &vex
+        name: VEX controleren
+        run: |
+          jq -e '
+            def ok:
+              (if .status == "not_affected" then (.justification | IN("component_not_present", "vulnerable_code_not_present",
+                   "vulnerable_code_not_in_execute_path", "vulnerable_code_cannot_be_controlled_by_adversary",
+                   "inline_mitigations_already_exist")) and ((.impact_statement // "") != "")
+               elif .status == "affected" then (.action_statement // "") != ""
+               else .status == "under_investigation" end)
+              and (.products | length > 0) and all(.products[]; .["@id"] | test("^pkg:[a-z]+/[^@]+@."));
+            [.statements[] | select(ok | not) | .vulnerability.name] | if . == [] then true else error("ongeldig: \(.)") end
+          ' vex/openvex.json
+
+      # De rem (MIT-35), op de SBoM: elk bekend lek van HIGH of CRITICAL laat de job falen, ook als er nog geen oplossing is,
+      # tenzij vex/openvex.json voor die versie zegt dat de image niet geraakt wordt (MIT-41). De weggefilterde meldingen
+      # staan apart in de log. Bij een pull request houdt de ruleset dan de merge tegen, bij een push stopt de job vóór het publiceren.
       - &scannen
         name: Scannen op bekende lekken
-        run: docker run --rm -v "$PWD:/scan" "$TRIVY" sbom /scan/sbom.cdx.json --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 --no-progress
+        run: docker run --rm -v "$PWD:/scan" "$TRIVY" sbom /scan/sbom.cdx.json --severity HIGH,CRITICAL --vex /scan/vex/openvex.json --show-suppressed --exit-code 1 --no-progress
 
   # Bij een push naar main, of met de hand: dezelfde stappen, en pas na een schone scan naar ghcr.io.
   image:
@@ -80,6 +97,7 @@ jobs:
       - *bouwen
       - *sbom
       - *bewaren
+      - *vex
       - *scannen
 
       # Het token via stdin en een omgevingsvariabele, niet in de opdracht zelf.
