@@ -9,7 +9,8 @@ WORKDIR /app
 COPY requirements.txt .
 # Daarna pip zelf weg: de app en de schema-job gebruiken hem niet, en pip neemt eigen kopieën van
 # urllib3, msgpack en setuptools mee waarin Trivy bekende lekken vond (MC-11).
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt \
+ && pip uninstall --yes pip
 
 COPY . .
 
