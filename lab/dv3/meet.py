@@ -1,12 +1,15 @@
 """Labmeting voor deelvraag 3: wat missen SBoM's van dezelfde image, en hoeveel verschillen ze per generator en scanner?
-Drie SBoM's (Trivy, Syft, Syft met de sbom-cataloger), elk gescand met Trivy en met Grype, naast wat er echt in de
-draaiende image zit (binnen.py). Draait op een runner via .github/workflows/dv3-meting.yml; werkt ook op Windows.
+SBoM's van Trivy, Syft, Syft met de sbom-cataloger, cdxgen (van de image) en cyclonedx-py (van requirements.txt), elk
+gescand met Trivy en met Grype en gecontroleerd met cyclonedx-cli, naast wat er echt in de draaiende image zit
+(binnen.py). cdxgen, cyclonedx-py en cyclonedx-cli doen alleen mee als ze op het PATH staan, zoals op de runner.
+Draait op een runner via .github/workflows/dv3-meting.yml; werkt ook op Windows.
 Gebruik: python lab/dv3/meet.py <image> <lege uitmap>"""
 import collections
 import json
 import pathlib
 import re
 import secrets
+import shutil
 import subprocess
 import sys
 import time
@@ -18,7 +21,7 @@ REPO = HERE.parents[1]
 # Dezelfde versies als de labmeting en de benchmark van deelvraag 1; Trivy uit image.yml.
 SYFT = "anchore/syft:v1.54.1@sha256:3eb5379ba7b409c3f4069b686110527af0c47df993fa5c10d13e7cf34f49b1aa"
 GRYPE = "anchore/grype:v0.120.1@sha256:e4a44ef45d285b829ce6efe2642980329661bd2d18eab5fc539138d4adaebbbe"
-SBOMS = ("trivy", "syft", "syft-sbom")
+SBOMS = ["trivy", "syft", "syft-sbom"]
 SCANNERS = ("trivy", "grype")
 PORT = 5056
 
@@ -49,6 +52,36 @@ def generate(out, trivy):
     run(["docker", "run", "--rm", *w, SYFT, "docker-archive:/w/img.tar", "-o", "cyclonedx-json=/w/sbom-syft.json", "-q"])
     run(["docker", "run", "--rm", *w, SYFT, "docker-archive:/w/img.tar", "--select-catalogers", "+sbom-cataloger",
          "-o", "cyclonedx-json=/w/sbom-syft-sbom.json", "-q"])
+    # De andere CycloneDX-tools: cdxgen leest dezelfde tar, cyclonedx-py alleen requirements.txt (de bron, niet de image).
+    # Een tool die faalt, is een uitkomst; de fout gaat naar maken-<naam>.fout.txt.
+    errors = {}
+    extra = []
+    if shutil.which("cdxgen"):
+        extra.append(("cdxgen", [shutil.which("cdxgen"), str(out / "img.tar"), "-t", "docker", "-o", str(out / "sbom-cdxgen.json")]))
+    if shutil.which("cyclonedx-py"):
+        extra.append(("cyclonedx-py", [shutil.which("cyclonedx-py"), "requirements", str(REPO / "app/requirements.txt"),
+                                       "--of", "JSON", "-o", str(out / "sbom-cyclonedx-py.json")]))
+    for name, cmd in extra:
+        p = subprocess.run(cmd, capture_output=True, text=True)
+        if p.returncode == 0 and (out / f"sbom-{name}.json").exists():
+            SBOMS.append(name)
+        else:
+            (out / f"maken-{name}.fout.txt").write_text(p.stdout[-4000:] + p.stderr[-4000:], encoding="utf-8")
+            errors[f"maken {name}"] = (p.stderr.strip().splitlines() or [str(p.returncode)])[-1][-300:]
+    return errors
+
+
+def validate(out):
+    # Elke SBoM tegen het schema van CycloneDX, met cyclonedx-cli: geldig en toch niet uitwisselbaar, of niet geldig?
+    cli = shutil.which("cyclonedx")
+    if not cli:
+        return {}
+    result = {}
+    for s in SBOMS:
+        p = subprocess.run([cli, "validate", "--input-file", str(out / f"sbom-{s}.json"), "--input-format", "json",
+                            "--fail-on-errors"], capture_output=True, text=True)
+        result[s] = {"geldig": p.returncode == 0, "uitvoer": (p.stdout + p.stderr).strip()[-400:]}
+    return result
 
 
 def scan(out, trivy):
@@ -209,11 +242,13 @@ def main():
     run(["docker", "pull", "-q", image])
     digest = run(["docker", "image", "inspect", "--format", "{{index .RepoDigests 0}}", image]).stdout.strip()
     run(["docker", "save", image, "-o", str(out / "img.tar")])
-    generate(out, trivy)
+    made = generate(out, trivy)
     # De scans lezen alleen de SBoM's; de tar (ruim 170 MB) hoort niet in het artifact.
     (out / "img.tar").unlink()
     meta = scan(out, trivy)
-    meta.update(image=image, digest=digest, trivy=trivy, syft=SYFT, grype=GRYPE, scan_trivy_db=meta.pop("trivy"))
+    meta["fouten"].update(made)
+    meta.update(image=image, digest=digest, trivy=trivy, syft=SYFT, grype=GRYPE, scan_trivy_db=meta.pop("trivy"),
+                geldig=validate(out), tools={t: shutil.which(t) is not None for t in ("cdxgen", "cyclonedx-py", "cyclonedx")})
     truth = inside(out, image)
     res = analyse(out, truth, meta)
     print(json.dumps({k: res[k] for k in ("waarheid", "geladen")}, indent=1, ensure_ascii=False))
@@ -222,9 +257,14 @@ def main():
               f"pypi {v['pypi_gevonden']}/{res['waarheid']['pypi']}; verborgen gezien: {v['verborgen_gezien']}")
     for k, v in res["scans"].items():
         if "fout" in v:
-            print(f"{k:22} FOUT: {v['fout']}")
+            print(f"{k:28} FOUT: {v['fout']}")
         else:
-            print(f"{k:22} {v['meldingen']:4} meldingen, {v['lekken']:4} lekken {v['per_ernst']}")
+            print(f"{k:28} {v['meldingen']:4} meldingen, {v['lekken']:4} lekken {v['per_ernst']}")
+    for s, v in meta["geldig"].items():
+        print(f"schema {s:14} {'geldig' if v['geldig'] else 'NIET geldig: ' + v['uitvoer'][-160:]}")
+    for k, v in meta["fouten"].items():
+        if k.startswith("maken"):
+            print(f"{k}: FOUT: {v}")
 
 
 main()
