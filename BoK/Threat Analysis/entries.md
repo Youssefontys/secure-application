@@ -827,7 +827,7 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 - Houdt tegen: MC-11 stap 1 en 3 als er nog geen oplossing is: zo'n lek gaat niet meer ongezien door
 - Wat: de scan van MIT-35 laat `--ignore-unfixed` los en leest `vex/openvex.json` (OpenVEX 0.2.0). Elke melding van HIGH of CRITICAL stopt de job, tenzij de VEX voor dat pakket en die versie zegt dat de image niet geraakt wordt, met de reden erbij. De triageflow in `vex/README.md` zegt hoe je beslist: bijwerken, weghalen, afschermen, of een verklaring; een lek in CISA KEV, of met een EPSS-score van 0,1 of hoger, gaat voor. Op de image van 368a30d: 44 meldingen van HIGH, 8 lekken, geen in KEV, en een EPSS-score van hooguit 0,005. Bij 5 zit de lekke code niet in de image of draait hij nooit; bij de 3 in mount houdt een maatregel het tegen (MIT-42) (T-114). OpenVEX, geen CycloneDX-VEX: die wijst naar het `serialNumber` van één SBoM, en dat is bij elke build anders (T-114). Trivy filtert ook een `not_affected` zonder reden weg, en een verklaring zonder versie geldt voor elke versie (T-115). Daarom controleert een stap met jq vóór de scan dat elke verklaring een geldige justification en een uitleg heeft, of bij `affected` een actie, en een PURL met versie (T-116). De weggefilterde meldingen staan apart in de log (`--show-suppressed`). Gekozen in deelvraag 2 van het onderzoek (SBoM in CI/CD)
 - Waar: `vex/openvex.json` en `vex/README.md`; de stappen VEX controleren en Scannen op bekende lekken in `.github/workflows/image.yml`
-- Status: bewezen (T-114, T-115, T-116; gemeten op 2026-10-19)
+- Status: bewezen (T-114 tot T-116 lokaal, T-117 bij pull request #14; gemeten op 2026-10-19)
 - Sinds: e6a3888
 
 ### MIT-42 Geen setuid- of setgid-bits in de image
