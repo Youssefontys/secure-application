@@ -1,0 +1,56 @@
+# Proef na deelvraag 3 van het onderzoek: psycopg-binary, met zijn 15 meegeleverde bibliotheken, tegen psycopg met de
+# libpq van Debian. Op één runner na elkaar, met de lokale stack: de regressietest, wat de app laadt, de rem zoals de
+# pipeline en de snelheid. Alleen op labbranches (lab/...), en alleen als de proef zelf verandert; main verandert hier
+# niet door. De scripts staan in lab/psycopg/.
+name: DV3-proef-psycopg
+
+on:
+  push:
+    branches: ["lab/**"]
+    paths: ["lab/psycopg/*.py", ".github/workflows/dv3-psycopg.yml"]
+  workflow_dispatch:
+
+# Standaard geen rechten; de job leest alleen de code.
+permissions: {}
+
+# Met pipefail: een fout vóór tee laat de stap dan falen.
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  proef:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Zonder terminal stelt deployment.py geen vragen en maakt het zelf wegwerpgeheimen in .env.
+      - name: Met psycopg-binary, zoals op main
+        run: |
+          python3 scripts/deployment.py lokaal < /dev/null
+          python3 lab/psycopg/meet.py binary "$RUNNER_TEMP/proef/binary"
+          docker compose down -v
+
+      - name: Met psycopg en de libpq van Debian
+        run: |
+          python3 lab/psycopg/variant.py
+          git diff app/
+          python3 scripts/deployment.py lokaal < /dev/null
+          python3 lab/psycopg/meet.py libpq "$RUNNER_TEMP/proef/libpq"
+          docker compose down -v
+
+      - name: Vergelijken
+        run: python3 lab/psycopg/meet.py vergelijk "$RUNNER_TEMP/proef" | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: dv3-proef-psycopg
+          path: |
+            ${{ runner.temp }}/proef
+            !${{ runner.temp }}/proef/*/img.tar
+          retention-days: 90
