@@ -238,7 +238,7 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
   - OR  2. Een kwaadaardige nieuwe versie van een pakket komt bij de volgende build vanzelf mee
   - OR  3. Een kwetsbaarheid in de base images (`python:3.15-slim`, `postgres:18`), bijvoorbeeld in de Debian-systeembibliotheken
   - OR  4. Een image-tag wijst bij een volgende build naar een andere image dan eerder (tags zijn niet vast)
-- Mitigaties: MIT-03 (stap 2, en stap 4 sinds 7bfd435). MIT-33 (stap 1 en 3: Dependabot stelt elke week nieuwe versies voor). MIT-35 (stap 1 en 3: de pipeline publiceert geen image met een bekend lek van HIGH of CRITICAL waarvoor een oplossing is; T-105). MIT-36 (de SBoM: welke pakketten en versies in elke image zitten; T-106). MIT-39 (stap 1 en 3: sinds bc6c669 draait dezelfde scan bij elke pull request, en een ruleset op `main` houdt de merge tegen als hij faalt; T-110)
+- Mitigaties: MIT-03 (stap 2, en stap 4 sinds 7bfd435). MIT-33 (stap 1 en 3: Dependabot stelt elke week nieuwe versies voor). MIT-35 (stap 1 en 3: de pipeline publiceert geen image met een bekend lek van HIGH of CRITICAL waarvoor een oplossing is; T-105). MIT-36 (de SBoM: welke pakketten en versies in elke image zitten; T-106). MIT-39 (stap 1 en 3: sinds bc6c669 draait dezelfde scan bij elke pull request, en een ruleset op `main` houdt de merge tegen als hij faalt; T-110, T-111)
 - Restrisico: een lek zonder oplossing houdt de image niet tegen, en een lek dat pas na de build bekend wordt, ziet de scan pas bij de volgende pull request of push; een draaiende image wordt niet opnieuw gescand. Dependabot stelt alleen voor; iemand moet de pull request bekijken en samenvoegen. Of hij ook de digests van de images bijwerkt, moet de eerste pull request laten zien (T-97). Minder pakketten helpt wel: sinds 29d201d doet `cryptography` ook Argon2id, en zijn `argon2-cffi` en `argon2-cffi-bindings` weg
 - Status: open
 - Sinds: baseline
@@ -520,7 +520,7 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
   - OR  4. Een lang geldig token met `write:packages` stelen en daarmee een image onder dezelfde naam publiceren
   - OR  5. Met een overgenomen GitHub-account naar `main` pushen
   - OR  6. Een pull request die de check zelf aanpast, bijvoorbeeld `--exit-code 1` weghaalt, zodat die groen wordt en de ruleset de merge toelaat
-- Mitigaties: MIT-34 (stap 1 tot 4: het token van de run mag alleen `contents: read` en `packages: write`, checkout staat vast op een commit, een pull request publiceert niets, en er is geen eigen token meer; T-103). MIT-33 (stap 2: Dependabot stelt een nieuwe versie van de action voor). MIT-39 (stap 3: bij een pull request draait alleen de job `check`, met leesrechten; stap 5 deels: rechtstreeks pushen naar `main` houdt de ruleset tegen; T-110)
+- Mitigaties: MIT-34 (stap 1 tot 4: het token van de run mag alleen `contents: read` en `packages: write`, checkout staat vast op een commit, een pull request publiceert niets, en er is geen eigen token meer; T-103). MIT-33 (stap 2: Dependabot stelt een nieuwe versie van de action voor). MIT-39 (stap 3: bij een pull request draait alleen de job `check`, met leesrechten; stap 5 deels: rechtstreeks pushen naar `main` houdt de ruleset tegen; T-110, T-112)
 - Restrisico: stap 5 blijft: wie het account heeft, kan een pull request mergen of de ruleset uitzetten, en publiceert zo een image die hij kan uitrollen. Stap 6 blijft ook: bij een pull request draait de workflow uit die pull request; alleen wie mergt, ziet een gewijzigde check in de wijzigingen. De image wordt sinds 29e42cc gescand op bekende lekken (MIT-35), en heeft sinds 1d6f21a een SBoM (MIT-36), maar is niet ondertekend; dat is een volgende stap in de pipeline (Week 8). Het pakket is openbaar, maar er staan geen geheimen in en de code is ook openbaar
 - Status: open
 - Sinds: 19a34dd
@@ -811,6 +811,6 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 ### MIT-39 De check bij elke pull request, verplicht op `main`
 - Houdt tegen: MC-11 stap 1 en 3, nu al vóór de merge en niet pas vóór het publiceren; MC-30 stap 3, en stap 5 deels
 - Wat: `.github/workflows/image.yml` draait bij elke pull request naar `main` de job `check`: dezelfde stappen als bij het publiceren (bouwen, de SBoM van MIT-36 en de scan van MIT-35), uit één definitie via YAML-ankers, maar alleen met `contents: read` en zonder te publiceren. Vanuit een fork geeft GitHub het token sowieso alleen leesrechten en geen secrets. Een ruleset op `main` maakt de check verplicht: een pull request is nodig, de check `check` moet slagen, en de bypass-lijst is leeg, ook voor de beheerder. Gekozen in deelvraag 1 van het onderzoek (SBoM in CI/CD): Trivy scoorde het hoogst in een labmeting en een benchmark op GitHub-runners; Syft met Grype liet met de standaardinstellingen de vier lekken van T-105 door. Aanleiding: op 19-10-2026 werd een testpull request met pip per ongeluk gemerged (pull request #2). De rem bij het publiceren hield de image tegen (run 39231439170), maar het lek stond wel op `main`, tot de revert 62b2b2e
-- Waar: de job `check` in `.github/workflows/image.yml`; de ruleset op `main` (Settings, Rules, Rulesets)
-- Status: gebouwd (de check: T-110; gemeten op 2026-10-19)
-- Sinds: bc6c669
+- Waar: de job `check` in `.github/workflows/image.yml`; de ruleset "Beveiliging Ruleset" op `main` (Settings, Rules, Rulesets), die niet in de repo staat
+- Status: bewezen (T-110, T-111, T-112; gemeten op 2026-10-19)
+- Sinds: bc6c669; op `main` sinds 7a83161
