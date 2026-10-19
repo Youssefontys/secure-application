@@ -7,7 +7,7 @@ from flask import g
 from psycopg.rows import namedtuple_row
 
 DATABASE_URL = os.environ["DATABASE_URL"]
-# De app is Nederlandstalig; tijden worden in Nederlandse tijd getoond.
+# Tijden worden in Nederlandse tijd getoond, ook nu de interface Engels is.
 TIMEZONE = "Europe/Amsterdam"
 
 
