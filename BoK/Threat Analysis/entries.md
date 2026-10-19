@@ -141,7 +141,7 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
   - OR  2. De cookie kopieren van een gedeelde of onbeheerde browser
   - OR  3. De sessiesleutel (A-05) bemachtigen en zelf een cookie ondertekenen
   - AND 4. De cookie blijft geldig tot hij verloopt (tot 2f1236e 31 dagen, nu 8 uur). Uitloggen, een nieuw wachtwoord en tweestapsverificatie aanzetten of opnieuw instellen maken hem eerder ongeldig (MIT-09)
-- Mitigaties: MIT-09 (stap 4, zodra de gebruiker uitlogt of een van zijn inloggegevens wijzigt). MIT-29 (stap 4: hooguit 8 uur, T-90). Verder geen: de `HttpOnly`-vlag staat standaard aan in Flask; dat houdt JavaScript buiten beeld maar stopt stap 1 tot 3 niet
+- Mitigaties: MIT-09 (stap 4, zodra de gebruiker uitlogt of een van zijn inloggegevens wijzigt). MIT-29 (stap 4: hooguit 8 uur, T-90). Op Azure ook stap 1: MIT-40 (TLS, getoetst aan de richtlijnen van het NCSC; T-113), met de `Secure`-vlag (MIT-23) en HSTS (MIT-21), zodat de browser de cookie alleen over HTTPS stuurt. Lokaal draait de app zonder TLS. De `HttpOnly`-vlag staat standaard aan in Flask; dat houdt JavaScript buiten beeld maar stopt stap 1 tot 3 niet
 - Restrisico: een gekopieerde cookie werkt tot de gebruiker uitlogt of zijn wachtwoord of tweestapsverificatie wijzigt, en anders tot 8 uur. Tweestapsverificatie helpt hier niet: de cookie is van na de code
 - Status: open
 - Sinds: baseline
@@ -814,3 +814,10 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 - Waar: de job `check` in `.github/workflows/image.yml`; de ruleset "Beveiliging Ruleset" op `main` (Settings, Rules, Rulesets), die niet in de repo staat
 - Status: bewezen (T-110, T-111, T-112; gemeten op 2026-10-19)
 - Sinds: bc6c669; op `main` sinds 7a83161
+
+### MIT-40 TLS op Azure, getoetst aan de richtlijnen van het NCSC
+- Houdt tegen: MC-04 stap 1, op Azure; lokaal draait de app zonder TLS
+- Wat: de ingress van Container Apps zet TLS voor de app (F-01); `allow_insecure_connections = false` stuurt HTTP met een 301 naar HTTPS, en de `Secure`-vlag (MIT-23) en HSTS (MIT-21) houden de browser daarna op HTTPS. Versies, ciphers en het certificaat kiest het platform; in `terraform/` staat daar niets over. Gemeten en getoetst aan de TLS-richtlijnen van het NCSC (versie 2025-05). Nergens Onvoldoende: alleen TLS 1.3 en 1.2, alleen AEAD-ciphers met ECDHE (forward secrecy), geen CBC en geen RSA-sleuteluitwisseling, geen compressie, geen renegotiation door de client en geen 0-RTT. Drie punten halen het hoogste niveau niet. Het certificaat heeft een RSA-sleutel van 2048 bits, wat de richtlijn sinds 2025 Uit te faseren noemt (3072 bits voor 128 bits sterkte). De sleuteluitwisseling is ECDHE (Voldoende), niet het hybride X25519MLKEM768 (Goed). En de server stuurt geen OCSP-antwoord mee, terwijl de richtlijn OCSP-stapling aanraadt als het kan (T-113)
+- Waar: de ingress in `terraform/app.tf`; `HTTPS_ONLY` in de configuratie van de app
+- Status: bewezen (T-113; gemeten op 2026-10-19)
+- Sinds: 75c9967

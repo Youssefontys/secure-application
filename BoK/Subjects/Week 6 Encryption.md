@@ -96,7 +96,7 @@ Per gegeven waar het staat en waar het hoort:
 | Gebruikersnamen (A-04) | Leesbaar | Nodig om op te zoeken bij het inloggen |
 | Aantal notities en hun tijden | Leesbaar | Nodig om te sorteren; geen inhoud |
 | Sessiecookie (A-03) | Ondertekend, niet versleuteld: de inhoud (`user_id`, sessieversie) is leesbaar voor wie de cookie heeft | Bewust: er staat niets geheims in |
-| Verkeer tussen browser en app (F-01, F-02) | HTTP zonder TLS, lokaal | Op Azure zet Container Apps TLS 1.2 of 1.3 ervoor en stuurt HTTP door naar HTTPS; daarbij `HTTPS_ONLY` (`terraform/app.tf`) |
+| Verkeer tussen browser en app (F-01, F-02) | HTTP zonder TLS, lokaal | Op Azure zet Container Apps TLS 1.2 of 1.3 ervoor en stuurt HTTP door naar HTTPS; daarbij `HTTPS_ONLY` (`terraform/app.tf`). Getoetst aan de richtlijnen van het NCSC: zie TLS op Azure hieronder |
 | Verbinding tussen app en database (F-03) | Zonder TLS, lokaal | Op Azure TLS 1.3 met `sslmode=verify-full`, en de database alleen in een privé-netwerk (`terraform/database.tf`) |
 | Databasebestanden en volume (C-04, F-04) | Geen schijfversleuteling lokaal | Op Azure versleutelt de dienst alle data, logs en backups op schijf, met een sleutel van Azure. Een eigen sleutel (CMK) kan alleen bij het aanmaken van de server |
 | Geheimen in `.env` (A-05, A-06, A-09, A-10) | Leesbaar op de ontwikkelmachine en in de omgeving van de container | Key Vault (`terraform/keyvault.tf`) |
@@ -178,6 +178,24 @@ Trivy 0.75.0 vond op 17-10-2026 zeven punten in `terraform/`, met per punt een b
 | AZU-0019, AZU-0024: verbindingen en checkpoints niet gelogd | MEDIUM | Bij Logging en monitoring, samen met waar de logs naartoe gaan |
 | AZU-0021: verbindingen niet begrensd | MEDIUM | Bij Logging en monitoring; de app heeft zelf poginglimieten (MIT-10) |
 
+## TLS op Azure, gemeten (19-10-2026)
+
+Op Azure zet de ingress van Container Apps TLS voor de app. Terraform zegt alleen dat HTTP naar HTTPS gaat (`allow_insecure_connections = false`); versies, ciphers en het certificaat kiest het platform. Gemeten met openssl 3.5.9 vanaf de pc van de beheerder, en getoetst aan de TLS-richtlijnen van het NCSC (versie 2025-05). Die kennen vier niveaus: Goed, Voldoende, Uit te faseren en Onvoldoende (T-113, MIT-40).
+
+| Onderdeel | Gemeten | Volgens het NCSC |
+|---|---|---|
+| Versies | TLS 1.3 en 1.2; 1.0 en 1.1 geweigerd | Gebruik TLS 1.3, en 1.2 voor oudere clients; 1.0 en 1.1 zijn sinds 2025 Onvoldoende |
+| Ciphers | AES-256-GCM, ChaCha20-Poly1305 en AES-128-GCM, bij TLS 1.2 alleen met ECDHE-RSA; geen CBC, geen RSA-sleuteluitwisseling, geen DHE | De voorkeur gaat naar AES-256-GCM en ChaCha20-Poly1305; AES-128-GCM is Voldoende; CBC is Uit te faseren en RSA-sleuteluitwisseling Onvoldoende, maar die biedt de server niet aan |
+| Sleuteluitwisseling | X25519 of P-256; niet X25519MLKEM768 | ECDHE is sinds 2025 Voldoende, met het oog op quantumcomputers; X25519MLKEM768 is Goed, en het NCSC raadt aan het nu al te overwegen |
+| Certificaat | Van Microsoft, voor het standaarddomein van de omgeving: RSA-2048, SHA-384, geldig tot 25-01-2027, keten geldig | RSA van 2048 tot 3071 bits is sinds 2025 Uit te faseren; 3072 bits geeft de nagestreefde 128 bits sterkte |
+| Intrekking | Rechtstreeks gevraagd: OCSP `good`; de server stuurt het antwoord niet mee | Gebruik OCSP-stapling als het kan; dat is privacyvriendelijker voor de bezoeker |
+| Opties | Geen compressie; renegotiation door de client geweigerd; bij TLS 1.3 geen sessieticket, dus geen 0-RTT | Geen compressie, renegotiation bij voorkeur uit, 0-RTT uit: alle drie zo |
+
+- **Nergens Onvoldoende, niet overal Goed.** Wat het verkeer nu beschermt, is volgens het NCSC voldoende.
+- **De drie punten liggen bij het platform.** RSA-2048, geen hybride sleuteluitwisseling en geen OCSP-stapling zijn keuzes van Azure voor het standaarddomein; in `terraform/` is daar niets aan te zetten. Met een eigen domein kan Container Apps een eigen certificaat gebruiken, met een langere sleutel; de sleuteluitwisseling en de stapling blijven bij de ingress.
+- **Zonder stapling vraagt de browser zelf.** Een browser die OCSP gebruikt, vraagt de status dan bij Microsoft op, en Microsoft ziet zo welke site er bezocht wordt.
+- **De TLS stopt bij de ingress.** Van de ingress naar de container gaat het verkeer als HTTP, binnen het eigen netwerk van de omgeving (F-01).
+
 ## Vergelijking met BOK-SECENGINEER
 
 | | BOK-SECENGINEER | Deze repo |
@@ -205,3 +223,4 @@ Opgehaald en gecontroleerd op 16-10-2026 en 17-10-2026.
 - OWASP Password Storage Cheat Sheet: https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html
 - `cryptography`, AEAD (AESGCM): https://cryptography.io/en/latest/hazmat/primitives/aead/
 - `cryptography`, Argon2id (sinds 44.0.0, PHC-formaat sinds 45.0.0): https://cryptography.io/en/latest/hazmat/primitives/key-derivation-functions/
+- NCSC, Transport Layer Security (TLS): beveiligingsrichtlijnen, versie 2025-05 (de vier niveaus, hoofdstuk 3 en Bijlage A met de wijzigingen sinds 2021), gelezen op 19-10-2026: https://www.ncsc.nl/api/media/sites/default/files/TLS-Richtlijnen-2025-05.pdf
