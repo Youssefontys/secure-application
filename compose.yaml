@@ -49,19 +49,20 @@ services:
       timeout: 3s
       retries: 10
 
-  # ZAP, only with a profile and commented out for now; Trivy (SBoM and scan) already runs in CI (CI-image.yml).
-  # Use after turning it on: docker compose --profile scan run --rm zap
-  # Pin the version as in requirements.txt (MIT-03); fill in <version> when turning it on.
-  #
-  # zap:                                        # DAST: attacks the running app from outside (ZAP baseline)
-  #   image: ghcr.io/zaproxy/zaproxy:<version>
-  #   profiles: ["scan"]
-  #   depends_on:
-  #     app:
-  #       condition: service_healthy
-  #   command: zap-baseline.py -t http://app:5000/login -r zap-report.html
-  #   volumes:
-  #     - ./scan:/zap/wrk
+  # DAST (MIT-46): the ZAP baseline against the running app. Passive: it reads headers, cookies and pages, and does not
+  # attack. Only with the profile scan, so a normal up does not start it; the pipeline runs exactly this (CI-image.yml).
+  # Locally: docker compose --profile scan run --rm zap; the report goes to scan/, which is not in git.
+  # Pinned on version and digest (MIT-03); Dependabot keeps it up to date, as the other images here.
+  # -I: warnings do not fail the run; for now it only reports.
+  zap:
+    image: ghcr.io/zaproxy/zaproxy:2.17.0@sha256:5ccfff9a411743ab2615136a2edd7416bec9ce41572fa94e935df38c14adb2b6
+    profiles: ["scan"]
+    depends_on:
+      app:
+        condition: service_healthy
+    command: ["zap-baseline.py", "-t", "http://app:5000/", "-r", "zap-report.html", "-J", "zap-report.json", "-I"]
+    volumes:
+      - ./scan:/zap/wrk:rw
 
 volumes:
   dbdata:
