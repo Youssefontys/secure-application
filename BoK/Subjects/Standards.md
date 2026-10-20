@@ -40,7 +40,7 @@ is wel gemeten; dat zijn de tests in `Threat Analysis/tests.md`.
 |---|---|---|---|
 | V1 Encoding and Sanitization | Ja | Jinja escapet (MIT-01), queries met parameters (MIT-02), het pad als repr in de log (MIT-25) | |
 | V2 Validation and Business Logic | Ja | Een allowlist voor de gebruikersnaam en lengtegrenzen (MIT-22, MIT-04), limieten op registreren en notities (MIT-30) | |
-| V3 Web Frontend Security | Ja | CSP, `frame-ancestors`, `nosniff` en `Referrer-Policy` (MIT-21), cookievlaggen (MIT-23), HSTS op Azure (MIT-40) | |
+| V3 Web Frontend Security | Ja | CSP, `frame-ancestors`, `nosniff`, `Referrer-Policy`, `Permissions-Policy`, COOP, CORP en COEP (MIT-21), cookievlaggen (MIT-23), HSTS op Azure (MIT-40) | |
 | V4 API and Web Service | Nee | Geen API | |
 | V5 File Handling | Nee | Geen uploads | |
 | V6 Authentication | Ja | Argon2id (MIT-19), 12 tot 64 tekens (MIT-13), verplichte TOTP (MIT-05, MIT-12), limieten (MIT-06, MIT-10), herstelcode en wachtwoord vergeten (MIT-11, MIT-14) | Geen blocklist van veelgebruikte wachtwoorden (MC-03); TOTP is niet phishingbestendig (MC-16) |
@@ -66,7 +66,7 @@ de nummering afwijken.
 
 | Domein | Azure doet | Wij doen | Open |
 |---|---|---|---|
-| AIS, Application & Interface Security | | Secure coding (Week 7); bij elke pull request een scan van de afhankelijkheden (MIT-39) en SAST met CodeQL (MIT-45) | Nog geen DAST (AIS-05); CodeQL houdt alleen high en hoger tegen |
+| AIS, Application & Interface Security | | Secure coding (Week 7); bij elke pull request een scan van de afhankelijkheden (MIT-39) SAST met CodeQL (MIT-45) en DAST met de ZAP baseline (MIT-46) | ZAP scant alleen zonder account en passief; CodeQL houdt alleen high en hoger tegen |
 | CCC, Change Control & Configuration Management | | Alles via een pull request met een verplichte check, zonder uitzonderingen (MIT-39, T-112; CCC-04); Terraform wacht op `yes` | Niemand anders kijkt mee: er is één beheerder |
 | CEK, Cryptography, Encryption & Key Management | De database op schijf versleuteld, met een sleutel van Azure; Key Vault | Kolomversleuteling en Argon2id in de app (CEK-03); de state met een eigen RSA-4096-sleutel (MIT-38, CEK-08) | Geen rotatie van de gegevenssleutel (CEK-12) |
 | DSP, Data Security & Privacy | | Wat er is en waar het heen gaat: de assets en datastromen in `Architecture/` (DSP-03, DSP-05); de log 30 dagen; alles in France Central, in de EU (DSP-19) | Een DPIA hoort bij Laws & compliance, overgeslagen |

@@ -54,6 +54,7 @@ De details staan in de entries (MC-04, MC-05, MC-07, MC-08, MC-10, MC-11, MC-14,
 - **Headers (MIT-21).**
   - De CSP: `default-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'`.
   - Daarbij `X-Frame-Options: DENY`, `nosniff` en `Referrer-Policy: same-origin`.
+  - Sinds 20-10-2026 ook `Permissions-Policy`, en tegen Spectre COOP, CORP en COEP: die vond ZAP als ontbrekend (MIT-46).
   - HSTS alleen als de app op HTTPS draait.
 - **Invoer (MIT-22).**
   - De gebruikersnaam gaat door een allowlist met `fullmatch`: `[A-Za-z0-9_]{3,20}`. Bij registreren volgt een melding. Bij inloggen en wachtwoord vergeten telt een andere naam als onbekend, met hetzelfde antwoord.
@@ -142,7 +143,7 @@ Bewust niet: rechten per rij (row-level security), een audit-log in de database 
 | C5 Secure By Default Configurations | `HTTPS_ONLY` standaard aan, de hackmode standaard uit, `TRUSTED_PROXIES` standaard 0, geen root (MIT-23, MIT-26) |
 | C6 Keep your Components Secure | Alles vastgezet, ook wat er meekomt en de base-images op digest (MIT-03); in de pipeline maakt Trivy van elke image een SBoM en scant die, ook bij elke pull request (MIT-35, MIT-36, MIT-39, Week 8) |
 | C7 Secure Digital Identities | Verplichte 2FA, poginglimieten, sessieversie, Argon2id (Week 5 en 6) |
-| C8 Leverage Browser Security Features | CSP, `frame-ancestors`, `nosniff`, `Referrer-Policy`, `HttpOnly`, `SameSite`, `Secure` (MIT-21, MIT-23) |
+| C8 Leverage Browser Security Features | CSP, `frame-ancestors`, `nosniff`, `Referrer-Policy`, `Permissions-Policy`, COOP, CORP, COEP, `HttpOnly`, `SameSite`, `Secure` (MIT-21, MIT-23) |
 | C9 Implement Security Logging and Monitoring | Elke security-gebeurtenis een JSON-regel (MIT-31, Week 6 Logging), onverwachte fouten met traceback (MIT-25); op Azure een mail bij een blokkade (MIT-37) |
 | C10 Stop Server Side Request Forgery | Niet van toepassing: de app doet geen verzoeken naar adressen die een gebruiker kiest |
 
