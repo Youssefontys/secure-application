@@ -1,5 +1,5 @@
 # Deploying on Azure: the state storage if it is not there yet (setup_azure.py), the image GitHub built,
-# and Terraform. Start through deployment.py.
+# Terraform, and if you want, deploying from GitHub after your approval (MIT-44). Start through deployment.py.
 
 import json
 import re
@@ -10,7 +10,7 @@ import urllib.error
 import urllib.request
 
 import deployment
-from deployment import REPO, ask, check_tools, hackmode, stop, terraform
+from deployment import REPO, ask, check_tools, gh, git, github_repo, hackmode, stop, terraform, yes
 
 # If a tenant requires MFA, az login skips it (AADSTS50076) and there is no subscription; --tenant does ask for it.
 AZ_LOGIN_HELP = """First sign in to Azure: you are not signed in yet, or no subscription was found.
@@ -21,18 +21,6 @@ AZ_LOGIN_HELP = """First sign in to Azure: you are not signed in yet, or no subs
    Then again: python scripts/deployment.py azure"""
 # An email address, as an allowlist (MIT-22); the same rule as the validation of alert_email in terraform/variables.tf.
 EMAIL = r"[^@\s]+@[^@\s]+\.[A-Za-z]{2,}"
-
-
-# Git in this folder; None if it does not work.
-def git(*args):
-    result = subprocess.run([shutil.which("git"), *args], cwd=REPO, capture_output=True, text=True)
-    return result.stdout.strip() if result.returncode == 0 else None
-
-
-# owner/name of the GitHub repo, from the remote origin; also for whoever copied the repo. ghcr.io wants lower case.
-def github_repo(url):
-    match = re.search(r"github\.com[:/]([\w.-]+/[\w.-]+?)(?:\.git)?/?$", url or "")
-    return match and match.group(1).lower()
 
 
 # Is the image there, and may everyone pull it? It must: Container Apps does not sign in to ghcr.io.
@@ -48,6 +36,34 @@ def image_public(repo, tag):
             return response.status == 200
     except (urllib.error.URLError, KeyError, ValueError):
         return False
+
+
+# The environment azure in GitHub (MIT-44): only main may deploy, and only after your approval. The three IDs as
+# environment secrets: not secret, but this way the public log of a run does not show them. Already there counts as fine.
+def setup_github(github):
+    print("\n🚀 GitHub: the environment azure, only for main, with you as the reviewer")
+    me = gh("api", "user", "--jq", ".id")
+    settings = {"reviewers": [{"type": "User", "id": int(me or 0)}],
+                "deployment_branch_policy": {"protected_branches": False, "custom_branch_policies": True}}
+    done = me is not None and gh("api", "-X", "PUT", f"repos/{github}/environments/azure", "--input", "-",
+                                 stdin=json.dumps(settings)) is not None
+    branches = gh("api", f"repos/{github}/environments/azure/deployment-branch-policies", "--jq", ".branch_policies[].name")
+    if done and "main" not in (branches or "").split():
+        done = gh("api", "-X", "POST", f"repos/{github}/environments/azure/deployment-branch-policies",
+                  "-f", "name=main", "-f", "type=branch") is not None
+    output = subprocess.run([shutil.which("terraform"), "-chdir=terraform", "output", "-raw", "deploy_client_id"],
+                            cwd=REPO, capture_output=True, text=True).stdout.strip()
+    account = subprocess.run([shutil.which("az"), "account", "show", "--query", "[tenantId, id]", "-o", "tsv"],
+                             capture_output=True, text=True).stdout.split()
+    ids = dict(zip(("AZURE_CLIENT_ID", "AZURE_TENANT_ID", "AZURE_SUBSCRIPTION_ID"), [output, *account]))
+    for name, value in ids.items():
+        done = done and bool(value) and gh("secret", "set", name, "--env", "azure", "--repo", github, stdin=value) is not None
+    if done:
+        print("   ✅ Set: the next merge to main waits for your approval in the Actions tab, then goes to Azure")
+    else:
+        print("   ⚠️  Not everything worked; the app on Azure is fine. Set it by hand in Settings, Environments, azure:\n"
+              "      only the branch main, yourself as required reviewer, and the secrets AZURE_CLIENT_ID\n"
+              "      (terraform -chdir=terraform output -raw deploy_client_id), AZURE_TENANT_ID and AZURE_SUBSCRIPTION_ID.")
 
 
 # Everything for Azure at once: the state storage if it is not there yet, the image GitHub built, and Terraform.
@@ -70,9 +86,11 @@ def run():
             sys.exit(1)
 
     # The tag is the content of app/ in your last commit (see image.yml): a commit without an app change reuses it.
-    repo, tree = github_repo(git("remote", "get-url", "origin")), git("rev-parse", "HEAD:app")
-    if not (repo and tree):
+    github, tree = github_repo(), git("rev-parse", "HEAD:app")
+    if not (github and tree):
         stop("No GitHub repo found (git remote get-url origin); the image comes from GitHub Actions.", icon="🤔")
+    # ghcr.io wants lower case; the OIDC token of GitHub names the repo exactly as GitHub does (deploy.tf).
+    repo, github = github.lower(), gh("repo", "view", github, "--json", "nameWithOwner", "--jq", ".nameWithOwner") or github
     tag = f"app-{tree}"
     image = f"ghcr.io/{repo}:{tag}"
     print(f"\n📦 The image of app/ as in your last commit: {image}")
@@ -92,7 +110,10 @@ def run():
         email = ask("To which address?", email or "-", EMAIL)
     if not re.fullmatch(EMAIL, email):
         stop("No email address for the alert; run this script in a terminal and fill one in.", icon="📧")
-    variables = [f"app_image={image}", f"alert_email={email}"]
+    # Only with gh, signed in to GitHub; without it, deploying stays this script.
+    from_github = deployment.INTERACTIVE and gh("auth", "status") is not None and yes(
+        "\n🚀 Deploy from GitHub after a merge, only once you approve it in the Actions tab (MIT-44)?")
+    variables = [f"app_image={image}", f"alert_email={email}", f"github_repo={github}"]
     if hack["THROTTLE_IP_MODE"]:
         variables += ["throttle_ip_mode=hackweek", "min_replicas=1"]
     if hack["THROTTLE_PAIR_EXEMPT_USERS"]:
@@ -108,7 +129,10 @@ def run():
         stop("terraform apply did not work, or you did not type yes; the message is above.")
     url = subprocess.run([shutil.which("terraform"), "-chdir=terraform", "output", "-raw", "app_url"],
                          cwd=REPO, capture_output=True, text=True).stdout.strip()
+    if from_github:
+        setup_github(github)
     print(f"\n🎉 Done! The app is on {url}")
     print("⏳ Terraform has started the schema job; if logging in gives an error in the first minute, try again shortly.")
-    print("💡 Updating: merge a pull request to main, wait until the Action Image is green, and run this script again.")
+    print("💡 Updating: merge a pull request to main, and approve the deployment in the Actions tab; without GitHub set up,\n"
+          "   wait until the Action Image is green and run this script again.")
     print("💡 Everything gone again, so it costs nothing: python scripts/deployment.py undo\n")

@@ -1,6 +1,7 @@
 # Builds the image, makes the SBoM and scans it: on every pull request to main in the job check, which then also
 # runs the security test, publishes nothing and is made required by a ruleset on main (MIT-39), and on every push to main
-# again in the job image, which puts the image on ghcr.io after a clean scan with the token of the run.
+# again in the job image, which puts the image on ghcr.io after a clean scan with the token of the run, and then in the
+# job deploy, which puts that image on Azure after an approval (MIT-44).
 # A package created this way gets the visibility of the repo; Container Apps therefore pulls it without signing in.
 # Two tags, never latest (MIT-03): the commit, and the content of app/ (the tree hash of git). deployment.py azure looks for
 # the second one: a commit that only changes Terraform or the BoK thus needs no new build.
@@ -35,14 +36,16 @@ jobs:
         with:
           persist-credentials: false
 
-      # ghcr.io wants lower case; the label links the package to this repo.
+      # ghcr.io wants lower case; the label links the package to this repo. The output is the tag that deploy uses.
       - &build
         name: Build
+        id: build
         run: |
           image="ghcr.io/${GITHUB_REPOSITORY,,}"
           docker build --label "org.opencontainers.image.source=https://github.com/$GITHUB_REPOSITORY" \
             -t "$image:$GITHUB_SHA" -t "$image:app-$(git rev-parse HEAD:app)" app
           echo "IMAGE=$image" >> "$GITHUB_ENV"
+          echo "image=$image:app-$(git rev-parse HEAD:app)" >> "$GITHUB_OUTPUT"
 
       # The SBoM (MIT-36): all components of the image as CycloneDX, only the list, without vulnerabilities or VEX. Trivy reads
       # the image as a tar file, without the Docker socket, so it cannot change the image that is pushed later.
@@ -101,6 +104,8 @@ jobs:
     permissions:
       contents: read
       packages: write
+    outputs:
+      image: ${{ steps.build.outputs.image }}
     steps:
       - *checkout
       - *build
@@ -116,3 +121,45 @@ jobs:
         run: |
           echo "$TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
           docker push --all-tags "$IMAGE"
+
+  # After the push: the new image to Azure (MIT-44), in the environment azure, which only allows main and waits for an
+  # approval. Azure accepts the short-lived OIDC token of this job; there is no password or key in GitHub, and the three
+  # IDs are environment secrets only so the public log does not show them. Without them (no Azure) there is nothing to do.
+  deploy:
+    needs: image
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    environment: azure
+    permissions:
+      id-token: write
+    env:
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      IMAGE: ${{ needs.image.outputs.image }}
+    steps:
+      # Only the image changes: the rest of the template comes from Azure itself, so Terraform stays the source of
+      # everything else. The names come from terraform/main.tf (local.name).
+      - name: Deploy to Azure
+        run: |
+          if [ -z "$AZURE_CLIENT_ID" ]; then echo "No deployment to Azure set up in the environment azure; nothing to do."; exit 0; fi
+          token=$(curl -sSf -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=api://AzureADTokenExchange" | jq -r .value)
+          az login --service-principal --username "$AZURE_CLIENT_ID" --tenant "$AZURE_TENANT_ID" --federated-token "$token" \
+            --allow-no-subscriptions -o none
+          app="https://management.azure.com/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/rg-notes/providers/Microsoft.App/containerApps/ca-notes?api-version=2025-07-01"
+          az rest --method get --uri "$app" > "$RUNNER_TEMP/app.json"
+          jq --arg image "$IMAGE" '{properties: {template: (.properties.template | del(.revisionSuffix)
+            | (.containers[] | select(.name == "app") | .image) = $image)}}' "$RUNNER_TEMP/app.json" > "$RUNNER_TEMP/patch.json"
+          az rest --method patch --uri "$app" --body "@$RUNNER_TEMP/patch.json" -o none
+          # Ready when the newest revision is also the newest ready one.
+          for _ in $(seq 30); do
+            az rest --method get --uri "$app" > "$RUNNER_TEMP/app.json"
+            ready=$(jq -r '.properties.provisioningState == "Succeeded" and .properties.latestRevisionName == .properties.latestReadyRevisionName' "$RUNNER_TEMP/app.json")
+            [ "$ready" = true ] && break
+            sleep 10
+          done
+          [ "$ready" = true ] || { echo "The new revision did not become ready in 5 minutes."; exit 1; }
+          echo "Running: $(jq -r '.properties.template.containers[] | select(.name == "app") | .image' "$RUNNER_TEMP/app.json")"
+          fqdn=$(jq -r .properties.configuration.ingress.fqdn "$RUNNER_TEMP/app.json")
+          curl -sSf -o /dev/null --retry 10 --retry-delay 10 --retry-all-errors -w "https://$fqdn/login: %{http_code}\n" "https://$fqdn/login"

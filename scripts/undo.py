@@ -6,7 +6,7 @@ import re
 import shutil
 import subprocess
 
-from deployment import ENV, REPO, SECRETS, check_tools, stop, terraform, yes
+from deployment import ENV, REPO, SECRETS, check_tools, gh, github_repo, stop, terraform, yes
 
 
 def run():
@@ -18,7 +18,8 @@ def run():
         check_tools("azure")
         # For removing the values do not matter, but Terraform wants them, and checks the address.
         if not (terraform("init", "-input=false", "-reconfigure", "-backend-config=../backend.conf")
-                and terraform("destroy", "-var=app_image=gone", "-var=alert_email=nobody@example.com")):
+                and terraform("destroy", "-var=app_image=gone", "-var=alert_email=nobody@example.com",
+                              "-var=github_repo=nobody/gone")):
             stop("terraform destroy did not work, or you did not type yes; the state storage and backend.conf stay.\n"
                  "   💡 Is the state storage itself already gone? Then only remove backend.conf.")
         rg = re.search(r'^resource_group_name\s*=\s*"([A-Za-z0-9_.-]+)"', conf.read_text(encoding="utf-8"), re.M)
@@ -34,6 +35,14 @@ def run():
               "      deleted for 90 days; that costs nothing, and a new deployment picks new names.\n"
               "   💡 Azure makes NetworkWatcherRG itself for a virtual network; it costs nothing and comes back\n"
               "      by itself on a new deployment, so it stays.")
+        # Without Azure the environment only makes every push to main wait for an approval that deploys nothing.
+        github = github_repo()
+        if github and gh("api", f"repos/{github}/environments/azure") is not None and yes(
+                "🚀 Also remove the environment azure in GitHub, with its three IDs?"):
+            if gh("api", "-X", "DELETE", f"repos/{github}/environments/azure") is None:
+                print("   ⚠️  That did not work; remove it yourself in Settings, Environments.")
+            else:
+                print("   ✅ The environment azure is gone too.")
     if yes("🐳 Remove locally: the containers, the database with all notes, the built image and .env?"):
         check_tools("local")
         # The database first: without .env but with the old database in the volume the app no longer starts.
