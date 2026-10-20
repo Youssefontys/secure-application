@@ -39,7 +39,7 @@ NEEDS = {
 INTERACTIVE = sys.stdin.isatty()
 
 
-# Stoppen met de melding, met witregels eromheen zodat hij opvalt; zelfde vorm als azuresetup_v2.py.
+# Stoppen met de melding, met witregels eromheen zodat hij opvalt; zelfde vorm als setup_azure.py.
 def stop(message, icon="❌"):
     sys.exit(f"\n{icon} {message}\n\n🛑 Stoppen.\n")
 

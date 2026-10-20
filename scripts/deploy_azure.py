@@ -1,4 +1,4 @@
-# Op Azure uitrollen: de state-opslag als die er nog niet is (azuresetup_v2.py), de image die GitHub bouwde,
+# Op Azure uitrollen: de state-opslag als die er nog niet is (setup_azure.py), de image die GitHub bouwde,
 # en Terraform. Start via deployment.py.
 
 import json
@@ -65,8 +65,8 @@ def run():
     if (REPO / "backend.conf").exists():
         print("🗄️  Opslag voor de Terraform-state: staat er al (backend.conf)")
     else:
-        print("\n🗄️  Nog geen opslag voor de Terraform-state; azuresetup_v2.py zet die nu eenmalig klaar.")
-        if subprocess.run([sys.executable, str(REPO / "scripts" / "azuresetup_v2.py")], cwd=REPO).returncode != 0:
+        print("\n🗄️  Nog geen opslag voor de Terraform-state; setup_azure.py zet die nu eenmalig klaar.")
+        if subprocess.run([sys.executable, str(REPO / "scripts" / "setup_azure.py")], cwd=REPO).returncode != 0:
             sys.exit(1)
 
     # De tag is de inhoud van app/ in je laatste commit (zie image.yml): een commit zonder app-wijziging hergebruikt hem.
