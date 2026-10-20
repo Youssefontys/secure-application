@@ -22,10 +22,8 @@ locals {
   }
   app_settings = merge(
     {
+      # sslrootcert=system: the OpenSSL of Debian finds the root certificates itself, no SSL_CERT_FILE needed (MIT-43, T-126).
       DATABASE_URL = local.database_url_app
-      # The root certificates of Debian, for sslrootcert=system. Needed for the own OpenSSL of psycopg-binary; with the
-      # libpq of Debian (MIT-43) OpenSSL also finds them itself, but this stays until that is measured on Azure.
-      SSL_CERT_FILE = "/etc/ssl/certs/ca-certificates.crt"
       # Container Apps only puts the rightmost address in X-Forwarded-For: one proxy (MC-18).
       TRUSTED_PROXIES  = "1"
       HTTPS_ONLY       = "1"
@@ -211,10 +209,6 @@ resource "azurerm_container_app_job" "schema" {
       env {
         name  = "DATABASE_URL"
         value = local.database_url_admin
-      }
-      env {
-        name  = "SSL_CERT_FILE"
-        value = local.app_settings.SSL_CERT_FILE
       }
       env {
         name  = "SCHEMA_SQL"
