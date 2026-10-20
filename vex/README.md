@@ -60,7 +60,7 @@ it does not happen automatically yet.
   never looked at (T-115). With the qualifier `distro` it falls away with every new Debian version.
 - **Always a reason:** for `not_affected` a `justification` and an `impact_statement`, for `affected` an
   `action_statement`. Trivy also filters out a `not_affected` without a reason (T-115). That is why the step Check VEX
-  in `image.yml` checks that first, and fails otherwise.
+  in `CI-image.yml` checks that first, and fails otherwise.
 - **No `fixed`.** Trivy filters that out too, but whether a vulnerability is fixed shows in the version; the scan should
   see that itself.
 - **Only through a pull request,** like every change on `main`. Raise `version` on every change, and set

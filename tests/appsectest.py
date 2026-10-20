@@ -8,7 +8,7 @@ AGE_PROBE = """import json, time, urllib.error, urllib.request
 from unittest import mock
 import app, db
 with app.app.app_context():
-    u = db.query("SELECT id, session_version FROM users WHERE username = 'hugo'", one=True)
+    u = db.query("SELECT id, session_version FROM users WHERE username = 'testacc13'", one=True)
 signer = app.app.session_interface.get_signing_serializer(app.app)
 class Stop(urllib.request.HTTPRedirectHandler):
     def redirect_request(self, *args): return None
@@ -54,7 +54,7 @@ def run():
         "import app; print(app.app.config['SESSION_COOKIE_SECURE'])", run=("env", "-u", "HTTPS_ONLY", "python", "-c")).stdout.strip(), "True")
 
     print("== input validation (MIT-22)")
-    for name in ("<script>alert(1)</script>", "ab", "a" * 21, "with space", "anna-b"):
+    for name in ("<script>alert(1)</script>", "ab", "a" * 21, "with space", "testacc1-b"):
         r = req(client(), "/register", {"username": name, "password": PW})
         check(f"register as {name[:24]!r}", (r[0], msg(r[1])), (400, NAME_RULE))
     check("  3 and 20 characters, with _ and digits", [req(client(), "/register", {"username": n, "password": PW})[0] for n in ("abc", "a_b_c_1234567890_xyz")],
@@ -86,7 +86,7 @@ def run():
     check("  locally on HTTP no HSTS", req(client(), "/login")[2].get("Strict-Transport-Security"), None)
 
     print("== CSRF token (MIT-20)")
-    ca = account("gert")[0]
+    ca = account("testacc12")[0]
     before = sql("SELECT count(*) FROM notes")
     r = req(ca, "/", {"title": "No token", "body": "x"}, csrf=False)
     check("create a note without a token: 400, nothing created", (r[0], sql("SELECT count(*) FROM notes")), (400, before))
@@ -96,7 +96,7 @@ def run():
     check("  with the token of another session: 400", req(ca, "/", {"title": "Other token", "body": "x", "csrf_token": csrf_of(other)})[0], 400)
     check("  logging out without a token: 400, still logged in", (req(ca, "/logout", {}, csrf=False)[0], req(ca, "/")[0]), (400, 200))
     check("  with the own token: created", loc(req(ca, "/", {"title": "With token", "body": "x"})), "302 /")
-    check("  logging in without a token: 400", req(client(), "/login", {"username": "gert", "password": PW}, csrf=False)[0], 400)
+    check("  logging in without a token: 400", req(client(), "/login", {"username": "testacc12", "password": PW}, csrf=False)[0], 400)
 
     print("== only POST acts")
     unlock()
@@ -104,7 +104,7 @@ def run():
     check("3 times HEAD /login: plain 200, does not count as an attempt", (heads, sql("SELECT count(*) FROM auth_throttle")), ([200] * 3, "0"))
 
     print("== cache and session lifetime (MIT-28, MIT-29)")
-    ch = account("hugo")[0]
+    ch = account("testacc13")[0]
     cache = [req(ch, p)[2].get("Cache-Control") for p in ("/", "/account")] + [req(client(), p)[2].get("Cache-Control") for p in ("/login", "/does-not-exist")]
     check("no-store on pages, also logged in and on a 404", cache, ["no-store"] * 4)
     check("  static files may be cached", req(client(), "/static/style.css")[2].get("Cache-Control") != "no-store", True)

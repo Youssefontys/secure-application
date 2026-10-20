@@ -44,7 +44,7 @@ def run():
     check("404 with the own page", (r404[0], "This page does not exist." in r404[1]), (404, True))
     r405 = req(client(), "/logout")
     check("  405 with Allow header", (r405[0], "POST" in r405[2].get("Allow", "")), (405, True))
-    cz = account("zoe")[0]
+    cz = account("testacc14")[0]
     # Search from here, not "the last 2 minutes": when Docker is slow, stopping and starting takes longer.
     fail_mark = str(int(time.time()))
     compose("stop", "db")

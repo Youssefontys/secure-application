@@ -5,7 +5,7 @@ from securitytest import *
 
 def run():
     print("== notes")
-    a = account("nora")[0]
+    a = account("testacc7")[0]
     check("note empty", req(a, "/", {"title": "", "body": ""})[0], 400)
     check("title 16", req(a, "/", {"title": "x" * 16, "body": "y"})[0], 400)
     check("note 251", req(a, "/", {"title": "x", "body": "y" * 251})[0], 400)
@@ -15,11 +15,11 @@ def run():
     check("edit empty", req(a, f"/notes/{nid}/edit", {"title": "", "body": ""})[0], 400)
     check("edit", loc(req(a, f"/notes/{nid}/edit", {"title": "T2", "body": "Changed"})), "302 /")
     check("edited visible", "edited" in req(a, "/")[1], True)
-    cb = account("otto")[0]
-    check("owner (MIT-15): otto opens the note of nora", req(cb, f"/notes/{nid}/edit")[0], 404)
-    check("  otto edits the note of nora", req(cb, f"/notes/{nid}/edit", {"title": "x", "body": "y"})[0], 404)
-    check("  otto deletes the note of nora", req(cb, f"/notes/{nid}/delete", {})[0], 404)
-    check("  the note of nora unchanged", all(s in req(a, f"/notes/{nid}/edit")[1] for s in ("T2", "Changed")), True)
+    cb = account("testacc8")[0]
+    check("owner (MIT-15): testacc8 opens the note of testacc7", req(cb, f"/notes/{nid}/edit")[0], 404)
+    check("  testacc8 edits the note of testacc7", req(cb, f"/notes/{nid}/edit", {"title": "x", "body": "y"})[0], 404)
+    check("  testacc8 deletes the note of testacc7", req(cb, f"/notes/{nid}/delete", {})[0], 404)
+    check("  the note of testacc7 unchanged", all(s in req(a, f"/notes/{nid}/edit")[1] for s in ("T2", "Changed")), True)
     check("  unknown id", req(a, "/notes/999999/edit")[0], 404)
     check("delete", loc(req(a, f"/notes/{nid}/delete", {})), "302 /")
     check("profile", req(a, "/account")[0], 200)

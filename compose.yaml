@@ -49,7 +49,7 @@ services:
       timeout: 3s
       retries: 10
 
-  # ZAP, only with a profile and commented out for now; Trivy (SBoM and scan) already runs in CI (image.yml).
+  # ZAP, only with a profile and commented out for now; Trivy (SBoM and scan) already runs in CI (CI-image.yml).
   # Use after turning it on: docker compose --profile scan run --rm zap
   # Pin the version as in requirements.txt (MIT-03); fill in <version> when turning it on.
   #

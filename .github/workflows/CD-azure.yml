@@ -15,7 +15,7 @@ on:
 permissions: {}
 
 jobs:
-  # Only a new image is worth an approval. The tag is the tree hash of app/ (see image.yml): the same tree is the same
+  # Only a new image is worth an approval. The tag is the tree hash of app/ (see CI-image.yml): the same tree is the same
   # image, so after a merge that only changes the BoK or the README nothing waits for you. By hand it always deploys.
   # Compared with the first parent, the previous main of a merge commit. No checkout: through the API.
   changed:

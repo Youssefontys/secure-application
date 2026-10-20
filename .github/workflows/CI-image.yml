@@ -1,7 +1,7 @@
 # Builds the image, makes the SBoM and scans it: on every pull request to main in the job check, which then also
 # runs the security test, publishes nothing and is made required by a ruleset on main (MIT-39), and on every push to main
 # again in the job image, which puts the image on ghcr.io after a clean scan with the token of the run. After that,
-# deploy.yml puts the image on Azure once you approve it (MIT-44).
+# CD-azure.yml puts the image on Azure once you approve it (MIT-44).
 # A package created this way gets the visibility of the repo; Container Apps therefore pulls it without signing in.
 # Two tags, never latest (MIT-03): the commit, and the content of app/ (the tree hash of git). deployment.py azure looks for
 # the second one: a commit that only changes Terraform or the BoK thus needs no new build.
