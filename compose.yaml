@@ -1,24 +1,24 @@
-# App en database voor lokaal gebruik.
+# App and database for local use.
 
 services:
   db:
-    # Vast op versie en digest (MIT-03), zoals de base-image van de app.
+    # Pinned on version and digest (MIT-03), like the base image of the app.
     image: postgres:18.6-trixie@sha256:74935e72241653ca55e0414067e6d8763aceb8a810eb51b452253ec3dcfc4336
     environment:
-      POSTGRES_DB: notities
-      POSTGRES_USER: notities
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?zet POSTGRES_PASSWORD in .env}
-      # Alleen voor app-password.sh; de app zelf krijgt het wachtwoord van de eigenaar niet (MIT-27).
-      APP_DB_PASSWORD: ${APP_DB_PASSWORD:?zet APP_DB_PASSWORD in .env}
+      POSTGRES_DB: notes
+      POSTGRES_USER: notes_owner
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      # Only for app-password.sh; the app itself does not get the password of the owner (MIT-27).
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD:?set APP_DB_PASSWORD in .env}
     volumes:
-      # Vanaf PostgreSQL 18 hoort het volume op /var/lib/postgresql. De image
-      # zet de data zelf in een submap per hoofdversie (18/docker).
+      # From PostgreSQL 18 the volume belongs on /var/lib/postgresql. The image
+      # puts the data in a subfolder per major version itself (18/docker).
       - dbdata:/var/lib/postgresql
-      # Draait alleen bij de allereerste start van een leeg volume.
+      # Runs only at the very first start of an empty volume.
       - ./db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
       - ./db/app-password.sh:/docker-entrypoint-initdb.d/02-app-password.sh:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U notities -d notities"]
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U notes_owner -d notes"]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -29,37 +29,37 @@ services:
       db:
         condition: service_healthy
     environment:
-      FLASK_SECRET_KEY: ${FLASK_SECRET_KEY:?zet FLASK_SECRET_KEY in .env}
-      # Versleutelt het TOTP-geheim en de notities (MIT-17, MIT-18); kwijt of vervangen is notities kwijt.
-      DATA_ENCRYPTION_KEY: ${DATA_ENCRYPTION_KEY:?zet DATA_ENCRYPTION_KEY in .env}
-      # Lokaal draait de app op HTTP; zonder deze regel geldt de veilige standaard (alleen HTTPS).
+      FLASK_SECRET_KEY: ${FLASK_SECRET_KEY:?set FLASK_SECRET_KEY in .env}
+      # Encrypts the TOTP secret and the notes (MIT-17, MIT-18); lost or replaced means the notes are lost.
+      DATA_ENCRYPTION_KEY: ${DATA_ENCRYPTION_KEY:?set DATA_ENCRYPTION_KEY in .env}
+      # Locally the app runs on HTTP; without this line the safe default applies (HTTPS only).
       HTTPS_ONLY: "0"
-      # Hackstand, alleen tijdens de hacking week (MC-18); standaard streng en zonder uitzonderingen.
+      # Hack mode, only during the hacking week (MC-18); strict by default and without exceptions.
       THROTTLE_IP_MODE: ${THROTTLE_IP_MODE:-strict}
       THROTTLE_PAIR_EXEMPT_USERS: ${THROTTLE_PAIR_EXEMPT_USERS:-}
-      # Een eigen rol: lezen en schrijven in de eigen tabellen, verder niets (MIT-27, MC-08).
-      DATABASE_URL: postgresql://notities_app:${APP_DB_PASSWORD}@db:5432/notities
+      # A role of its own: reading and writing in its own tables, nothing else (MIT-27, MC-08).
+      DATABASE_URL: postgresql://notes_app:${APP_DB_PASSWORD}@db:5432/notes
     ports:
       - "127.0.0.1:5000:5000"
-    # Gezond zodra Flask antwoordt, zodat `docker compose up --wait` pas
-    # terugkomt als de app echt bereikbaar is. De slim-image heeft geen curl.
+    # Healthy as soon as Flask answers, so `docker compose up --wait` only
+    # returns when the app is really reachable. The slim image has no curl.
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5000/login')"]
       interval: 5s
       timeout: 3s
       retries: 10
 
-  # ZAP, alleen met een profile en voorlopig in commentaar; Trivy (SBoM en scan) draait al in CI (image.yml).
-  # Gebruik na het aanzetten: docker compose --profile scan run --rm zap
-  # Versie vastzetten zoals in requirements.txt (MIT-03); <versie> invullen bij het aanzetten.
+  # ZAP, only with a profile and commented out for now; Trivy (SBoM and scan) already runs in CI (image.yml).
+  # Use after turning it on: docker compose --profile scan run --rm zap
+  # Pin the version as in requirements.txt (MIT-03); fill in <version> when turning it on.
   #
-  # zap:                                        # DAST: valt de draaiende app van buitenaf aan (ZAP baseline)
-  #   image: ghcr.io/zaproxy/zaproxy:<versie>
+  # zap:                                        # DAST: attacks the running app from outside (ZAP baseline)
+  #   image: ghcr.io/zaproxy/zaproxy:<version>
   #   profiles: ["scan"]
   #   depends_on:
   #     app:
   #       condition: service_healthy
-  #   command: zap-baseline.py -t http://app:5000/login -r zap-rapport.html
+  #   command: zap-baseline.py -t http://app:5000/login -r zap-report.html
   #   volumes:
   #     - ./scan:/zap/wrk
 

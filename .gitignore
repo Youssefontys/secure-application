@@ -1,22 +1,22 @@
-# De echte geheimen (A-05, A-06, A-09, A-10). Het sjabloon zonder waarden is .env.example.
+# The real secrets (A-05, A-06, A-09, A-10). The template without values is .env.example.
 .env
 
-# Bytecode die Python maakt als je de code buiten de container draait.
+# Bytecode that Python makes when you run the code outside the container.
 __pycache__/
 
-# Virtuele omgeving, als je de app of tests buiten Docker draait.
+# Virtual environment, if you run the app or tests outside Docker.
 .venv/
 
-# Cache van pytest, zodra er tests zijn.
+# Cache of pytest, once there are pytest tests.
 .pytest_cache/
 
-# Gemaakt door scripts/setup_azure.py: subscription- en tenant-id van je Azure-omgeving.
+# Made by scripts/setup_azure.py: subscription and tenant ID of your Azure environment.
 backend.conf
 
-# Uitvoer van de scanners (zie de profiles in compose.yaml).
+# Output of the scanners (see the profiles in compose.yaml).
 scan/
 
-# Terraform: providers, state en plannen horen niet in git; .terraform.lock.hcl wel (vaste hashes, MIT-03).
+# Terraform: providers, state and plans do not belong in git; .terraform.lock.hcl does (pinned hashes, MIT-03).
 terraform/.terraform/
 *.tfstate
 *.tfstate.*

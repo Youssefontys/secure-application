@@ -1,5 +1,5 @@
-# Dependabot opent zelf een pull request bij een nieuwe versie van een pakket of image (MIT-33, MC-11 stap 1 en 3).
-# Alles staat vast (MIT-03), dus zonder dit komen ook beveiligingspatches nooit vanzelf binnen. Geen pipeline nodig.
+# Dependabot opens a pull request itself for a new version of a package or image (MIT-33, MC-11 steps 1 and 3).
+# Everything is pinned (MIT-03), so without this even security patches never come in by themselves. No pipeline needed.
 version: 2
 updates:
   - package-ecosystem: pip
