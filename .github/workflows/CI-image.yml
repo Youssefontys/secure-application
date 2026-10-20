@@ -98,8 +98,8 @@ jobs:
 
   # DAST (MIT-46): the ZAP baseline of compose.yaml (the profile scan) against the stack on the runner, in a job of its
   # own next to check, so a pull request hardly waits longer. Passive: it reads headers, cookies and pages, it does not
-  # attack, and it only sees what a visitor without an account sees. For now it only reports: the report is an artifact,
-  # and the findings are in the summary of the run; failing on high comes once each finding has a decision.
+  # attack, and it only sees what a visitor without an account sees. A finding without a decision in zap-rules.tsv fails
+  # the job; the report is an artifact, and the findings are in the summary of the run.
   dast:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-24.04

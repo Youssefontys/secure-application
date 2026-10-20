@@ -58,6 +58,8 @@ app.jinja_env.globals.update(
 
 # Only own files and no inline script: a second layer against XSS (MC-07); no frame on another site (MC-24).
 CSP = "default-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
+# No camera, microphone, location, payment or USB: the app uses none of them, so a script that got in cannot either.
+PERMISSIONS = "camera=(), geolocation=(), microphone=(), payment=(), usb=()"
 
 
 # On every response, error pages too (MIT-21). HSTS only over HTTPS, otherwise the browser remembers it wrongly.
@@ -67,6 +69,12 @@ def security_headers(response):
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["Referrer-Policy"] = "same-origin"
+    response.headers["Permissions-Policy"] = PERMISSIONS
+    # Site isolation against Spectre (ZAP 90004): no window or resource shared with another site. The app only loads
+    # its own files (the CSP), so require-corp blocks nothing it needs (MIT-46).
+    response.headers["Cross-Origin-Opener-Policy"] = "same-origin"
+    response.headers["Cross-Origin-Resource-Policy"] = "same-origin"
+    response.headers["Cross-Origin-Embedder-Policy"] = "require-corp"
     # No page in a browser or proxy cache: after logging out, Back shows nothing (MIT-28), and the secret and
     # recovery code are kept nowhere (MIT-08, MIT-11). Static files may be cached.
     if request.endpoint != "static":

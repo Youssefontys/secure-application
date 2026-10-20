@@ -3,6 +3,9 @@ session lifetime, and the rights of the database role (MIT-20 to MIT-29). Runs t
 from securitytest import *
 
 CSP = "default-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
+PERMISSIONS = "camera=(), geolocation=(), microphone=(), payment=(), usb=()"
+HEADERS = ("Content-Security-Policy", "X-Frame-Options", "X-Content-Type-Options", "Referrer-Policy", "Permissions-Policy",
+           "Cross-Origin-Opener-Policy", "Cross-Origin-Resource-Policy", "Cross-Origin-Embedder-Policy")
 NAME_RULE = "Choose a username of 3 to 20 characters: letters, digits and _."
 AGE_PROBE = """import json, time, urllib.error, urllib.request
 from unittest import mock
@@ -81,8 +84,8 @@ def run():
     print("== security headers (MIT-21)")
     for path in ("/login", "/", "/does-not-exist"):
         h = req(client(), path)[2]
-        check(f"headers on {path}", (h.get("Content-Security-Policy"), h.get("X-Frame-Options"), h.get("X-Content-Type-Options"), h.get("Referrer-Policy")),
-              (CSP, "DENY", "nosniff", "same-origin"))
+        check(f"headers on {path}", tuple(h.get(name) for name in HEADERS),
+              (CSP, "DENY", "nosniff", "same-origin", PERMISSIONS, "same-origin", "same-origin", "require-corp"))
     check("  locally on HTTP no HSTS", req(client(), "/login")[2].get("Strict-Transport-Security"), None)
 
     print("== CSRF token (MIT-20)")
