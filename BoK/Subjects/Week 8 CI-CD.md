@@ -1,8 +1,8 @@
 # Week 8: CI/CD security checks
 
-Vier stappen van de pipeline staan. Bij elke push naar `main` bouwt GitHub Actions de image en zet hem op ghcr.io (MIT-34): het token van de run mag alleen dat, `actions/checkout` staat vast op een commit, en een eigen token is niet meer nodig. Trivy maakt van elke image een SBoM (MIT-36), en scant die: een bekend lek van HIGH of CRITICAL houdt de image tegen (MIT-35), sinds deelvraag 2 van het onderzoek ook als er nog geen oplossing is, tot er een beslissing in de VEX staat (MIT-41). De eerste scan vond vier lekken, allemaal in pip, dat nu uit de image gaat. Sinds deelvraag 1 van het onderzoek draaien dezelfde stappen ook bij elke pull request, zonder te publiceren, en maakt een ruleset op `main` die check verplicht (MIT-39): een bekend lek komt dan niet eens meer op `main`. Tests van de app draaien nog niet; die komen er stap voor stap bij.
+Vijf stappen van de pipeline staan. Bij elke push naar `main` bouwt GitHub Actions de image en zet hem op ghcr.io (MIT-34): het token van de run mag alleen dat, `actions/checkout` staat vast op een commit, en een eigen token is niet meer nodig. Trivy maakt van elke image een SBoM (MIT-36), en scant die: een bekend lek van HIGH of CRITICAL houdt de image tegen (MIT-35), sinds deelvraag 2 van het onderzoek ook als er nog geen oplossing is, tot er een beslissing in de VEX staat (MIT-41). De eerste scan vond vier lekken, allemaal in pip, dat nu uit de image gaat. Sinds deelvraag 1 van het onderzoek draaien dezelfde stappen ook bij elke pull request, zonder te publiceren, en maakt een ruleset op `main` die check verplicht (MIT-39): een bekend lek komt dan niet eens meer op `main`. En sinds de securitytest in de repo staat, draait de check die ook: een wijziging die een maatregel breekt, komt niet op `main` (MIT-39, T-125).
 
-De details staan in de entries (MC-30, MC-11, MC-14, MIT-34 tot MIT-36, MIT-39 en MIT-41 tot MIT-43; C-06, C-11, A-12, A-14, A-18, F-06, F-07, F-12, B-04, B-06 en AZ-16 in de architectuur) en de tests T-103, T-105, T-106, T-110 tot T-112 en T-114 tot T-124. De triageflow staat in `vex/README.md`.
+De details staan in de entries (MC-30, MC-11, MC-14, MIT-34 tot MIT-36, MIT-39 en MIT-41 tot MIT-43; C-06, C-11, A-12, A-14, A-18, F-06, F-07, F-12, B-04, B-06 en AZ-16 in de architectuur) en de tests T-103, T-105, T-106, T-110 tot T-112 en T-114 tot T-125. De triageflow staat in `vex/README.md`.
 
 ## De dreiging
 
@@ -22,6 +22,7 @@ De details staan in de entries (MC-30, MC-11, MC-14, MIT-34 tot MIT-36, MIT-39 e
 | Weten wat er in de image zit | Nergens vastgelegd | Een CycloneDX-SBoM van elke image, 90 dagen bij de run |
 | Bekende lekken in de image | Niemand keek; er zaten vier keer HIGH in, in pip | Trivy vóór het publiceren; 0, want pip gaat na het installeren uit de image |
 | Een pull request | Er draaide niets; een pull request met pip werd gewoon gemerged (pull request #2, 19-10-2026) | De job `check` bouwt, maakt de SBoM en scant; faalt hij, dan houdt de ruleset de merge tegen |
+| Tests | Alleen lokaal, met de hand | De securitytest in de check van elke pull request: 182 controles |
 | Uitrollen | Vijf stappen van de routekaart in `setup.py` (nu `deployment.py`) | `python scripts/deployment.py azure`: het zoekt de image bij je laatste commit en draait Terraform |
 
 ## Hoe het werkt
@@ -32,6 +33,7 @@ De details staan in de entries (MC-30, MC-11, MC-14, MIT-34 tot MIT-36, MIT-39 e
 - **De SBoM:** Trivy 0.76.0, vast op versie en digest, leest de image als tar-bestand en maakt er een CycloneDX-SBoM van: alleen de lijst, zonder lekken of VEX. jq zet de naam en tag van de image als hoofdonderdeel. De SBoM gaat als artifact bij de run, ook als de scan daarna een lek vindt.
 - **De VEX:** `vex/openvex.json`, OpenVEX 0.2.0, per lek welke pakketten met welke versie de image niet raken, en waarom. Vóór de scan controleert een stap met jq dat elke verklaring een geldige reden heeft en een PURL met versie; Trivy zelf controleert dat niet (T-115).
 - **De scan:** tussen de SBoM en het pushen. Trivy scant de SBoM, niet de image zelf, met de VEX erbij. Een lek van HIGH of CRITICAL stopt de job, ook zonder oplossing, tenzij de VEX het voor die versie uitsluit; wat de VEX wegfiltert, staat apart in de log. Stopt de job, dan komt er geen nieuwe image op ghcr.io, en kan `deployment.py azure` hem ook niet uitrollen. Bij een pull request faalt de check.
+- **De securitytest:** alleen in `check`, na de scan. `deployment.py lokaal` start de stack van `compose.yaml` zonder vragen, met wegwerpgeheimen in `.env` op de runner; daarna draait `tests/securitytest.py --wipe`, met een test per onderwerp. Een controle die faalt, laat de check falen. `--wipe` moet erbij, omdat de test de accounts van de database leegmaakt; op de runner is dat de bedoeling.
 - **De ruleset op `main`:** een pull request is verplicht, de check `check` moet slagen, en de bypass-lijst is leeg, ook voor de beheerder. Goedkeuren door een tweede persoon is niet nodig: er is maar één beheerder.
 - **Twee tags:** de commit-hash, en `app-` met de tree-hash van `app/`. `deployment.py azure` rekent die tweede zelf uit met `git rev-parse HEAD:app`, en kijkt anoniem bij ghcr.io of de image er is en openbaar is, zoals Container Apps hem ophaalt. Een commit die alleen Terraform of de BoK verandert, heeft zo geen nieuwe build nodig.
 - **Dependabot** houdt `actions/checkout` bij, net als de pakketten en de images (MIT-33).
@@ -49,6 +51,7 @@ De details staan in de entries (MC-30, MC-11, MC-14, MIT-34 tot MIT-36, MIT-39 e
 | Niemand komt om de check heen | De ruleset, met een lege bypass-lijst | T-112: een push rechtstreeks naar `main` geweigerd (`GH013`) |
 | Een lek zonder oplossing gaat niet ongezien door | Geen `--ignore-unfixed` meer; alleen een verklaring in de VEX laat het door | T-114: 44 meldingen van HIGH, 8 lekken, alle zonder oplossing en eerder ongezien. T-116: met de VEX 0 over, de 44 apart in de log |
 | Een verklaring zonder reden telt niet | De stap VEX controleren, vóór de scan | T-116: vijf kapotte varianten geweigerd, de echte VEX door |
+| Een wijziging die een maatregel breekt, komt niet op `main` | De securitytest in de check, die de ruleset verplicht maakt | T-125: 182 controles, alles goed, in 212 s |
 | mount draait niet als root | Geen programma met een setuid- of setgid-bit (MIT-42) | T-116: 0, eerst 11; de regressietest slaagt |
 | Geen token dat kan uitlekken | Geen eigen token meer; dat van de run vervalt na de run | De stap met een token (classic) is weg uit `setup.py` (nu `deployment.py`) |
 
@@ -56,7 +59,8 @@ De details staan in de entries (MC-30, MC-11, MC-14, MIT-34 tot MIT-36, MIT-39 e
 
 - **Wie een pull request kan mergen, bepaalt de image,** en kan hem met `deployment.py azure` uitrollen. Als beheerder kan hij ook de ruleset uitzetten. Je GitHub-account, met tweestapsverificatie, is dus de sleutel.
 - **De check draait uit de pull request zelf.** Een pull request die de workflow aanpast, kan de check groen maken (MC-30, stap 6); alleen wie mergt, ziet dat in de wijzigingen.
-- **Nog geen tests.** Een image die stuk is, wordt gewoon gepubliceerd.
+- **De securitytest test de lokale stack, niet Azure.** Key Vault, TLS naar de database en de alerts ziet hij niet. En een pull request die de test aanpast, kan hem groen maken, net als de scan (MC-30, stap 6).
+- **Elke pull request wacht langer:** de check duurt zo'n 4 minuten, vooral door de securitytest.
 - **De scan ziet niet alles.** Een lek dat pas later bekend wordt, ziet de scan pas bij de volgende pull request of push, een draaiende image wordt niet opnieuw gescand, en MEDIUM en LOW houden niet tegen. En hij ziet niets van wat buiten dpkg en pip om in de image zit: Python zelf en de OpenSSL in `cryptography` (T-118, deelvraag 3 van het onderzoek). De 15 bibliotheken die psycopg-binary meenam, zijn sinds MIT-43 weg; libpq komt nu uit Debian (T-121).
 - **Een verklaring in de VEX kan fout zijn.** De check ziet of er een reden staat, niet of die klopt; dat ziet alleen wie mergt.
 - **Elk nieuw lek van HIGH of CRITICAL houdt elke pull request tegen,** ook een die alleen de BoK verandert, tot er een beslissing is. Dat is de bedoeling, maar het kost werk.
