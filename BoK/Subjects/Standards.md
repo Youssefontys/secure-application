@@ -66,7 +66,7 @@ de nummering afwijken.
 
 | Domein | Azure doet | Wij doen | Open |
 |---|---|---|---|
-| AIS, Application & Interface Security | | Secure coding (Week 7); bij elke pull request een scan van de afhankelijkheden (MIT-39) en SAST met CodeQL (MIT-45) | Nog geen DAST (AIS-05); CodeQL houdt een merge nog niet tegen |
+| AIS, Application & Interface Security | | Secure coding (Week 7); bij elke pull request een scan van de afhankelijkheden (MIT-39) en SAST met CodeQL (MIT-45) | Nog geen DAST (AIS-05); CodeQL houdt alleen high en hoger tegen |
 | CCC, Change Control & Configuration Management | | Alles via een pull request met een verplichte check, zonder uitzonderingen (MIT-39, T-112; CCC-04); Terraform wacht op `yes` | Niemand anders kijkt mee: er is één beheerder |
 | CEK, Cryptography, Encryption & Key Management | De database op schijf versleuteld, met een sleutel van Azure; Key Vault | Kolomversleuteling en Argon2id in de app (CEK-03); de state met een eigen RSA-4096-sleutel (MIT-38, CEK-08) | Geen rotatie van de gegevenssleutel (CEK-12) |
 | DSP, Data Security & Privacy | | Wat er is en waar het heen gaat: de assets en datastromen in `Architecture/` (DSP-03, DSP-05); de log 30 dagen; alles in France Central, in de EU (DSP-19) | Een DPIA hoort bij Laws & compliance, overgeslagen |
