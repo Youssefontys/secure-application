@@ -1,7 +1,7 @@
-# Puts the image that Image published on Azure (MIT-44): after Image succeeded on a push to main, or by hand. Only in the
-# environment azure, which only allows main and waits for your approval. Azure accepts the short-lived OIDC token of the
-# job; there is no password or key in GitHub, and the three IDs are environment secrets only so the public log does not
-# show them. Without them (no Azure, or a fork) there is nothing to do.
+# Puts the image that Image published on Azure (MIT-44): after Image succeeded on a push to main that changed app/,
+# or by hand. Only in the environment azure, which only allows main and waits for your approval. Azure accepts the
+# short-lived OIDC token of the job; there is no password or key in GitHub, and the three IDs are environment secrets
+# only so the public log does not show them. Without them (no Azure, or a fork) there is nothing to do.
 name: Deploy
 
 on:
@@ -11,36 +11,62 @@ on:
     branches: [main]
   workflow_dispatch:
 
-# No rights by default; the job only gets what it needs.
+# No rights by default; each job only gets what it needs.
 permissions: {}
 
 jobs:
-  deploy:
+  # Only a new image is worth an approval. The tag is the tree hash of app/ (see image.yml): the same tree is the same
+  # image, so after a merge that only changes the BoK or the README nothing waits for you. By hand it always deploys.
+  # Compared with the first parent, the previous main of a merge commit. No checkout: through the API.
+  changed:
     # Not after a pull request: a fork can name its branch main too. Not after a failed Image: then there is no new image.
     if: >-
       github.event_name == 'workflow_dispatch' ||
       (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event != 'pull_request' &&
        github.event.workflow_run.head_repository.full_name == github.repository)
     runs-on: ubuntu-24.04
-    environment: azure
     permissions:
       contents: read
+    outputs:
+      tree: ${{ steps.tree.outputs.tree }}
+      deploy: ${{ steps.tree.outputs.deploy }}
+    env:
+      GH_TOKEN: ${{ github.token }}
+      SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+    steps:
+      - name: Did app/ change?
+        id: tree
+        run: |
+          tree() { gh api "repos/$GITHUB_REPOSITORY/git/trees/$1" --jq '.tree[] | select(.path == "app") | .sha'; }
+          now=$(tree "$SHA")
+          before=$(tree "$(gh api "repos/$GITHUB_REPOSITORY/commits/$SHA" --jq '.parents[0].sha')")
+          echo "tree=$now" >> "$GITHUB_OUTPUT"
+          if [ "$GITHUB_EVENT_NAME" = workflow_dispatch ] || [ "$now" != "$before" ]; then
+            echo "deploy=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "app/ did not change (app-$now): the same image, so nothing to deploy and no approval asked."
+            echo "deploy=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  deploy:
+    needs: changed
+    if: needs.changed.outputs.deploy == 'true'
+    runs-on: ubuntu-24.04
+    environment: azure
+    permissions:
       id-token: write
     env:
       AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
       AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
       AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-      GH_TOKEN: ${{ github.token }}
-      SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+      TREE: ${{ needs.changed.outputs.tree }}
     steps:
       # Only the image changes: the rest of the template comes from Azure itself, so Terraform stays the source of
-      # everything else. No checkout: the tag is the tree hash of app/ (see image.yml), read through the API.
-      # The names come from terraform/main.tf (local.name).
+      # everything else. The names come from terraform/main.tf (local.name).
       - name: Deploy to Azure
         run: |
           if [ -z "$AZURE_CLIENT_ID" ]; then echo "No deployment to Azure set up in the environment azure; nothing to do."; exit 0; fi
-          tree=$(gh api "repos/$GITHUB_REPOSITORY/git/trees/$SHA" --jq '.tree[] | select(.path == "app") | .sha')
-          image="ghcr.io/${GITHUB_REPOSITORY,,}:app-$tree"
+          image="ghcr.io/${GITHUB_REPOSITORY,,}:app-$TREE"
           token=$(curl -sSf -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
             "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=api://AzureADTokenExchange" | jq -r .value)
           az login --service-principal --username "$AZURE_CLIENT_ID" --tenant "$AZURE_TENANT_ID" --federated-token "$token" \
