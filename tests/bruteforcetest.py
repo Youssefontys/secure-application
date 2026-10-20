@@ -1,4 +1,4 @@
-"""Brute force: the attempt limits per name and per address, simultaneous requests, hack mode and the limit on registering
+"""Brute force: the attempt limits per name and per address, simultaneous requests, hackmode and the limit on registering
 (MIT-06, MIT-10, MIT-30, MC-18). Runs through securitytest.py."""
 import securitytest
 from securitytest import *
@@ -46,7 +46,7 @@ def run():
         "import throttle; print(*(throttle.client_ip(a) for a in ('203.0.113.9:54321', '[2001:db8::1]:54321', '[2001:db8::1]')))").stdout.strip(),
         "203.0.113.9 2001:db8::/64 2001:db8::/64")
 
-    print("== hack mode (MC-18)")
+    print("== hackmode (MC-18)")
     check("hackweek: 100 per address, demo account without a counter per name, 5 min locked",
           in_app(HACK, "THROTTLE_IP_MODE=hackweek", "THROTTLE_PAIR_EXEMPT_USERS=hackingweek").stdout.split(), ["100", "2", "100", "5", "5"])
     check("  hackweek: 60 new accounts per hour per address, 5 min locked",

@@ -10,7 +10,7 @@ import urllib.error
 import urllib.request
 
 import deployment
-from deployment import REPO, ask, check_tools, hack_mode, stop, terraform
+from deployment import REPO, ask, check_tools, hackmode, stop, terraform
 
 # If a tenant requires MFA, az login skips it (AADSTS50076) and there is no subscription; --tenant does ask for it.
 AZ_LOGIN_HELP = """First sign in to Azure: you are not signed in yet, or no subscription was found.
@@ -84,7 +84,7 @@ def run():
              "   Then again: python scripts/deployment.py azure", icon="⏳")
     print("   ✅ Ready, and Container Apps may pull it")
 
-    hack = hack_mode() if deployment.INTERACTIVE else {"THROTTLE_IP_MODE": None, "THROTTLE_PAIR_EXEMPT_USERS": None}
+    hack = hackmode() if deployment.INTERACTIVE else {"THROTTLE_IP_MODE": None, "THROTTLE_PAIR_EXEMPT_USERS": None}
     # The mail on a lockout (alerts.tf): by default the address you signed in to az with. Not in the repo, which is public.
     email = login if re.fullmatch(EMAIL, login) else ""
     if deployment.INTERACTIVE:

@@ -23,7 +23,7 @@ variable "min_replicas" {
   default = 0
 }
 
-# Hack mode (MC-18): only on hackweek during the hacking week.
+# Hackmode (MC-18): only on hackweek during the hacking week.
 variable "throttle_ip_mode" {
   type    = string
   default = "strict"

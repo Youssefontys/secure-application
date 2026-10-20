@@ -27,7 +27,7 @@ POLICIES = {
     # New accounts per address, successful ones too: every registration costs an Argon2id calculation of 19 MiB (MIT-30).
     "register_ip": Policy(10, 60, 60, 4 * 60),
 }
-# Hack mode for the hacking week: a class behind one school address. Wider, and a fixed lockout of
+# Hackmode for the hacking week: a class behind one school address. Wider, and a fixed lockout of
 # 5 minutes without doubling: a scanner is still slowed down, the class waits at most 5 minutes (MC-18).
 IP_MODES = {"strict": {}, "hackweek": {"password_ip": Policy(100, 15, 5, 5), "register_ip": Policy(60, 60, 5, 5)}}
 _mode = os.environ.get("THROTTLE_IP_MODE", "strict")

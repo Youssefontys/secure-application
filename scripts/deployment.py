@@ -4,7 +4,7 @@
 #        python scripts/deployment.py azure    the state storage (once), the image from GitHub, and Terraform
 #        python scripts/deployment.py undo     everything gone again, on Azure and locally; asks per step
 # Each target is in a file of its own (deploy_local.py, deploy_azure.py, undo.py); what they share is here: paths,
-# questions, stopping and hack mode.
+# questions, stopping and hackmode.
 # Works on Windows and Linux: no shell, only lists of arguments.
 
 import re
@@ -74,13 +74,13 @@ def check_tools(target):
         print(f"   ✅ {tool}: {why}")
 
 
-# Hack mode for the hacking week (MC-18), off by default. Returns the settings, or None per setting.
-def hack_mode():
-    print("\n🏫 Hack mode, only for the hacking week, when the whole class attacks from one school address:\n"
+# Hackmode for the hacking week (MC-18), off by default. Returns the settings, or None per setting.
+def hackmode():
+    print("\n🏫 Hackmode, only for the hacking week, when the whole class attacks from one school address:\n"
           "   n  🙂 normal (default): per address 20 failed login attempts per quarter of an hour and 10 new accounts per hour\n"
           "   y  🏁 hacking week: per address 100 failed login attempts per quarter of an hour and 60 new accounts per hour,\n"
           "         so classmates do not lock each other out")
-    if not yes("Hack mode on?"):
+    if not yes("Hackmode on?"):
         return {"THROTTLE_IP_MODE": None, "THROTTLE_PAIR_EXEMPT_USERS": None}
     print("\n🎯 A shared demo account that everyone may attack: wrong passwords then do not lock it for the rest.")
     # The same rule as a username in the app; "-" is no demo account.

@@ -34,7 +34,7 @@ services:
       DATA_ENCRYPTION_KEY: ${DATA_ENCRYPTION_KEY:?set DATA_ENCRYPTION_KEY in .env}
       # Locally the app runs on HTTP; without this line the safe default applies (HTTPS only).
       HTTPS_ONLY: "0"
-      # Hack mode, only during the hacking week (MC-18); strict by default and without exceptions.
+      # Hackmode, only during the hacking week (MC-18); strict by default and without exceptions.
       THROTTLE_IP_MODE: ${THROTTLE_IP_MODE:-strict}
       THROTTLE_PAIR_EXEMPT_USERS: ${THROTTLE_PAIR_EXEMPT_USERS:-}
       # A role of its own: reading and writing in its own tables, nothing else (MIT-27, MC-08).

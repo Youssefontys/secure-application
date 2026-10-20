@@ -1,11 +1,11 @@
-# Deploying locally with Docker Compose: the secrets in .env, hack mode, and the containers. Start through deployment.py.
+# Deploying locally with Docker Compose: the secrets in .env, hackmode, and the containers. Start through deployment.py.
 
 import secrets
 import shutil
 import subprocess
 
 import deployment
-from deployment import ENV, REPO, SECRETS, check_tools, hack_mode, stop
+from deployment import ENV, REPO, SECRETS, check_tools, hackmode, stop
 
 
 def read_env():
@@ -53,7 +53,7 @@ def run():
           else "\n🔐 .env: all secrets are already there")
     # Without a terminal, what is in .env stays; compose.yaml sets HTTPS_ONLY to 0 locally (HTTP).
     if deployment.INTERACTIVE:
-        settings = hack_mode()
+        settings = hackmode()
         # Still interactive: there really was an answer, so the choice may go into .env.
         if deployment.INTERACTIVE:
             for name, value in settings.items():
