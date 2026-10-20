@@ -26,7 +26,7 @@ PW, PW2 = "security-test-password", "security-test-password-2"
 # Five wrong attempts are allowed, the sixth is refused, and then 15 minutes of waiting (MIT-06, MIT-10).
 LOCKED = ([400] * 5 + [429], "900")
 # Every result, and every secret a test sees: those must not be in the log at the end.
-results, secrets_seen, last = [], [], {}
+results, secrets_seen = [], []
 # The tests register many more than 10 accounts; except in the limit test a registration therefore does not count (MIT-30).
 count_registrations, register_key = False, None
 # True if all tests run; only then can the log contain every kind of event.
@@ -158,15 +158,17 @@ def code(key, offset=0):
 
 
 def fresh(sec, u):
-    """A code from a time step that has not been used for this account yet."""
+    """A code from a time step the app has not accepted for this account yet. The app keeps the last one
+    (totp_last_step), so a request it refused before the code costs nothing; only with all three steps it
+    allows used up does this wait for the next one."""
+    used = int(sql(f"SELECT coalesce(totp_last_step, 0) FROM users WHERE username = '{u}'") or 0)
     now = int(time.time() // 30)
-    step = max(last.get(u, now - 2) + 1, now - 1)
+    step = max(used + 1, now - 1)
     # The previous step only if the current one still lasts a while; otherwise the code is too old on arrival.
     if step == now - 1 and time.time() % 30 > 25:
         step = now
     while step > int(time.time() // 30) + 1:
         time.sleep(1)
-    last[u] = step
     return code(sec, step - int(time.time() // 30))
 
 

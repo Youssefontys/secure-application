@@ -42,10 +42,13 @@ def run():
     check("register twice", req(client(), "/register", {"username": "anna", "password": PW})[0], 409)
 
     print("== set up again, new recovery code")
-    check("new recovery code with a wrong code", req(a, "/account/2fa/recovery", {"current_password": PW, "code": "000000"})[0], 400)
-    check("  with a good code but without the password (MC-29)", req(a, "/account/2fa/recovery", {"code": fresh(sec, "anna")})[0], 400)
-    r = req(a, "/account/2fa/recovery", {"current_password": PW, "code": fresh(sec, "anna")})
-    rc_new = recovery(r[1])
+    # The new recovery code on an account of its own: anna then needs fewer codes in a short time.
+    ad, secad, _ = account("ada")
+    check("new recovery code with a wrong code", req(ad, "/account/2fa/recovery", {"current_password": PW, "code": "000000"})[0], 400)
+    check("  with a good code but without the password (MC-29)", req(ad, "/account/2fa/recovery", {"code": fresh(secad, "ada")})[0], 400)
+    r = req(ad, "/account/2fa/recovery", {"current_password": PW, "code": fresh(secad, "ada")})
+    recovery(r[1])
+    rc_before = rc
     check("new recovery code with password and code", f"{r[0]} {r[2].get('Cache-Control')}", "200 no-store")
     check("  Continue goes back to the profile", re.search(r'id="recovery-done" href="([^"]+)"', r[1]).group(1), "/account")
     a3 = login("anna", sec)
@@ -57,7 +60,6 @@ def run():
     check("  then /", loc(req(a, "/")), "302 /account/2fa")
     check("  other session expires", loc(req(a3, "/")), "302 /login")
     sec = secret(req(a, "/account/2fa")[1])
-    last.pop("anna", None)
     rc = recovery(req(a, "/account/2fa", {"code": fresh(sec, "anna")})[1])
     check("  set up anew", req(a, "/")[0], 200)
 
@@ -65,7 +67,7 @@ def run():
     h = password_step("anna")
     check("code page has a recovery link", 'href="/login/recover"' in req(h, "/login/2fa")[1], True)
     check("wrong recovery code", req(h, "/login/recover", {"code": "0" * 32})[0], 400)
-    check("recovery code from before setting up again", req(h, "/login/recover", {"code": rc_new})[0], 400)
+    check("recovery code from before setting up again", req(h, "/login/recover", {"code": rc_before})[0], 400)
     check("right recovery code", loc(req(h, "/login/recover", {"code": " " + rc.upper() + " "})), "302 /account/2fa")
     check("  message", msg(req(h, "/account/2fa")[1]).startswith("Your recovery code has been used"), True)
     check("  then / without 2FA", loc(req(h, "/")), "302 /account/2fa")
