@@ -90,7 +90,7 @@ K is kans, I is impact, R is risico.
 | MC-27 | De gedeelde computer | 3 × 2 = 6 | 2 × 2 = 4 | Geen pagina in de cache (MIT-28) en hooguit 8 uur (MIT-29); wie niet uitlogt, laat de sessie toch open voor de volgende |
 | MC-28 | Onopgemerkt blijven | 3 × 2 = 6 | 2 × 2 = 4 | Elke gebeurtenis in de log, op Azure 30 dagen buiten bereik van de app (MIT-31), en een mail bij een blokkade (MIT-37); andere aanvallen geven geen mail |
 | MC-29 | De tweede factor vervangen | 2 × 2 = 4 | 1 × 2 = 2 | Ook het huidige wachtwoord (MIT-16) |
-| MC-30 | Eigen code via de pipeline | 2 × 3 = 6 | 1 × 3 = 3 | Eerst een token met `write:packages` dat weken gold. Nu het token van de run met minimale rechten, actions op een commit, en alleen via een pull request met een check (MIT-34, MIT-39); het account van de beheerder blijft de sleutel |
+| MC-30 | Eigen code via de pipeline | 2 × 3 = 6 | 1 × 3 = 3 | Eerst een token met `write:packages` dat weken gold. Nu het token van de run met minimale rechten, actions op een commit, en alleen via een pull request met een check (MIT-34, MIT-39); uitrollen vanuit GitHub zonder sleutel en pas na goedkeuring (MIT-44); het account van de beheerder blijft de sleutel |
 | MC-31 | Azure via de beheerder | 1 × 3 = 3 | 1 × 3 = 3 | De state alleen via Entra ID, zonder accountsleutels (MIT-38), en de tenant vraagt een tweede stap; maar de beheerder is Owner, dus wie zijn login heeft, kan alles |
 
 ## Wat er overblijft, en wat ermee gebeurt
