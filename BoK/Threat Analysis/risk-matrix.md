@@ -78,14 +78,14 @@ K is kans, I is impact, R is risico.
 | MC-15 | De code raden | 2 × 2 = 4 | 1 × 2 = 2 | Een verdubbelende blokkade (MIT-06): ongeveer 0,56% kans in een jaar |
 | MC-16 | Een code onderscheppen | 2 × 2 = 4 | 2 × 2 = 4 | Elke code één keer (MIT-07) en TLS op Azure (MIT-40), maar een nepsite die meteen doorgeeft, komt binnen; alleen WebAuthn of passkeys helpen |
 | MC-17 | Het TOTP-geheim buitmaken | 1 × 3 = 3 | 1 × 2 = 2 | Versleuteld (MIT-17): uit de database alleen met de sleutel; meekijken tijdens het instellen blijft |
-| MC-18 | Buitensluiten met de blokkade | 3 × 2 = 6 | 2 × 2 = 4 | Alleen per adres, nooit een account over alle adressen (MIT-10). Op een gedeeld netwerk, zoals op school in de hacking week, wel; de hackstand verkleint dat |
+| MC-18 | Buitensluiten met de blokkade | 3 × 2 = 6 | 2 × 2 = 4 | Alleen per adres, nooit een account over alle adressen (MIT-10). Op een gedeeld netwerk, zoals op school in de hacking week, wel; de hackmode verkleint dat |
 | MC-19 | De herstelcode | 2 × 2 = 4 | 1 × 2 = 2 | 128 bits, een blokkade, alleen de SHA-256 en `no-store` (MIT-11) |
 | MC-20 | De eerste instelling kapen | 2 × 2 = 4 | 1 × 2 = 2 | Tweestapsverificatie verplicht, en een nieuw account gaat direct naar het instellen (MIT-12); het korte venster blijft |
 | MC-21 | Wachtwoord vergeten misbruiken | 3 × 2 = 6 | 1 × 2 = 2 | Twee van de drie factoren: herstelcode en code (MIT-14) |
 | MC-22 | De gegevenssleutel | 1 × 3 = 3 | 1 × 3 = 3 | Op Azure in Key Vault, en alleen de identiteit van de app leest hem (AZ-10, T-86); lokaal `.env` alleen voor de eigenaar (MIT-32). De draaiende app heeft hem wel, dus wie die overneemt, ook |
 | MC-23 | Notities uit de database | 1 × 3 = 3 | 1 × 1 = 1 | Versleuteld (MIT-18): zonder de sleutel alleen hoeveel notities en wanneer |
 | MC-24 | Clickjacking | 2 × 2 = 4 | 1 × 2 = 2 | De browser laadt de app niet in een frame (MIT-21) |
-| MC-25 | Een vergeten route | 2 × 2 = 4 | 1 × 2 = 2 | Elke route standaard dicht, en de regressietest bewaakt de lijst (MIT-24, T-80) |
+| MC-25 | Een vergeten route | 2 × 2 = 4 | 1 × 2 = 2 | Elke route standaard dicht, en de securitytest bewaakt de lijst (MIT-24, T-80) |
 | MC-26 | Een fout uitlokken | 3 × 1 = 3 | 1 × 1 = 1 | Een korte melding, en geen regeleinde in de log (MIT-25) |
 | MC-27 | De gedeelde computer | 3 × 2 = 6 | 2 × 2 = 4 | Geen pagina in de cache (MIT-28) en hooguit 8 uur (MIT-29); wie niet uitlogt, laat de sessie toch open voor de volgende |
 | MC-28 | Onopgemerkt blijven | 3 × 2 = 6 | 2 × 2 = 4 | Elke gebeurtenis in de log, op Azure 30 dagen buiten bereik van de app (MIT-31), en een mail bij een blokkade (MIT-37); andere aanvallen geven geen mail |
@@ -103,12 +103,12 @@ K is kans, I is impact, R is risico.
   buiten zicht. Daarom blijft de kans 2. Besluit: verder verkleinen: de bewaarde SBoM opnieuw scannen,
   bijvoorbeeld elke dag.
 - **Midden, met impact 3: MC-02, MC-06, MC-08, MC-22, MC-30, MC-31.** Weinig kans, maar als het lukt, zijn alle
-  gebruikers of de hele omgeving geraakt. MC-02 en MC-06 rusten elk op één regel in elke route; de regressietest
+  gebruikers of de hele omgeving geraakt. MC-02 en MC-06 rusten elk op één regel in elke route; de securitytest
   bewaakt ze. MC-08 en MC-22 komen neer op wie de app overneemt: de app heeft de sleutel en de rechten nodig om te
   werken. MC-30 en MC-31 komen neer op de accounts van de beheerder, met tweestapsverificatie. Besluit: accepteren,
   met de lagen die er zijn.
 - **Midden, met kans 2: MC-10, MC-16, MC-18, MC-27, MC-28.** Waarschijnlijker, maar één account of een tijdje
-  onbruikbaar. MC-18 telt in de hacking week, met een klas achter één adres; daarvoor is de hackstand. MC-16 lost
+  onbruikbaar. MC-18 telt in de hacking week, met een klas achter één adres; daarvoor is de hackmode. MC-16 lost
   alleen een factor op die aan het domein vastzit, zoals passkeys. MC-28: alleen een blokkade geeft een mail.
   Besluit: accepteren voor deze app; passkeys en meer alerts zijn een volgende stap.
 - **Midden: MC-09, gebruikersnamen opsporen (3).** Bij zelfgekozen namen niet te voorkomen, en de impact is laag.

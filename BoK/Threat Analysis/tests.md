@@ -4,7 +4,11 @@ De tests per use case en misuse case, gemeten met de hand (curl, Edge, `az`) en 
 securitytest (`tests/securitytest.py`, met een test per onderwerp; sinds d6b675f in de repo, en tegen de lokale stack; sinds d517527 ook in de check van elke pull request, T-125).
 
 Sinds 3204eb0 is de interface Engels. Meldingen in eerdere metingen staan
-in het Nederlands, zoals de app ze toen gaf.
+in het Nederlands, zoals de app ze toen gaf. Sinds 5a148b1 zijn ook de namen in de code Engels: `deployment.py local`
+(was `lokaal`), de stappen Check VEX en Security test (was VEX controleren en Securitytest),
+de database `notes` met de eigenaar `notes_owner` en de app-rol `notes_app` (was `notities`
+en `notities_app`), de hackmode (was hackstand) en `ALL GOOD` (was `ALLES GOED`). Metingen
+van daarvoor noemen de oude namen.
 
 Twee soorten:
 
