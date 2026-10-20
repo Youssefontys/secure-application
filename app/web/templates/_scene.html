@@ -1,5 +1,5 @@
-{# Decoratieve achtergrond. aria-hidden en pointer-events:none, zodat dit
-   niets doet voor schermlezers en nooit een klik van het formulier afpakt. #}
+{# Decorative background. aria-hidden and pointer-events:none, so this
+   does nothing for screen readers and never takes a click from the form. #}
 <div class="scene" aria-hidden="true">
   <svg viewBox="0 0 1200 300" preserveAspectRatio="xMidYMax slice">
     <defs>
@@ -53,9 +53,9 @@
       <ellipse class="hood" cx="700" cy="198" rx="56" ry="62"/>
       <ellipse class="face" cx="700" cy="208" rx="37" ry="45"/>
       <path class="brim" d="M 648 196 C 660 152, 740 152, 752 196 C 736 170, 664 170, 648 196 Z"/>
-      {# De gaze-groep schuift mee met de muis (CSS gebruikt --mx/--my die
-         cyber.js vult), de eyes-groep eronder doet alleen de kleur en de
-         gloed. Zo bijten de twee transformaties elkaar niet. #}
+      {# The gaze group moves with the mouse (CSS uses --mx/--my, which
+         cyber.js fills), the eyes group below it only does the colour and the
+         glow. That way the two transforms do not clash. #}
       <g class="gaze">
         <g class="eyes" filter="url(#glow)">
           <ellipse cx="685" cy="206" rx="7" ry="4"/>

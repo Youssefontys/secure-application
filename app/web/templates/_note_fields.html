@@ -1,5 +1,5 @@
-{# Titel en inhoud, gedeeld door aanmaken en aanpassen. maxlength is gemak in de
-   browser; de echte controle zit in read_note_form (MIT-04). #}
+{# Title and body, shared by creating and editing. maxlength is a convenience in the
+   browser; the real check is in read_note_form (MIT-04). #}
 <label>Title <small>(max. {{ TITLE_MAX }} characters)</small>
   <input name="title" required maxlength="{{ TITLE_MAX }}" value="{{ title or '' }}">
 </label>

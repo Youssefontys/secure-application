@@ -21,8 +21,8 @@
 
   <p class="count">{{ notes|length }} of {{ NOTES_MAX }} notes</p>
 
-  {# Jinja escapet de waarden hieronder standaard, dus een notitie met een
-     script-tag erin verschijnt als tekst. Gebruik hier nooit |safe. #}
+  {# Jinja escapes the values below by default, so a note with a
+     script tag in it shows up as text. Never use |safe here. #}
   <div class="notes-grid">
     {% for note in notes %}
       <article class="card note">

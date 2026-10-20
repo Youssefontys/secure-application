@@ -17,8 +17,8 @@
       <li>Scanning does not work? Then enter this key in the app: <span class="secret">{{ secret }}</span></li>
       <li>Below, enter the 6-digit code the app shows now. Only then is the second factor on.</li>
     </ol>
-    {# Het plaatje komt van een eigen route en staat niet inline, zodat de CSP
-       (MIT-21) geen data:-plaatjes hoeft toe te staan. #}
+    {# The image comes from its own route and is not inline, so the CSP
+       (MIT-21) does not have to allow data: images. #}
     <img class="qr" src="{{ url_for('account.qr_2fa') }}" alt="QR code for your authenticator app" width="232" height="232">
     <form method="post">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

@@ -1,4 +1,4 @@
-# Notities: aanmaken, tonen, aanpassen en verwijderen.
+# Notes: create, show, edit and delete.
 
 from flask import Blueprint, abort, g, redirect, render_template, request, url_for
 
@@ -8,12 +8,12 @@ from db import query
 
 bp = Blueprint("notes", __name__)
 
-# Maximale lengte in tekens (MIT-04); de templates gebruiken ze ook voor maxlength.
+# Maximum length in characters (MIT-04); the templates also use them for maxlength.
 TITLE_MAX = 15
 BODY_MAX = 250
-# Hooguit zoveel notities per account, tegen een database die volloopt (MIT-30, MC-10).
+# At most this many notes per account, against a database that fills up (MIT-30, MC-10).
 NOTES_MAX = 25
-# Wat er staat als een titel of inhoud niet ontsleutelt (gewijzigd, verplaatst of een andere sleutel).
+# What is shown if a title or body does not decrypt (changed, moved or another key).
 UNREADABLE = "(unreadable)"
 
 
@@ -23,8 +23,8 @@ def index():
         title, body, error = read_note_form()
         if error:
             return render_template("notes.html", notes=fetch_notes(), error=error, title=title, body=body), 400
-        # Tellen en toevoegen in één statement. shortcut: gelijktijdige verzoeken kunnen er samen een paar
-        # overheen, hooguit één per worker; een slot zou elke notitie vertragen voor een grens tegen groei.
+        # Count and insert in one statement. shortcut: simultaneous requests can together go a few over it,
+        # at most one per worker; a lock would slow down every note for a limit that only stops growth.
         if query(
             "INSERT INTO notes (user_id, title, body) SELECT %s, %s, %s"
             " WHERE (SELECT count(*) FROM notes WHERE user_id = %s) < %s RETURNING id",
@@ -38,7 +38,7 @@ def index():
     return render_template("notes.html", notes=fetch_notes())
 
 
-# Titel en inhoud uit het formulier, plus een foutmelding als er een leeg of te lang is.
+# Title and body from the form, plus an error message if one is empty or too long.
 def read_note_form():
     title = request.form.get("title", "").strip()
     body = request.form.get("body", "").strip()
@@ -60,22 +60,22 @@ def fetch_notes():
     return [readable(note) for note in rows]
 
 
-# Titel en inhoud staan alleen versleuteld in de database, gebonden aan de eigenaar (MIT-18).
+# Title and body are only stored encrypted in the database, bound to the owner (MIT-18).
 def sealed(title, body):
     return encryption.encrypt(title, "note_title", g.user.id), encryption.encrypt(body, "note_body", g.user.id)
 
 
-# Ontsleuteld voor de pagina; wat niet ontsleutelt, telt niet als tekst van de gebruiker.
+# Decrypted for the page; what does not decrypt does not count as text of the user.
 def readable(note):
     title = encryption.decrypt(note.title, "note_title", g.user.id)
     body = encryption.decrypt(note.body, "note_body", g.user.id)
-    # Gewijzigd of verplaatst in de database: een spoor van iemand met schrijfrechten (MC-08, MC-23).
+    # Changed or moved in the database: a trace of someone with write access (MC-08, MC-23).
     if title is None or body is None:
         events.event("note_unreadable", note_id=note.id)
     return note._replace(title=title or UNREADABLE, body=body or UNREADABLE)
 
 
-# De notitie van de ingelogde gebruiker, anders 404: ook andermans notitie lijkt niet te bestaan (MIT-15).
+# The note of the logged-in user, otherwise 404: someone else's note also seems not to exist (MIT-15).
 def own_note(note_id):
     note = query("SELECT id, title, body FROM notes WHERE id = %s AND user_id = %s", (note_id, g.user.id), one=True)
     if note is None:
@@ -101,7 +101,7 @@ def edit_note(note_id):
 
 @bp.route("/notes/<int:note_id>/delete", methods=["POST"])
 def delete_note(note_id):
-    # Alleen de eigen notitie; andermans notitie geeft 404, net als bij aanpassen (MIT-15).
+    # Only the own note; someone else's note gives 404, as with editing (MIT-15).
     if query("DELETE FROM notes WHERE id = %s AND user_id = %s RETURNING id", (note_id, g.user.id), one=True) is None:
         abort(404)
     return redirect(url_for("notes.index"))

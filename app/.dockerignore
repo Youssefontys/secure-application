@@ -1,7 +1,7 @@
-# Bytecode van een lokale run hoort niet in de image; de container maakt
-# zelf geen bytecode (PYTHONDONTWRITEBYTECODE in de Dockerfile).
+# Bytecode from a local run does not belong in the image; the container makes
+# no bytecode itself (PYTHONDONTWRITEBYTECODE in the Dockerfile).
 __pycache__/
 
-# De bouwbestanden zelf doen in de draaiende container niets.
+# The build files themselves do nothing in the running container.
 Dockerfile
 .dockerignore
