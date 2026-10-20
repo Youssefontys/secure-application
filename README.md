@@ -15,7 +15,7 @@ Every feature that is added has an entry in `BoK/`: the use case, the misuse cas
 - `BoK/Architecture/` - components, data flows, trust boundaries and the authentication and authorization points, with a diagram in `diagram/`
 - `BoK/Threat Analysis/` - use cases, misuse cases, mitigations, attack trees, the tests that go with them, and a risk matrix (likelihood × impact, before and after the mitigations), with a use case diagram and misuse case diagrams in `diagrams/`
 - `BoK/Subjects/` - per BoK subject (week) what was built, why it is safe and what it does not solve; `Standards.md` maps the app on the OWASP Top 10 Proactive Controls, ASVS 5.0, the CSA Cloud Controls Matrix and EN 40000, and `Laws.md` covers the AVG (with a self-assessment), NIS2 and the CRA
-- `compose.yaml` - app and database for local use, with a ZAP profile in comments for later
+- `compose.yaml` - app and database for local use, and the ZAP baseline (DAST) under the profile `scan`, which the pipeline runs too: `docker compose --profile scan run --rm zap`
 - `.github/dependabot.yml` - weekly update proposals for the pinned packages, images, Terraform providers and GitHub Actions
 - `.github/workflows/CI-image.yml` - on every pull request to `main`, builds the image, makes its SBoM, scans it with the VEX and runs the security test, without publishing (the job `check`, required by a ruleset on `main`); on every push to `main`, does the same and then publishes the image to ghcr.io, tagged with the commit
 - `.github/workflows/CD-azure.yml` - after Image succeeded on a push to `main` that changed `app/`, puts that image on Azure once you approve it, signed in through OIDC without a password or key in GitHub; it only changes the image of the container app
