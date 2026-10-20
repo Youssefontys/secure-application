@@ -21,7 +21,7 @@ Elk punt staat hier, ook als er (nog) geen controle zit. Een rij met
 | AU-11 | De pipeline bij ghcr.io | C-06 | F-06 | Dat wie een image publiceert de workflow van deze repo is | Het token van de run (`GITHUB_TOKEN`), dat na de run vervalt; geen eigen token (MIT-34) | gebouwd | MC-30 |
 | AU-12 | Container Apps bij ghcr.io | C-02 | F-07 | Niets: iedereen mag de image ophalen | Het pakket is openbaar, net als de repo. Bewust: zo staat er nergens een token voor de registry dat kan uitlekken; publiceren kan alleen via AU-11 | bewust geen | MC-30 |
 | AU-13 | Terraform bij de state | C-10 naar C-09 | F-11 | Dat wie de state leest of schrijft de beheerder is | Entra ID (`use_azuread_auth = true`) in plaats van een accountsleutel; sinds e4d9e25 staan accountsleutels uit, dus ook een Owner komt er alleen met een rol op de opslag bij (MIT-38) | gebouwd | MC-31 |
-| AU-14 | De deploy-job bij Azure | C-06 (`deploy.yml`) | F-13 | Dat het token komt van een job in de environment `azure` van deze repo | OIDC: de federated credential van A-19 accepteert alleen het subject `repo:Youssefontys@122530008/secure-application@1416134545:environment:azure`, met de vaste ID's van eigenaar en repo; geen wachtwoord of sleutel in GitHub (MIT-44, T-127) | gebouwd | MC-30 |
+| AU-14 | De deploy-job bij Azure | C-06 (`CD-azure.yml`) | F-13 | Dat het token komt van een job in de environment `azure` van deze repo | OIDC: de federated credential van A-19 accepteert alleen het subject `repo:Youssefontys@122530008/secure-application@1416134545:environment:azure`, met de vaste ID's van eigenaar en repo; geen wachtwoord of sleutel in GitHub (MIT-44, T-127) | gebouwd | MC-30 |
 
 ## Autorisatie
 
