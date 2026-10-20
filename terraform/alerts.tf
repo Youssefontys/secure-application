@@ -1,34 +1,34 @@
-# Een mail bij een blokkade (MIT-37, MC-28): de log bewaren is niet genoeg, iemand moet het ook zien.
+# A mail on a lockout (MIT-37, MC-28): keeping the log is not enough, someone must also see it.
 resource "azurerm_monitor_action_group" "security" {
   name                = "ag-${local.name}-security"
   resource_group_name = azurerm_resource_group.main.name
-  short_name          = "notities"
+  short_name          = "notes"
   tags                = local.tags
 
   email_receiver {
-    name                    = "beheerder"
+    name                    = "admin"
     email_address           = var.alert_email
     use_common_alert_schema = true
   }
 }
 
-# Elke 5 minuten (€1,32 per maand): een regel staat pas na een paar minuten in Log Analytics, dus vaker kijken scheelt weinig.
+# Every 5 minutes (€1.32 per month): a line only shows up in Log Analytics after a few minutes, so looking more often helps little.
 resource "azurerm_monitor_scheduled_query_rules_alert_v2" "lockout" {
   name                 = "alert-${local.name}-lockout"
   resource_group_name  = azurerm_resource_group.main.name
   location             = azurerm_resource_group.main.location
   scopes               = [azurerm_log_analytics_workspace.main.id]
-  description          = "Een teller van de poginglimieten ging op slot (lockout_started, MIT-10)."
+  description          = "A counter of the attempt limits was locked (lockout_started, MIT-10)."
   severity             = 2
   evaluation_frequency = "PT5M"
   window_duration      = "PT5M"
-  # Tijdens één aanval niet elke 5 minuten opnieuw mailen.
+  # Do not mail again every 5 minutes during one attack.
   mute_actions_after_alert_duration = "PT1H"
-  # In een nieuwe workspace bestaat de tabel pas na de eerste logregel; anders weigert Azure de regel bij het aanmaken.
+  # In a new workspace the table only exists after the first log line; otherwise Azure refuses the rule at creation.
   skip_query_validation = true
   tags                  = local.tags
 
-  # Een eigen identiteit, zoals Microsoft aanraadt; zonder leest de regel met de rechten van wie hem het laatst wijzigde.
+  # An own identity, as Microsoft recommends; without it the rule reads with the rights of whoever changed it last.
   identity {
     type = "SystemAssigned"
   }
@@ -45,7 +45,7 @@ resource "azurerm_monitor_scheduled_query_rules_alert_v2" "lockout" {
   }
 }
 
-# Alleen lezen in deze ene workspace.
+# Only reading in this one workspace.
 resource "azurerm_role_assignment" "alert_reader" {
   scope                = azurerm_log_analytics_workspace.main.id
   role_definition_name = "Log Analytics Reader"

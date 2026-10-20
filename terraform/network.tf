@@ -1,4 +1,4 @@
-# Eén netwerk voor app en database: de database krijgt geen publiek adres (B-02, F-03).
+# One network for app and database: the database gets no public address (B-02, F-03).
 resource "azurerm_virtual_network" "main" {
   name                = "vnet-${local.name}"
   location            = azurerm_resource_group.main.location
@@ -7,7 +7,7 @@ resource "azurerm_virtual_network" "main" {
   tags                = local.tags
 }
 
-# Voor de Container Apps-omgeving: minimaal /27 en gedelegeerd aan Microsoft.App/environments.
+# For the Container Apps environment: at least /27 and delegated to Microsoft.App/environments.
 resource "azurerm_subnet" "apps" {
   name                 = "snet-apps"
   resource_group_name  = azurerm_resource_group.main.name
@@ -23,14 +23,14 @@ resource "azurerm_subnet" "apps" {
   }
 }
 
-# Alleen voor PostgreSQL: minimaal /28, gedelegeerd, en er mag niets anders in.
+# Only for PostgreSQL: at least /28, delegated, and nothing else may go in.
 resource "azurerm_subnet" "db" {
   name                 = "snet-db"
   resource_group_name  = azurerm_resource_group.main.name
   virtual_network_name = azurerm_virtual_network.main.name
   address_prefixes     = ["10.20.1.0/28"]
-  # Zet Azure zelf bij de eerste server, voor het archiveren van het transactielog (WAL) naar Storage. Hier vastgelegd,
-  # anders haalt de volgende apply hem weg.
+  # Azure sets this itself at the first server, for archiving the transaction log (WAL) to Storage. Recorded here,
+  # otherwise the next apply removes it.
   service_endpoint {
     service = "Microsoft.Storage"
   }
@@ -44,7 +44,7 @@ resource "azurerm_subnet" "db" {
   }
 }
 
-# De database is alleen met een privé-DNS-naam te vinden, en alleen vanuit dit netwerk.
+# The database can only be found with a private DNS name, and only from this network.
 resource "azurerm_private_dns_zone" "db" {
   name                = "${local.unique}.private.postgres.database.azure.com"
   resource_group_name = azurerm_resource_group.main.name
