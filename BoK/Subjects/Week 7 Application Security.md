@@ -37,7 +37,7 @@ De details staan in de entries (MC-04, MC-05, MC-07, MC-08, MC-10, MC-11, MC-14,
 | Routes (MIT-24) | Elke route moest zelf `@login_required` hebben | Standaard dicht, met een vaste lijst publieke routes |
 | Fouten (MIT-25) | De standaardpagina van Flask, en geen controle over de log | Een korte melding; de fout in de log, zonder valse regels |
 | Draaien (MIT-26) | De ontwikkelserver van Flask, als root | Gunicorn, als de gebruiker `app`, zonder schrijfrecht op de code |
-| Databaserol (MIT-27) | De app logde in als superuser: tabellen weggooien en rollen maken lukte | `notities_app` mag alleen lezen en schrijven in de eigen tabellen; het wachtwoord van de eigenaar zit niet meer in de app |
+| Databaserol (MIT-27) | De app logde in als superuser: tabellen weggooien en rollen maken lukte | `notes_app` mag alleen lezen en schrijven in de eigen tabellen; het wachtwoord van de eigenaar zit niet meer in de app |
 | Terug na uitloggen (MIT-28) | De notities stonden weer in beeld | De inlogpagina; geen pagina in de cache |
 | Sessieduur (MIT-29) | Een cookie van 30 dagen oud werkte nog | Hooguit 8 uur |
 | Registreren en notities (MIT-30) | 15 registraties vanaf één adres en 30 notities gingen allemaal door; `/login` werd trager voor anderen | 10 per uur per adres, dan 429; 25 notities per account |
@@ -76,12 +76,12 @@ De details staan in de entries (MC-04, MC-05, MC-07, MC-08, MC-10, MC-11, MC-14,
   - Het pad gaat als repr de log in, dus een regeleinde in de URL wordt `\n`.
 - **Gewone gebruiker (MIT-26).** De image maakt de systeemgebruiker `app` zonder shell en draait daaronder, met Gunicorn en twee workers. De code is van root, dus de app kan hem lezen maar niet aanpassen. Sinds deelvraag 2 (Week 8) heeft ook geen programma meer een setuid- of setgid-bit, zodat wie de app overneemt niet via mount, su of passwd alsnog root wordt (MIT-42).
 - **Databaserol (MIT-27).**
-  - `db/schema.sql` maakt de rol `notities_app`, geen superuser en nergens eigenaar van. Hij krijgt `SELECT`, `INSERT`, `UPDATE` en `DELETE` op de drie tabellen en `USAGE` op de twee sequences: precies wat de app doet.
+  - `db/schema.sql` maakt de rol `notes_app`, geen superuser en nergens eigenaar van. Hij krijgt `SELECT`, `INSERT`, `UPDATE` en `DELETE` op de drie tabellen en `USAGE` op de twee sequences: precies wat de app doet.
   - Lokaal zet `db/app-password.sh` het wachtwoord bij de eerste start van een leeg volume. Het komt uit `APP_DB_PASSWORD` in `.env`, dat `scripts/deployment.py` aanmaakt. De app krijgt alleen dat wachtwoord.
   - Op Azure staat het wachtwoord van de eigenaar in een eigen Key Vault. Alleen de schema-job leest die, met een eigen identiteit. De job maakt het schema in een lege database en zet bij elke start het wachtwoord van de app-rol, en Terraform start hem zelf, ook na een nieuw wachtwoord (`secret_version`). Op Azure gemeten: de app heeft geen rol op de vault van de eigenaar (T-86).
 - **Geen cache (MIT-28).** Elk antwoord behalve CSS en scripts krijgt `Cache-Control: no-store`, zoals de OWASP Session Management Cheat Sheet aanraadt. Na uitloggen vraagt Terug de pagina opnieuw op, en dan stuurt de app naar de inlogpagina.
 - **Sessieduur (MIT-29).** `PERMANENT_SESSION_LIFETIME` is 8 uur. Flask controleert bij elk verzoek hoe oud de handtekening van de cookie is, ook bij een cookie die alleen voor de browsersessie geldt; dat staat in de broncode van Flask 3.1.3. Zonder deze regel was het 31 dagen.
-- **Limieten (MIT-30).** Elke registratie telt per adres, met de tellers van de poginglimieten: 10 per uur, in de hackstand 60. De teller staat vlak voor het hashen, dus alleen een registratie die echt rekent, telt. Een notitie wordt geteld en toegevoegd in één statement, tot 25 per account.
+- **Limieten (MIT-30).** Elke registratie telt per adres, met de tellers van de poginglimieten: 10 per uur, in de hackmode 60. De teller staat vlak voor het hashen, dus alleen een registratie die echt rekent, telt. Een notitie wordt geteld en toegevoegd in één statement, tot 25 per account.
 - **`.env` (MIT-32).** `deployment.py` zet het bestand op 0600 voordat het iets schrijft, en zet een bestaand bestand ook recht.
 - **Dependabot (MIT-33).** `.github/dependabot.yml` controleert elke week pip, de Dockerfile, `compose.yaml`, Terraform en de GitHub Actions. In de BoK hoort het bij CI/CD (Week 8), maar er is geen pipeline voor nodig.
 - **Eén UPDATE (MIT-09).** Een nieuw wachtwoord of een 2FA-wijziging hoogt in hetzelfde statement de sessieversie op. Valt de verbinding weg, dan is het allebei of niets.
@@ -100,7 +100,7 @@ De details staan in de entries (MC-04, MC-05, MC-07, MC-08, MC-10, MC-11, MC-14,
 | Geen route per ongeluk open | De test haalt alle routes uit de app en opent ze anoniem | T-80 |
 | Geen details naar buiten, geen valse logregels | Eigen foutpagina's; het pad als repr | T-81 |
 | Overname is geen root | `app`, Gunicorn, geen schrijfrecht op `/app` | T-82 |
-| Overname is geen databasebeheer | `notities_app`: geen tabellen maken of weggooien, geen rollen, geen `COPY` naar een programma | T-19, T-83 |
+| Overname is geen databasebeheer | `notes_app`: geen tabellen maken of weggooien, geen rollen, geen `COPY` naar een programma | T-19, T-83 |
 | De app kent het wachtwoord van de eigenaar niet | Niet in de omgeving van de app; op Azure in een vault die alleen de schema-job leest | T-84, T-86 |
 | De schema-job mag opnieuw | Het schema alleen in een lege database; het wachtwoord als tekst, niet als SQL | T-85 |
 | Geen notities na uitloggen | `no-store` op elke pagina; getest met de Terug-knop in Edge | T-89 |
@@ -139,7 +139,7 @@ Bewust niet: rechten per rij (row-level security), een audit-log in de database 
 | C2 Use Cryptography to Protect Data | AES-256-GCM voor het TOTP-geheim en de notities, Argon2id voor wachtwoorden (Week 6) |
 | C3 Validate all Input & Handle Exceptions | Parameterized queries (MIT-02), lengtegrenzen (MIT-04), invoer en configuratie (MIT-22, MIT-23), veilig falen (MIT-25) |
 | C4 Address Security from the Start | Elke feature begint bij de misuse cases in de BoK; sinds 19-10-2026 ook de risicomatrix en de use case- en misuse case-diagrammen (`Threat Analysis/`) |
-| C5 Secure By Default Configurations | `HTTPS_ONLY` standaard aan, de hackstand standaard uit, `TRUSTED_PROXIES` standaard 0, geen root (MIT-23, MIT-26) |
+| C5 Secure By Default Configurations | `HTTPS_ONLY` standaard aan, de hackmode standaard uit, `TRUSTED_PROXIES` standaard 0, geen root (MIT-23, MIT-26) |
 | C6 Keep your Components Secure | Alles vastgezet, ook wat er meekomt en de base-images op digest (MIT-03); in de pipeline maakt Trivy van elke image een SBoM en scant die, ook bij elke pull request (MIT-35, MIT-36, MIT-39, Week 8) |
 | C7 Secure Digital Identities | Verplichte 2FA, poginglimieten, sessieversie, Argon2id (Week 5 en 6) |
 | C8 Leverage Browser Security Features | CSP, `frame-ancestors`, `nosniff`, `Referrer-Policy`, `HttpOnly`, `SameSite`, `Secure` (MIT-21, MIT-23) |
@@ -172,7 +172,7 @@ Bewust niet: rechten per rij (row-level security), een audit-log in de database 
 - **Gunicorn met twee workers, zonder access-log.** Twee workers passen bij 0,25 vCPU op Container Apps. De security-events staan in de log (MIT-31); gewone verzoeken niet, ook de healthchecks niet.
 - **8 uur na het inloggen, niet 8 uur na het laatste verzoek.** Een grens die met elk verzoek opschuift, verdwijnt bij een tabblad dat openblijft. BOK-SECENGINEER gebruikte ook 8 uur; OWASP noemt 4 tot 8 uur als voorbeeld van een absolute timeout.
 - **De limiet op notities zonder slot.** Gelijktijdige verzoeken kunnen er samen een paar overheen, hooguit één per worker. Een slot zou elke notitie trager maken, voor een grens die alleen de groei afremt.
-- **De hackstand voor registreren op 60 per uur.** BOK-SECENGINEER had 30; een klas van zo'n 30 met een tweede account komt daar snel boven.
+- **De hackmode voor registreren op 60 per uur.** BOK-SECENGINEER had 30; een klas van zo'n 30 met een tweede account komt daar snel boven.
 - **Een eigen vault voor het wachtwoord van de eigenaar, geen rechten per geheim.** Microsoft raadt een vault per applicatie aan en geen rollen op losse geheimen; een van de twee uitzonderingen die Microsoft noemt, is een geheim dat twee applicaties delen. Die gebruiken we één keer: de schema-job leest ook het wachtwoord van de app-rol.
 - **De rol in `schema.sql`, het wachtwoord erbuiten.** `schema.sql` staat in git; het wachtwoord komt uit `.env` of Key Vault. Lokaal zet psql het met `:'password'` als letterlijke tekst, op Azure de job met `sql.Literal`.
 - **Geen bonusonderwerpen.** Compileropties zijn voor Python niet van toepassing. Het ondertekenen van de container-image (bijvoorbeeld met cosign) past bij de pipeline in Week 8.

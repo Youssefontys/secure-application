@@ -36,7 +36,7 @@ De beveiligingseisen staan vooral in:
 | Bewaartermijn (art. 5, lid 1, onder e) | De log 30 dagen (C-05); een notitie tot de gebruiker hem verwijdert; account verwijderen haalt alles weg (UC-05) | Een verwijderde notitie staat nog tot 7 dagen in de backup van de database |
 | Beveiliging (art. 5, lid 1, onder f, en art. 32, lid 1, onder a en b) | Notities en TOTP-geheimen versleuteld, wachtwoorden als Argon2id-hash (MIT-17 tot MIT-19); TLS (MIT-40); 2FA verplicht; de risicomatrix met één hoog restrisico | De draaiende app heeft de sleutel (MC-22) |
 | Herstel na een incident (art. 32, lid 1, onder c) | Een backup van 7 dagen; `deployment.py` zet de omgeving opnieuw neer | Nooit een terugzetting getest |
-| Regelmatig testen (art. 32, lid 1, onder d) | De tests per misuse case, de regressietest, de scan bij elke pull request, en de hacking week | |
+| Regelmatig testen (art. 32, lid 1, onder d) | De tests per misuse case, de securitytest en de scan bij elke pull request, en de hacking week | |
 | Privacy by design en by default (art. 25) | Geen e-mailadres gevraagd, geen beheerdersrol die notities kan lezen, alles standaard dicht (MIT-24) | |
 | Bijzondere persoonsgegevens (art. 9) | De app vraagt er niet om, maar een notitie is vrije tekst; daarom versleuteld | Of daarom een DPIA nodig is (art. 35), is niet beoordeeld |
 | Rechten van de gebruiker (art. 15 en 17) | Inzage: de gebruiker ziet zijn profiel en notities (UC-06). Verwijderen: het account en alle notities (UC-05) | Geen export van de eigen notities (art. 20) |
