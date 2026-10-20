@@ -8,7 +8,7 @@ import app, throttle
 from db import query
 with app.app.app_context():
     a, = throttle.password_limits("hackingweek", "198.51.100.1")
-    b = throttle.password_limits("anna", "198.51.100.1")
+    b = throttle.password_limits("testacc1", "198.51.100.1")
     first = [throttle.attempt(a) for _ in range(101)]
     query("UPDATE auth_throttle SET locked_until = now() - interval '1 minute', lock_count = 3,"
           " window_start = now() - interval '20 minutes' WHERE key = %s", (a.key,))
@@ -20,22 +20,22 @@ with app.app.app_context():
 def run():
     print("== limits")
     unlock()
-    _, secb, _ = account("bram")
+    _, secb, _ = account("testacc6")
     sql("INSERT INTO auth_throttle (key, failures, window_start) VALUES ('old', 1, now() - interval '2 days'), ('fresh', 1, now())")
-    check("5 wrong passwords, the 6th attempt refused", tries([req(client(), "/login", {"username": "bram", "password": f"wrong{i}"}) for i in range(6)]), LOCKED)
+    check("5 wrong passwords, the 6th attempt refused", tries([req(client(), "/login", {"username": "testacc6", "password": f"wrong{i}"}) for i in range(6)]), LOCKED)
     check("  old counter cleaned up, fresh one stays", sql("SELECT string_agg(key, ',' ORDER BY key) FROM auth_throttle WHERE key IN ('old', 'fresh')"), "fresh")
-    check("right password during the lockout", req(client(), "/login", {"username": "bram", "password": PW})[0], 429)
+    check("right password during the lockout", req(client(), "/login", {"username": "testacc6", "password": PW})[0], 429)
     unlock()
-    d = password_step("bram")
+    d = password_step("testacc6")
     st = [req(d, "/login/2fa", {"code": f"{i:06d}"}) for i in range(6)]
     check("5 wrong codes, the 6th refused", (*tries(st), msg(st[-1][1])[:24]), (*LOCKED, "Too many failed attempts"))
-    check("right code during the lockout", req(d, "/login/2fa", {"code": fresh(secb, "bram")})[0], 429)
+    check("right code during the lockout", req(d, "/login/2fa", {"code": fresh(secb, "testacc6")})[0], 429)
     check("5 wrong recovery codes, the 6th refused", tries([req(d, "/login/recover", {"code": f"{i:032d}"}) for i in range(6)]), LOCKED)
     unlock()
-    pair, same = (password_step("bram"), password_step("bram")), fresh(secb, "bram")
+    pair, same = (password_step("testacc6"), password_step("testacc6")), fresh(secb, "testacc6")
     check("two at the same time with the same code", sorted(together([lambda x=x: req(x, "/login/2fa", {"code": same})[0] for x in pair])), [302, 400])
     unlock()
-    res = together([lambda i=i: req(client(), "/login", {"username": "bram", "password": f"together{i}"})[0] for i in range(40)])
+    res = together([lambda i=i: req(client(), "/login", {"username": "testacc6", "password": f"together{i}"})[0] for i in range(40)])
     check("40 at once: exactly 5 checked, the rest refused", sorted(res), [400] * 5 + [429] * 35)
     check("  doubling counter up only once", sql("SELECT max(lock_count) FROM auth_throttle"), "1")
     unlock()

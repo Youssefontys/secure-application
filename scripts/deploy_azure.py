@@ -90,7 +90,7 @@ def run():
         if subprocess.run([sys.executable, str(REPO / "scripts" / "setup_azure.py")], cwd=REPO).returncode != 0:
             sys.exit(1)
 
-    # The tag is the content of app/ in your last commit (see image.yml): a commit without an app change reuses it.
+    # The tag is the content of app/ in your last commit (see CI-image.yml): a commit without an app change reuses it.
     github, tree = github_repo(), git("rev-parse", "HEAD:app")
     if not (github and tree):
         stop("No GitHub repo found (git remote get-url origin); the image comes from GitHub Actions.", icon="🤔")
