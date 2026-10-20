@@ -13,8 +13,8 @@ __pycache__/
 # Made by scripts/setup_azure.py: subscription and tenant ID of your Azure environment.
 backend.conf
 
-# The report of ZAP (the profile scan in compose.yaml).
-scan/
+# The report of ZAP, if you run the baseline yourself (see the README).
+zap-report.*
 
 # Terraform: providers, state and plans do not belong in git; .terraform.lock.hcl does (pinned hashes, MIT-03).
 terraform/.terraform/

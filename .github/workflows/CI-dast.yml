@@ -1,0 +1,54 @@
+# DAST (MIT-46): the ZAP baseline against the app on the runner, on every pull request to main. Passive: it reads
+# headers, cookies and pages, it does not attack, and it only sees what a visitor without an account sees. Every rule of
+# ZAP has a decision in zap-rules.tsv, like the VEX for the scan; a finding without one fails the job. The report is an
+# artifact, and the findings are in the summary of the run. A workflow of its own: it shares nothing with CI-image.yml.
+name: DAST
+
+on:
+  pull_request:
+    branches: [main]
+
+# No rights by default; the job only reads the code.
+permissions: {}
+
+env:
+  # Pinned on version and digest (MIT-03); Dependabot does not see an image in a run line, so you update it yourself,
+  # as Trivy in CI-image.yml.
+  ZAP: ghcr.io/zaproxy/zaproxy:2.17.0@sha256:5ccfff9a411743ab2615136a2edd7416bec9ce41572fa94e935df38c14adb2b6
+
+jobs:
+  dast:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      # Pinned on a commit, not on a tag that can move (MIT-03); Dependabot keeps it up to date (MIT-33).
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # The same stack as the security test, with throwaway secrets that only exist on this runner.
+      - name: Start the stack
+        run: python3 scripts/deployment.py local < /dev/null
+
+      # ZAP joins the network of the app, so it scans http://app:5000 as before; it runs as its own user, so it needs to
+      # be able to write in the folder.
+      - name: ZAP baseline
+        run: |
+          mkdir -p "$RUNNER_TEMP/zap" && chmod 777 "$RUNNER_TEMP/zap" && cp zap-rules.tsv "$RUNNER_TEMP/zap/rules.tsv"
+          net=$(docker inspect --format '{{range $name, $_ := .NetworkSettings.Networks}}{{$name}}{{end}}' "$(docker compose ps -q app)")
+          docker run --rm --network "$net" -v "$RUNNER_TEMP/zap:/zap/wrk:rw" "$ZAP" \
+            zap-baseline.py -t http://app:5000/ -c rules.tsv -r zap-report.html -J zap-report.json
+
+      - name: Findings in the summary
+        if: always()
+        run: |
+          jq -r '"| Risk | Finding | Instances |", "|---|---|---|",
+            (.site[].alerts[] | "| \(.riskdesc) | \(.name) | \(.count) |")' "$RUNNER_TEMP/zap/zap-report.json" >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: zap-${{ github.sha }}
+          path: ${{ runner.temp }}/zap/zap-report.*
+          retention-days: 90
