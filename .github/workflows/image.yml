@@ -87,12 +87,12 @@ jobs:
 
       # De securitytest (tests/securitytest.py) tegen de stack van compose.yaml, alleen in de check: faalt een controle, dan
       # faalt de check en houdt de ruleset de merge tegen (MIT-39). Zonder terminal stelt deployment.py geen vragen en maakt
-      # het wegwerpgeheimen in .env, die alleen op deze runner bestaan. De test duurde op een runner zo'n vijf minuten (T-121).
+      # het wegwerpgeheimen in .env, die alleen op deze runner bestaan. De stap duurt zo'n 212 seconden (T-125).
       - name: Securitytest
         timeout-minutes: 20
         run: |
           python3 scripts/deployment.py lokaal < /dev/null
-          python3 tests/securitytest.py --wis
+          python3 tests/securitytest.py --wipe
 
   # Bij een push naar main, of met de hand: dezelfde stappen, en pas na een schone scan naar ghcr.io.
   image:

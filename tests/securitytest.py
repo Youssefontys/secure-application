@@ -1,11 +1,11 @@
 """Securitytest van de hele app, tegen de lokale stack op http://127.0.0.1:5000: per onderwerp een eigen bestand
 (twofactortest.py en verder, zie TESTS), elk met de normale werking en de aanval, en de maatregel (MIT-..) uit
 BoK/Threat Analysis/entries.md in de kop. LET OP: maakt de tabellen users en auth_throttle leeg, dus alle lokale
-accounts en notities zijn daarna weg. Daarom draait hij alleen met --wis:
+accounts en notities zijn daarna weg. Daarom draait hij alleen met --wipe:
 
     python scripts/deployment.py lokaal
-    python tests/securitytest.py --wis                 alle tests
-    python tests/securitytest.py --wis bruteforce      alleen bruteforcetest.py; meer namen mag ook
+    python tests/securitytest.py --wipe                alle tests
+    python tests/securitytest.py --wipe bruteforce     alleen bruteforcetest.py; meer namen mag ook
 
 Vraagt niets. Alleen de standaardbibliotheek en docker compose; werkt op Windows en Linux. Exit 1 als een controle faalt.
 """
@@ -188,8 +188,8 @@ def account(u, pw=PW):
 
 
 if __name__ == "__main__":
-    chosen = [a for a in sys.argv[1:] if a != "--wis"]
-    if "--wis" not in sys.argv:
+    chosen = [a for a in sys.argv[1:] if a != "--wipe"]
+    if "--wipe" not in sys.argv:
         sys.exit(__doc__)
     if unknown := sorted(set(chosen) - set(TESTS)):
         sys.exit(f"Onbekende test: {', '.join(unknown)}. Kies uit: {', '.join(TESTS)}.")
