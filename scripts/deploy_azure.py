@@ -9,8 +9,8 @@ import sys
 import urllib.error
 import urllib.request
 
-import common
-from common import REPO, ask, check_tools, hackstand, stop, terraform
+import deployment
+from deployment import REPO, ask, check_tools, hackstand, stop, terraform
 
 # Eist een tenant MFA, dan slaat az login hem over (AADSTS50076) en is er geen subscription; --tenant vraagt er wel om.
 AZ_LOGIN_HELP = """Eerst even inloggen bij Azure: je bent nog niet ingelogd, of er is geen subscription gevonden.
@@ -84,10 +84,10 @@ def run():
              "   Daarna opnieuw: python scripts/deployment.py azure", icon="⏳")
     print("   ✅ Staat klaar, en Container Apps mag hem ophalen")
 
-    hack = hackstand() if common.INTERACTIVE else {"THROTTLE_IP_MODE": None, "THROTTLE_PAIR_EXEMPT_USERS": None}
+    hack = hackstand() if deployment.INTERACTIVE else {"THROTTLE_IP_MODE": None, "THROTTLE_PAIR_EXEMPT_USERS": None}
     # De mail bij een blokkade (alerts.tf): standaard het adres waarmee je bij az bent ingelogd. Niet in de repo, die is openbaar.
     email = login if re.fullmatch(EMAIL, login) else ""
-    if common.INTERACTIVE:
+    if deployment.INTERACTIVE:
         print("\n📧 Bij een blokkade stuurt Azure binnen een paar minuten een mail.")
         email = ask("Naar welk adres?", email or "-", EMAIL)
     if not re.fullmatch(EMAIL, email):
