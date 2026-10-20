@@ -23,7 +23,8 @@ locals {
   app_settings = merge(
     {
       DATABASE_URL = local.database_url_app
-      # De OpenSSL in psycopg vindt zo de rootcertificaten van Debian, voor sslrootcert=system.
+      # De rootcertificaten van Debian, voor sslrootcert=system. Nodig voor de eigen OpenSSL van psycopg-binary; met de
+      # libpq van Debian (MIT-43) vindt OpenSSL ze ook zelf, maar dit blijft staan tot dat op Azure gemeten is.
       SSL_CERT_FILE = "/etc/ssl/certs/ca-certificates.crt"
       # Container Apps zet alleen het meest rechtse adres in X-Forwarded-For: één proxy (MC-18).
       TRUSTED_PROXIES  = "1"

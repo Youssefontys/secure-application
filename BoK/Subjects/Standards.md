@@ -25,7 +25,7 @@ Geschreven voor ontwikkelaars: per control een werkwijze, niet een lijst eisen. 
 | C3 Input en exceptions | MIT-02, MIT-04, MIT-22, MIT-23, MIT-25 | |
 | C4 Security from the Start | De misuse cases bij elke feature, de risicomatrix en de diagrammen in `Threat Analysis/` | |
 | C5 Secure by Default | MIT-23, MIT-26 | |
-| C6 Components | MIT-03, MIT-33, MIT-35, MIT-36, MIT-39, MIT-41 | De enige hoge in de risicomatrix: een lek na de build (MC-11) |
+| C6 Components | MIT-03, MIT-33, MIT-35, MIT-36, MIT-39, MIT-41, MIT-43 | De enige hoge in de risicomatrix: een lek na de build (MC-11) |
 | C7 Digital Identities | MIT-05, MIT-06, MIT-09, MIT-10, MIT-12, MIT-19 | TOTP is niet bestand tegen phishing (MC-16) |
 | C8 Browser Security Features | MIT-21, MIT-23 | |
 | C9 Logging en Monitoring | MIT-31, MIT-37 | Alleen een blokkade geeft een mail (MC-28) |

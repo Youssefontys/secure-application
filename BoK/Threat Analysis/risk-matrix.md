@@ -71,7 +71,7 @@ K is kans, I is impact, R is risico.
 | MC-08 | Te veel databaserechten | 1 × 3 = 3 | 1 × 3 = 3 | Eerst de eigenaar van de database, nu een eigen rol (MIT-27): geen tabellen of rollen meer, maar nog wel alle rijen. Kleiner, maar nog steeds alle gebruikers |
 | MC-09 | Gebruikersnamen opsporen | 3 × 1 = 3 | 3 × 1 = 3 | Registreren zegt of een naam bezet is. Sinds 5d0f1d0 telt ook een bezette naam mee voor de limiet van 10 per uur per adres (MIT-30); vanaf veel adressen blijft het makkelijk |
 | MC-10 | Overbelasten | 3 × 2 = 6 | 2 × 2 = 4 | Een grens per verzoek, per veld en op registreren en notities (MIT-22, MIT-04, MIT-30); vanaf veel adressen tegelijk, met Argon2id per poging, lukt het nog |
-| MC-11 | Kwetsbare afhankelijkheid | 3 × 3 = 9 | 2 × 3 = 6 | Vastgezet (MIT-03), Dependabot (MIT-33), een scan bij elke pull request en vóór het publiceren (MIT-35, MIT-39), en een beslissing per lek, ook zonder oplossing (MIT-41). Een lek dat na de build bekend wordt, gaat door tot de volgende pull request, een draaiende image wordt niet opnieuw gescand, een verklaring in de VEX kan fout zijn, en wat een wheel zelf meeneemt (psycopg-binary, de OpenSSL in `cryptography`) en Python zelf ziet de scan niet (T-118) |
+| MC-11 | Kwetsbare afhankelijkheid | 3 × 3 = 9 | 2 × 3 = 6 | Vastgezet (MIT-03), Dependabot (MIT-33), een scan bij elke pull request en vóór het publiceren (MIT-35, MIT-39), en een beslissing per lek, ook zonder oplossing (MIT-41). Een lek dat na de build bekend wordt, gaat door tot de volgende pull request, een draaiende image wordt niet opnieuw gescand, een verklaring in de VEX kan fout zijn, en de OpenSSL in `cryptography` en Python zelf ziet de scan niet (T-118); de bibliotheken van psycopg-binary zijn sinds MIT-43 weg |
 | MC-12 | Wachtwoord wijzigen met andermans sessie | 2 × 2 = 4 | 1 × 2 = 2 | Het huidige wachtwoord en een code (MIT-16) |
 | MC-13 | Andermans account verwijderen | 2 × 2 = 4 | 1 × 2 = 2 | Wachtwoord en code (MIT-16); verwijderen blijft onomkeerbaar |
 | MC-14 | Root en de ontwikkelserver | 1 × 3 = 3 | 1 × 2 = 2 | Gunicorn als gewone gebruiker zonder schrijfrecht op de code (MIT-26), en geen setuid-programma's om alsnog root te worden (MIT-42); wat de app mag, blijft (MC-08, MC-22) |
@@ -99,8 +99,9 @@ K is kans, I is impact, R is risico.
   CRITICAL tegen tot er een beslissing is, ook zonder oplossing (MIT-41, deelvraag 2 van het onderzoek). Maar hij
   ziet geen lek dat pas na de build bekend wordt, en de draaiende image wordt niet opnieuw gescand. En volgens
   deelvraag 3 ziet hij niets van wat buiten dpkg en pip om in de image zit: 52 van de 70 bestanden die de app
-  laadt (T-118). Daarom blijft de kans 2. Besluit: verder verkleinen: de bewaarde SBoM opnieuw scannen,
-  bijvoorbeeld elke dag, en psycopg zonder binary, met de libpq van Debian.
+  laadt (T-118). Sinds MIT-43 komt libpq uit Debian, maar Python zelf en de OpenSSL in `cryptography` blijven
+  buiten zicht. Daarom blijft de kans 2. Besluit: verder verkleinen: de bewaarde SBoM opnieuw scannen,
+  bijvoorbeeld elke dag.
 - **Midden, met impact 3: MC-02, MC-06, MC-08, MC-22, MC-30, MC-31.** Weinig kans, maar als het lukt, zijn alle
   gebruikers of de hele omgeving geraakt. MC-02 en MC-06 rusten elk op één regel in elke route; de regressietest
   bewaakt ze. MC-08 en MC-22 komen neer op wie de app overneemt: de app heeft de sleutel en de rechten nodig om te
