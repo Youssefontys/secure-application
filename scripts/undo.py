@@ -19,7 +19,7 @@ def run():
         # For removing the values do not matter, but Terraform wants them, and checks the address.
         if not (terraform("init", "-input=false", "-reconfigure", "-backend-config=../backend.conf")
                 and terraform("destroy", "-var=app_image=gone", "-var=alert_email=nobody@example.com",
-                              "-var=github_repo=nobody/gone")):
+                              "-var=github_oidc_prefix=repo:nobody/gone")):
             stop("terraform destroy did not work, or you did not type yes; the state storage and backend.conf stay.\n"
                  "   💡 Is the state storage itself already gone? Then only remove backend.conf.")
         rg = re.search(r'^resource_group_name\s*=\s*"([A-Za-z0-9_.-]+)"', conf.read_text(encoding="utf-8"), re.M)

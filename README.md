@@ -17,7 +17,8 @@ Every feature that is added has an entry in `BoK/`: the use case, the misuse cas
 - `BoK/Subjects/` - per BoK subject (week) what was built, why it is safe and what it does not solve; `Standards.md` maps the app on the OWASP Top 10 Proactive Controls, ASVS 5.0, the CSA Cloud Controls Matrix and EN 40000, and `Laws.md` covers the AVG (with a self-assessment), NIS2 and the CRA
 - `compose.yaml` - app and database for local use, with a ZAP profile in comments for later
 - `.github/dependabot.yml` - weekly update proposals for the pinned packages, images, Terraform providers and GitHub Actions
-- `.github/workflows/image.yml` - on every pull request to `main`, builds the image, makes its SBoM, scans it with the VEX and runs the security test, without publishing (the job `check`, required by a ruleset on `main`); on every push to `main`, does the same and then publishes the image to ghcr.io, tagged with the commit, and the job `deploy` puts that image on Azure once you approve it, signed in through OIDC without a password or key in GitHub
+- `.github/workflows/image.yml` - on every pull request to `main`, builds the image, makes its SBoM, scans it with the VEX and runs the security test, without publishing (the job `check`, required by a ruleset on `main`); on every push to `main`, does the same and then publishes the image to ghcr.io, tagged with the commit
+- `.github/workflows/deploy.yml` - after Image succeeded on a push to `main`, puts that image on Azure once you approve it, signed in through OIDC without a password or key in GitHub; it only changes the image of the container app
 - `vex/` - `openvex.json`, which says per vulnerability in the image whether it affects the image and why, and in `README.md` how a finding is triaged
 - `scripts/` - `deployment.py` to deploy, locally or to Azure, and to remove it all again. It asks what to do and starts `deploy_local.py`, `deploy_azure.py` or `undo.py`, which take what they share from it: paths, questions, stopping and hackmode. `setup_azure.py` is the one-time Terraform state bootstrap that `deploy_azure.py` starts when it is missing
 - `tests/` - the security test against the local stack: `securitytest.py` runs one test per topic (`bruteforcetest.py` and the others), each with the normal flow, the attack and the mitigation it proves. It empties the local accounts, so it only runs with `--wipe`
@@ -26,8 +27,9 @@ Every feature that is added has an entry in `BoK/`: the use case, the misuse cas
 ## Requirements
 
 - **Locally:** Docker with Compose v2, and Python 3 for `scripts/deployment.py`.
-- **Azure:** an Azure subscription in which you may create resources and role assignments, the Azure CLI, Terraform 1.11 or newer, Python 3 and Git. No Docker and no GitHub token: GitHub Actions builds the image on every push to `main`. Optional: the GitHub CLI (`gh`), signed in, to deploy from GitHub after your approval.
+- **Azure:** an Azure subscription in which you may create resources, role assignments and a custom role (Owner, or Contributor with User Access Administrator), the Azure CLI, Terraform 1.11 or newer, Python 3 and Git. No Docker and no GitHub token: GitHub Actions builds the image on every push to `main`. Optional, to deploy from GitHub after your approval: the GitHub CLI (`gh`) and admin rights on the repo.
 - **Signed in to Azure** before `python scripts/deployment.py azure`: run `az login`. If it says `Authentication failed against tenant <ID>` with `AADSTS50076`, that tenant requires MFA and `az login` skipped it; run `az login --tenant <ID>` and approve the second step in your authenticator app. On Windows the sign-in opens in a small Windows window (Web Account Manager) instead of the browser; that is the default since Azure CLI 2.61.0.
+- **Signed in to GitHub**, only to deploy from GitHub: run `gh auth login`. `deployment.py azure` then sets up the environment `azure` and reads how GitHub names the repo in the OIDC token of a job, with the IDs of owner and repo if the repo uses immutable subjects. Without `gh` it skips this, and you update by running it again.
 
 `deployment.py` checks these first and names what is missing.
 

@@ -8,13 +8,13 @@ resource "azurerm_user_assigned_identity" "deploy" {
 }
 
 # Azure only accepts a token of a job in the environment azure; that environment only allows main and waits for an
-# approval (deploy_azure.py sets it up). The subject is case-sensitive, so the exact name of the repo.
+# approval (deploy_azure.py sets it up). The subject must match exactly, with the IDs if GitHub puts them in.
 resource "azurerm_federated_identity_credential" "github" {
   name                      = "github-environment-azure"
   user_assigned_identity_id = azurerm_user_assigned_identity.deploy.id
   issuer                    = "https://token.actions.githubusercontent.com"
   audience                  = ["api://AzureADTokenExchange"]
-  subject                   = "repo:${var.github_repo}:environment:azure"
+  subject                   = "${var.github_oidc_prefix}:environment:azure"
 }
 
 # Only what replacing the image needs: reading and writing the container app and seeing its revisions. Not on the
