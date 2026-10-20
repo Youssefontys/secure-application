@@ -1,4 +1,4 @@
-# De identiteit van de app: leest alleen de geheimen in deze vault, verder niets.
+# The identity of the app: only reads the secrets in this vault, nothing else.
 resource "azurerm_user_assigned_identity" "app" {
   name                = "id-${local.name}-app"
   location            = azurerm_resource_group.main.location
@@ -6,7 +6,7 @@ resource "azurerm_user_assigned_identity" "app" {
   tags                = local.tags
 }
 
-# Eigen identiteit in plaats van systeem-toegewezen: die bestaat al voordat de app de geheimen ophaalt.
+# An own identity instead of system-assigned: it already exists before the app fetches the secrets.
 resource "azurerm_role_assignment" "app_secrets" {
   scope                = azurerm_key_vault.main.id
   role_definition_name = "Key Vault Secrets User"
@@ -14,7 +14,7 @@ resource "azurerm_role_assignment" "app_secrets" {
 }
 
 locals {
-  # Per omgevingsvariabele een verwijzing naar Key Vault; de waarde staat niet in Terraform (MIT-17, MIT-18).
+  # Per environment variable a reference to Key Vault; the value is not in Terraform (MIT-17, MIT-18).
   app_secrets = {
     DATA_ENCRYPTION_KEY = azurerm_key_vault_secret.data_key
     FLASK_SECRET_KEY    = azurerm_key_vault_secret.flask_key
@@ -23,10 +23,10 @@ locals {
   app_settings = merge(
     {
       DATABASE_URL = local.database_url_app
-      # De rootcertificaten van Debian, voor sslrootcert=system. Nodig voor de eigen OpenSSL van psycopg-binary; met de
-      # libpq van Debian (MIT-43) vindt OpenSSL ze ook zelf, maar dit blijft staan tot dat op Azure gemeten is.
+      # The root certificates of Debian, for sslrootcert=system. Needed for the own OpenSSL of psycopg-binary; with the
+      # libpq of Debian (MIT-43) OpenSSL also finds them itself, but this stays until that is measured on Azure.
       SSL_CERT_FILE = "/etc/ssl/certs/ca-certificates.crt"
-      # Container Apps zet alleen het meest rechtse adres in X-Forwarded-For: één proxy (MC-18).
+      # Container Apps only puts the rightmost address in X-Forwarded-For: one proxy (MC-18).
       TRUSTED_PROXIES  = "1"
       HTTPS_ONLY       = "1"
       THROTTLE_IP_MODE = var.throttle_ip_mode
@@ -35,13 +35,13 @@ locals {
   )
 }
 
-# Alleen het Consumption-profiel: betalen per gebruik, ook in een eigen netwerk.
+# Only the Consumption profile: pay per use, also in an own network.
 resource "azurerm_container_app_environment" "main" {
   name                     = "cae-${local.name}"
   location                 = azurerm_resource_group.main.location
   resource_group_name      = azurerm_resource_group.main.name
   infrastructure_subnet_id = azurerm_subnet.apps.id
-  # De log bewaren in logs.tf; zonder deze twee regels is hij alleen live te volgen.
+  # Keep the log in logs.tf; without these two lines it can only be followed live.
   logs_destination           = "log-analytics"
   log_analytics_workspace_id = azurerm_log_analytics_workspace.main.id
   tags                       = local.tags
@@ -52,7 +52,7 @@ resource "azurerm_container_app_environment" "main" {
   }
 }
 
-# HTTPS van het platform: HTTP gaat naar HTTPS, met TLS 1.2 of 1.3 (F-01, F-02).
+# HTTPS of the platform: HTTP goes to HTTPS, with TLS 1.2 or 1.3 (F-01, F-02).
 resource "azurerm_container_app" "app" {
   name                         = "ca-${local.name}"
   container_app_environment_id = azurerm_container_app_environment.main.id
@@ -128,7 +128,7 @@ resource "azurerm_container_app" "app" {
   }
 }
 
-# De schema-job logt in als eigenaar, dus een eigen identiteit: alleen die leest de vault met dat wachtwoord.
+# The schema job logs in as the owner, so an own identity: only it reads the vault with that password.
 resource "azurerm_user_assigned_identity" "schema" {
   name                = "id-${local.name}-schema"
   location            = azurerm_resource_group.main.location
@@ -136,8 +136,8 @@ resource "azurerm_user_assigned_identity" "schema" {
   tags                = local.tags
 }
 
-# De admin-vault helemaal; uit de app-vault alleen het wachtwoord van notities_app. Een geheim dat twee
-# applicaties delen is de uitzondering waarvoor Microsoft rechten per geheim noemt.
+# The admin vault entirely; from the app vault only the password of notes_app. A secret that two
+# applications share is the exception for which Microsoft names rights per secret.
 resource "azurerm_role_assignment" "schema_secrets" {
   for_each = {
     admin  = azurerm_key_vault.admin.id
@@ -148,9 +148,9 @@ resource "azurerm_role_assignment" "schema_secrets" {
   principal_id         = azurerm_user_assigned_identity.schema.principal_id
 }
 
-# Laadt db/schema.sql in de lege database en zet het wachtwoord van notities_app; Terraform start hem zelf (hieronder).
-# Opnieuw starten mag: het schema alleen als de tabellen er nog niet zijn, het wachtwoord elke keer.
-# De app-image, want die heeft psycopg en de rootcertificaten; postgres:18 heeft geen CA-bundel.
+# Loads db/schema.sql into the empty database and sets the password of notes_app; Terraform starts it itself (below).
+# Starting it again is fine: the schema only if the tables are not there yet, the password every time.
+# The app image, because it has psycopg and the root certificates; postgres:18 has no CA bundle.
 resource "azurerm_container_app_job" "schema" {
   name                         = "caj-${local.name}-schema"
   location                     = azurerm_resource_group.main.location
@@ -158,7 +158,7 @@ resource "azurerm_container_app_job" "schema" {
   container_app_environment_id = azurerm_container_app_environment.main.id
   workload_profile_name        = "Consumption"
   replica_timeout_in_seconds   = 300
-  # Herhaalbaar, dus bij een tijdelijke fout (rechten nog niet overal bekend) gewoon nog eens.
+  # Repeatable, so on a temporary error (rights not yet known everywhere) simply once more.
   replica_retry_limit = 2
   tags                = local.tags
   depends_on          = [azurerm_role_assignment.schema_secrets]
@@ -188,15 +188,15 @@ resource "azurerm_container_app_job" "schema" {
       image  = var.app_image
       cpu    = 0.25
       memory = "0.5Gi"
-      # Eén transactie: lukt een statement niet, dan staat er niets half. sql.Literal maakt van het
-      # wachtwoord tekst, nooit SQL.
+      # One transaction: if a statement fails, nothing is left half done. sql.Literal turns the
+      # password into text, never SQL.
       command = ["python", "-c", <<-PY
         import os, psycopg
         from psycopg import sql
         with psycopg.connect(os.environ["DATABASE_URL"]) as c:
             if c.execute("SELECT to_regclass('public.users')").fetchone()[0] is None:
                 c.execute(os.environ["SCHEMA_SQL"])
-            c.execute(sql.SQL("ALTER ROLE notities_app PASSWORD {}").format(sql.Literal(os.environ["APP_DB_PASSWORD"])))
+            c.execute(sql.SQL("ALTER ROLE notes_app PASSWORD {}").format(sql.Literal(os.environ["APP_DB_PASSWORD"])))
         PY
       ]
 
@@ -224,13 +224,13 @@ resource "azurerm_container_app_job" "schema" {
   }
 }
 
-# Wanneer de job moet draaien: na de eerste apply, en opnieuw bij een ander schema of een nieuw wachtwoord van notities_app.
+# When the job must run: after the first apply, and again on another schema or a new password of notes_app.
 resource "terraform_data" "schema_inputs" {
   input = [filesha256("${path.module}/../db/schema.sql"), var.secret_version]
 }
 
-# De job starten; azurerm kan dat niet, azapi doet dezelfde aanroep als az containerapp job start. De start wacht niet
-# tot de job klaar is: de eerste minuut na een nieuwe database kan inloggen nog mislukken.
+# Start the job; azurerm cannot do that, azapi makes the same call as az containerapp job start. The start does not wait
+# until the job is done: in the first minute after a new database, logging in can still fail.
 resource "azapi_resource_action" "schema_start" {
   type        = "Microsoft.App/jobs@2025-07-01"
   resource_id = azurerm_container_app_job.schema.id

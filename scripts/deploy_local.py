@@ -1,26 +1,26 @@
-# Lokaal uitrollen met Docker Compose: de geheimen in .env, de hackstand, en de containers. Start via deployment.py.
+# Deploying locally with Docker Compose: the secrets in .env, hackmode, and the containers. Start through deployment.py.
 
 import secrets
 import shutil
 import subprocess
 
 import deployment
-from deployment import ENV, REPO, SECRETS, check_tools, hackstand, stop
+from deployment import ENV, REPO, SECRETS, check_tools, hackmode, stop
 
 
 def read_env():
     return ENV.read_text(encoding="utf-8").splitlines() if ENV.exists() else []
 
 
-# Alleen de eigenaar mag .env lezen (0600), al vóór het schrijven; anders leest elke gebruiker van de machine
-# de sleutels mee (MIT-32). Op Windows zet chmod alleen het alleen-lezen-vlag, en dat blijft uit.
+# Only the owner may read .env (0600), already before writing; otherwise every user of the machine reads
+# the keys too (MIT-32). On Windows chmod only sets the read-only flag, and that stays off.
 def write_env(lines):
     ENV.touch(mode=0o600, exist_ok=True)
     ENV.chmod(0o600)
     ENV.write_text("\n".join(lines) + "\n", encoding="utf-8", newline="")
 
 
-# Vult ontbrekende of lege geheimen in .env aan met 256 willekeurige bits; toont ze nooit.
+# Fills in missing or empty secrets in .env with 256 random bits; never shows them.
 def ensure_env():
     lines = read_env()
     present, new = set(), []
@@ -38,7 +38,7 @@ def ensure_env():
     return new + missing
 
 
-# Zet een instelling in .env, of haalt hem weg bij None; regels in commentaar blijven staan.
+# Sets a setting in .env, or removes it for None; commented lines stay.
 def set_env(name, value):
     lines = [line for line in read_env() if line.lstrip().startswith("#") or line.partition("=")[0].strip() != name]
     if value is not None:
@@ -47,20 +47,20 @@ def set_env(name, value):
 
 
 def run():
-    check_tools("lokaal")
+    check_tools("local")
     added = ensure_env()
-    print(f"\n🔑 Nieuwe geheimen in .env: {', '.join(added)} (elk 256 willekeurige bits, nooit getoond)" if added
-          else "\n🔐 .env: alle geheimen staan er al")
-    # Zonder terminal blijft wat er in .env staat; HTTPS_ONLY zet compose.yaml lokaal op 0 (HTTP).
+    print(f"\n🔑 New secrets in .env: {', '.join(added)} (each 256 random bits, never shown)" if added
+          else "\n🔐 .env: all secrets are already there")
+    # Without a terminal, what is in .env stays; compose.yaml sets HTTPS_ONLY to 0 locally (HTTP).
     if deployment.INTERACTIVE:
-        settings = hackstand()
-        # Nog steeds interactief: er is echt geantwoord, dus de keuze mag in .env.
+        settings = hackmode()
+        # Still interactive: there really was an answer, so the choice may go into .env.
         if deployment.INTERACTIVE:
             for name, value in settings.items():
                 set_env(name, value)
-    print("\n🐳 Containers bouwen en starten... ☕ de eerste keer duurt dit even.\n")
+    print("\n🐳 Building and starting the containers... ☕ the first time this takes a while.\n")
     if subprocess.run([shutil.which("docker"), "compose", "up", "-d", "--build", "--wait"], cwd=REPO).returncode != 0:
-        stop("docker compose up lukte niet; de melding van Docker staat hierboven.\n"
-             "   💡 Draait Docker (op Windows: Docker Desktop)? Start het en probeer het opnieuw.")
-    print("\n🎉 Klaar! De app draait op http://127.0.0.1:5000")
-    print("💡 Stoppen kan met: docker compose down; alles weg, ook de data: python scripts/deployment.py undo\n")
+        stop("docker compose up did not work; the message from Docker is above.\n"
+             "   💡 Is Docker running (on Windows: Docker Desktop)? Start it and try again.")
+    print("\n🎉 Done! The app runs on http://127.0.0.1:5000")
+    print("💡 Stop it with: docker compose down; everything gone, the data too: python scripts/deployment.py undo\n")

@@ -1,46 +1,46 @@
-# West Europe neemt geen nieuwe tenants aan, in Germany West Central mag deze subscription geen PostgreSQL maken, en
-# Belgium Central heeft geen log search alert. France Central is het goedkoopst en ligt in de EU (Week 8);
-# database.tf controleert de regio al bij het plan.
+# West Europe takes no new tenants, in Germany West Central this subscription may not create PostgreSQL, and
+# Belgium Central has no log search alert. France Central is the cheapest and is in the EU (Week 8);
+# database.tf already checks the region at the plan.
 variable "location" {
   type    = string
   default = "francecentral"
 }
 
-# De image van de app met een vaste tag of digest, nooit latest (MIT-03); de pipeline bouwt en pusht hem.
+# The image of the app with a fixed tag or digest, never latest (MIT-03); the pipeline builds and pushes it.
 variable "app_image" {
   type = string
 }
 
-# Zelfde hoofdversie als lokaal in compose.yaml.
+# Same major version as locally in compose.yaml.
 variable "postgres_version" {
   type    = string
   default = "18"
 }
 
-# 0: de app slaapt als niemand hem gebruikt (geen kosten, maar de eerste aanvraag is traag). Hacking week: 1.
+# 0: the app sleeps when nobody uses it (no cost, but the first request is slow). Hacking week: 1.
 variable "min_replicas" {
   type    = number
   default = 0
 }
 
-# Hackstand (MC-18): alleen tijdens de hacking week op hackweek.
+# Hackmode (MC-18): only on hackweek during the hacking week.
 variable "throttle_ip_mode" {
   type    = string
   default = "strict"
 
   validation {
     condition     = contains(["strict", "hackweek"], var.throttle_ip_mode)
-    error_message = "Kies strict of hackweek."
+    error_message = "Choose strict or hackweek."
   }
 }
 
-# Waar de alert bij een blokkade heen gaat (alerts.tf); deployment.py vult het adres van az login in. Niet in de repo: die is openbaar.
+# Where the alert on a lockout goes (alerts.tf); deployment.py fills in the address of az login. Not in the repo: it is public.
 variable "alert_email" {
   type = string
 
   validation {
     condition     = can(regex("^[^@[:space:]]+@[^@[:space:]]+[.][A-Za-z]{2,}$", var.alert_email))
-    error_message = "Geef een e-mailadres, zoals naam@voorbeeld.nl."
+    error_message = "Give an email address, such as name@example.com."
   }
 }
 
@@ -49,8 +49,8 @@ variable "throttle_pair_exempt_users" {
   default = ""
 }
 
-# Ophogen maakt nieuwe databasewachtwoorden en een nieuwe sessiesleutel; dat laatste logt iedereen uit.
-# Start daarna de schema-job: die zet het nieuwe wachtwoord van notities_app in de database.
+# Raising it makes new database passwords and a new session key; the latter logs everyone out.
+# Then start the schema job: it puts the new password of notes_app in the database.
 variable "secret_version" {
   type    = number
   default = 1

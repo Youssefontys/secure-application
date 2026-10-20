@@ -1,4 +1,4 @@
-# De geheimen van de app (A-05, A-09, A-10), met RBAC in plaats van access policies.
+# The secrets of the app (A-05, A-09, A-10), with RBAC instead of access policies.
 resource "azurerm_key_vault" "main" {
   name                       = "kv-${local.unique}"
   location                   = azurerm_resource_group.main.location
@@ -6,14 +6,14 @@ resource "azurerm_key_vault" "main" {
   tenant_id                  = data.azurerm_client_config.current.tenant_id
   sku_name                   = "standard"
   rbac_authorization_enabled = true
-  # Sleutel kwijt is notities kwijt (MC-22): 90 dagen terug te halen, en ook een beheerder kan niet eerder wissen.
+  # Key lost means notes lost (MC-22): 90 days to recover, and not even an administrator can purge earlier.
   purge_protection_enabled   = true
   soft_delete_retention_days = 90
   tags                       = local.tags
 }
 
-# Een eigen vault voor het wachtwoord van de eigenaar (A-06): de app kan hem dus niet lezen, ook niet met zijn
-# identiteit (MIT-27). Microsoft raadt een vault per applicatie aan, geen rechten per geheim.
+# A vault of its own for the password of the owner (A-06): so the app cannot read it, not even with its
+# identity (MIT-27). Microsoft recommends a vault per application, not rights per secret.
 resource "azurerm_key_vault" "admin" {
   name                       = "kvdb-${local.unique}"
   location                   = azurerm_resource_group.main.location
@@ -26,7 +26,7 @@ resource "azurerm_key_vault" "admin" {
   tags                       = local.tags
 }
 
-# Wie Terraform draait, mag geheimen schrijven; de vault zelf beheren hoort niet bij deze rol.
+# Whoever runs Terraform may write secrets; managing the vault itself is not part of this role.
 resource "azurerm_role_assignment" "kv_operator" {
   for_each             = { main = azurerm_key_vault.main.id, admin = azurerm_key_vault.admin.id }
   scope                = each.value
@@ -34,7 +34,7 @@ resource "azurerm_role_assignment" "kv_operator" {
   principal_id         = data.azurerm_client_config.current.object_id
 }
 
-# Ephemeral: Terraform maakt de waarden maar bewaart ze nergens; ze gaan alleen write-only naar Key Vault.
+# Ephemeral: Terraform makes the values but stores them nowhere; they only go write-only to Key Vault.
 ephemeral "random_bytes" "data_key" {
   length = 32
 }
@@ -43,7 +43,7 @@ ephemeral "random_bytes" "flask_key" {
   length = 32
 }
 
-# Azure eist drie van de vier soorten tekens; zonder leestekens hoeft het nergens ge-escapet te worden.
+# Azure requires three of the four kinds of characters; without punctuation it never needs escaping.
 ephemeral "random_password" "db" {
   length      = 40
   special     = false
@@ -52,7 +52,7 @@ ephemeral "random_password" "db" {
   min_numeric = 1
 }
 
-# Het wachtwoord van de app-rol notities_app, met dezelfde regels.
+# The password of the app role notes_app, with the same rules.
 ephemeral "random_password" "app_db" {
   length      = 40
   special     = false
@@ -65,7 +65,7 @@ resource "azurerm_key_vault_secret" "data_key" {
   name         = "data-encryption-key"
   key_vault_id = azurerm_key_vault.main.id
   value_wo     = ephemeral.random_bytes.data_key.hex
-  # Niet ophogen: een nieuwe gegevenssleutel maakt alle notities en TOTP-geheimen onleesbaar, tot v2: gebouwd is.
+  # Do not raise: a new data key makes all notes and TOTP secrets unreadable, until v2: is built.
   value_wo_version = 1
   content_type     = "hex, 256 bits"
   depends_on       = [azurerm_role_assignment.kv_operator]
@@ -85,7 +85,7 @@ resource "azurerm_key_vault_secret" "app_db_password" {
   key_vault_id     = azurerm_key_vault.main.id
   value_wo         = ephemeral.random_password.app_db.result
   value_wo_version = var.secret_version
-  content_type     = "wachtwoord, 40 tekens"
+  content_type     = "password, 40 characters"
   depends_on       = [azurerm_role_assignment.kv_operator]
 }
 
@@ -94,12 +94,12 @@ resource "azurerm_key_vault_secret" "db_password" {
   key_vault_id     = azurerm_key_vault.admin.id
   value_wo         = ephemeral.random_password.db.result
   value_wo_version = var.secret_version
-  content_type     = "wachtwoord, 40 tekens"
+  content_type     = "password, 40 characters"
   depends_on       = [azurerm_role_assignment.kv_operator]
 }
 
-# Het wachtwoord voor de database komt terug uit Key Vault: zo hebben vault en database altijd hetzelfde,
-# ook als een eerste apply halverwege stopt.
+# The password for the database comes back from Key Vault: this way vault and database always have the same one,
+# even if a first apply stops halfway.
 ephemeral "azurerm_key_vault_secret" "db_password" {
   name         = azurerm_key_vault_secret.db_password.name
   key_vault_id = azurerm_key_vault.admin.id

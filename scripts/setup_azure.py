@@ -1,9 +1,9 @@
-# Zet eenmalig de opslag voor de Terraform-state op Azure op; daarna doet Terraform de rest (deployment.py azure).
-# - De opslag is versleuteld met een eigen sleutel (RSA 4096) in Key Vault, met purge protection.
-# - Gescheiden rollen: wie dit draait beheert de sleutel; de identiteit van de opslag mag hem alleen gebruiken.
-# - Geen shell: elk commando is een lijst van argumenten. Op Windows is az een .cmd-bestand en leest cmd.exe
-#   de argumenten toch opnieuw, dus de echte bescherming is de allowlist op alle invoer (letters, cijfers, - _ .).
-# Uit BOK-SECENGINEER, daarna aangepast; de wijzigingen staan in de git-geschiedenis. Werkt op Windows en Linux.
+# Sets up the storage for the Terraform state on Azure once; after that Terraform does the rest (deployment.py azure).
+# - The storage is encrypted with its own key (RSA 4096) in Key Vault, with purge protection.
+# - Separated roles: whoever runs this manages the key; the identity of the storage may only use it.
+# - No shell: every command is a list of arguments. On Windows az is a .cmd file and cmd.exe still reads
+#   the arguments again, so the real protection is the allowlist on all input (letters, digits, - _ .).
+# Taken from BOK-SECENGINEER, then adapted; the changes are in the git history. Works on Windows and Linux.
 
 import random
 import re
@@ -13,55 +13,55 @@ import sys
 import time
 from pathlib import Path
 
-# Emoji ook als de uitvoer naar een pipe of bestand gaat: Python voor 3.15 schrijft daar op Windows cp1252.
-# Een stream zonder reconfigure (IDLE, een test) kan al Unicode.
+# Emoji also when the output goes to a pipe or file: Python before 3.15 writes cp1252 there on Windows.
+# A stream without reconfigure (IDLE, a test) can already do Unicode.
 for stream in (sys.stdout, sys.stderr):
     if hasattr(stream, "reconfigure"):
         stream.reconfigure(encoding="utf-8")
 
-# backend.conf komt in de hoofdmap van de repo, waar deployment.py en terraform init hem zoeken.
+# backend.conf goes into the root folder of the repo, where deployment.py and terraform init look for it.
 BACKEND_CONF = Path(__file__).resolve().parent.parent / "backend.conf"
-# West Europe neemt geen nieuwe tenants aan (RequestDisallowedByAzure); dezelfde regio als terraform/variables.tf.
+# West Europe takes no new tenants (RequestDisallowedByAzure); the same region as terraform/variables.tf.
 DEFAULT_LOCATION = "francecentral"
-# In de vraag doorgestreept; wie daar al resources heeft, mag hem nog wel intypen.
+# Struck through in the question; whoever already has resources there may still type it in.
 CLOSED_LOCATION = "westeurope"
 DEFAULT_RG_NAME = "rg-tfstate-mgmt"
 PROPAGATION_WAIT = 120
-# Allowlist voor een subscription ID: een GUID, verder niets.
+# Allowlist for a subscription ID: a GUID, nothing else.
 GUID = r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"
-# Fouten die bij het doorvoeren in Azure horen en vanzelf overgaan, en fouten die betekenen dat het er al is.
+# Errors that belong to propagation in Azure and pass by themselves, and errors that mean it is already there.
 RETRYABLE = ("ResourceNotFound", "ConnectionAbortedError", "PrincipalNotFound", "AuthorizationFailed")
 IGNORABLE = ("RoleAssignmentExists", "already exists")
 
 
-# Het commando als lijst van argumenten, zonder shell; het programma via PATH (op Windows az.cmd).
+# The command as a list of arguments, without a shell; the program through PATH (on Windows az.cmd).
 def as_args(*args):
     return [shutil.which(args[0]) or args[0], *args[1:]]
 
 
-# Stoppen met de melding, met witregels eromheen zodat hij opvalt; zelfde vorm als deployment.py.
+# Stop with the message, with blank lines around it so it stands out; same form as deployment.py.
 def stop(message, icon="❌"):
-    sys.exit(f"\n{icon} {message}\n\n🛑 Stoppen.\n")
+    sys.exit(f"\n{icon} {message}\n\n🛑 Stopping.\n")
 
 
-# De fout van az één keer: de regels Code, Message en Target herhalen meestal de eerste regel.
+# The error of az once: the lines Code, Message and Target usually repeat the first line.
 def az_error(stderr):
     lines = [line for line in stderr.strip().splitlines() if not line.startswith("WARNING:")] or [""]
     first = lines[0].removeprefix("ERROR: ")
     return "\n".join([first, *(line for line in lines[1:] if not ((value := line.partition(": ")[2]) and value in first))])
 
 
-# Voert az uit en geeft de uitvoer; bij een fout stoppen, of None met ignore_error.
+# Runs az and returns the output; on an error stop, or None with ignore_error.
 def az(*args, ignore_error=False):
     result = subprocess.run(as_args("az", *args), capture_output=True, text=True)
     if result.returncode == 0:
         return result.stdout.strip()
     if ignore_error:
         return None
-    stop(f"FOUT: {az_error(result.stderr)}")
+    stop(f"ERROR: {az_error(result.stderr)}")
 
 
-# Zoals az, maar opnieuw proberen zolang Azure nog bezig is; "bestaat al" telt als gelukt. Alleen een nieuwe poging meldt zich.
+# Like az, but try again while Azure is still busy; "already exists" counts as success. Only a new attempt reports itself.
 def az_retry(*args, tries=10, delay=10):
     for attempt in range(1, tries + 1):
         result = subprocess.run(as_args("az", *args), capture_output=True, text=True)
@@ -69,8 +69,8 @@ def az_retry(*args, tries=10, delay=10):
         if result.returncode == 0 or any(x in err for x in IGNORABLE):
             return result.stdout.strip()
         if attempt == tries or not any(x in err for x in RETRYABLE):
-            stop(f"FOUT: {az_error(err)}")
-        print(f"   ⏳ Azure is nog bezig; over {delay}s poging {attempt + 1} van {tries}...")
+            stop(f"ERROR: {az_error(err)}")
+        print(f"   ⏳ Azure is still busy; in {delay}s attempt {attempt + 1} of {tries}...")
         time.sleep(delay)
         delay += 5
 
@@ -80,8 +80,8 @@ def assign(role, assignee, scope):
     az_retry("role", "assignment", "create", "--role", role, "--assignee", assignee, "--scope", scope, "-o", "none")
 
 
-# Een vraag met een standaardwaarde; met pattern alleen een antwoord dat er helemaal aan voldoet.
-# shown vervangt wat er tussen de haakjes staat, bijvoorbeeld met een optie die niet kan.
+# A question with a default; with pattern only an answer that fully meets it.
+# shown replaces what is between the brackets, for example with an option that is not possible.
 def ask_user(question, default=None, pattern=None, shown=None):
     prompt = f"{question} [{shown or default}]: " if default else f"{question}: "
     while True:
@@ -90,57 +90,57 @@ def ask_user(question, default=None, pattern=None, shown=None):
             continue
         if pattern is None or re.fullmatch(pattern, ans):
             return ans
-        print("🤔 Dat kan niet: alleen letters, cijfers en - _ . mogen.")
+        print("🤔 That is not possible: only letters, digits and - _ . are allowed.")
 
 
-# De uitrol zelf.
+# The deployment itself.
 print("\n🛡️  Azure Terraform Bootstrap")
-print("👋 Eenmalig: de opslag waarin Terraform onthoudt wat er op Azure staat. Daarna doet Terraform de rest.")
-print("   Enter kiest steeds wat tussen [ ] staat.\n")
+print("👋 Once: the storage in which Terraform remembers what is on Azure. After that Terraform does the rest.")
+print("   Enter always picks what is between [ ].\n")
 
-# 1. Ingelogd en de subscription; de ID's pas daarna lezen, ook de tenant van een andere subscription.
-# Zelf az login starten kan hier niet: az() vangt de uitvoer af, en dan wacht de keuze van de subscription onzichtbaar.
+# 1. Signed in and the subscription; read the IDs only after that, also the tenant of another subscription.
+# Starting az login here is not possible: az() captures the output, and then the subscription choice waits invisibly.
 name = az("account", "show", "--query", "name", "-o", "tsv", ignore_error=True)
 if not name:
-    stop("Eerst even inloggen bij Azure: az login\n"
-         "   Zegt dat \"Authentication failed against tenant <ID>\" met AADSTS50076? Dan wil die tenant MFA:\n"
-         "   az login --tenant <ID>\n   Daarna dit script opnieuw.", icon="🔐")
-print(f"☁️  Ingelogd bij Azure, subscription: {name}")
-if ask_user("🔀 Andere subscription? (j/n)", "n").lower() == "j":
+    stop("First sign in to Azure: az login\n"
+         "   Does it say \"Authentication failed against tenant <ID>\" with AADSTS50076? Then that tenant wants MFA:\n"
+         "   az login --tenant <ID>\n   Then run this script again.", icon="🔐")
+print(f"☁️  Signed in to Azure, subscription: {name}")
+if ask_user("🔀 Another subscription? (y/n)", "n").lower() == "y":
     az("account", "set", "--subscription", ask_user("Subscription ID", pattern=GUID))
 sub_id = az("account", "show", "--query", "id", "-o", "tsv")
 tenant_id = az("account", "show", "--query", "tenantId", "-o", "tsv")
 me = az("ad", "signed-in-user", "show", "--query", "id", "-o", "tsv")
 
 # 2. Providers
-print("\n🧩 Providers registreren, eenmalig per subscription...")
+print("\n🧩 Registering providers, once per subscription...")
 for namespace in ("Microsoft.Storage", "Microsoft.KeyVault", "Microsoft.ManagedIdentity"):
     az_retry("provider", "register", "--namespace", namespace, "--wait", "-o", "none", tries=2)
     print(f"   ✅ {namespace}")
 
-# 3. Invoer; met vier cijfers erachter blijft de naam van de opslag binnen de 3 tot 24 tekens van Azure.
-print("\n📝 Een paar keuzes; de standaard is prima:")
-rg = ask_user("Resource Group naam", DEFAULT_RG_NAME, pattern=r"[A-Za-z0-9_.-]{0,89}[A-Za-z0-9_-]")
-# Doorstrepen met een combinerend streepje per letter: werkt in elke terminal die UTF-8 toont, zonder kleurcodes.
-closed = "".join(char + "\u0336" for char in CLOSED_LOCATION)
-location = ask_user("Regio", DEFAULT_LOCATION, pattern=r"[a-z0-9]+", shown=f"{DEFAULT_LOCATION} | {closed} neemt geen nieuwe klanten aan")
-container = ask_user("Blob container naam", "tfstate", pattern=r"[a-z0-9](?!.*--)[a-z0-9-]{1,61}[a-z0-9]")
+# 3. Input; with four digits after it the name of the storage stays within the 3 to 24 characters of Azure.
+print("\n📝 A few choices; the default is fine:")
+rg = ask_user("Resource Group name", DEFAULT_RG_NAME, pattern=r"[A-Za-z0-9_.-]{0,89}[A-Za-z0-9_-]")
+# Strike through with a combining stroke per letter: works in every terminal that shows UTF-8, without colour codes.
+closed = "".join(char + "̶" for char in CLOSED_LOCATION)
+location = ask_user("Region", DEFAULT_LOCATION, pattern=r"[a-z0-9]+", shown=f"{DEFAULT_LOCATION} | {closed} takes no new customers")
+container = ask_user("Blob container name", "tfstate", pattern=r"[a-z0-9](?!.*--)[a-z0-9-]{1,61}[a-z0-9]")
 prefix = ask_user("Storage prefix (3-10 chars)", "tfstate", pattern=r"[a-z0-9]{3,10}")
 sa_name = f"{prefix}{random.randint(1000, 9999)}"
 suffix = random.randint(1000, 9999)
 mi_name, kv_name, key_name = f"mi-{prefix}-{suffix}", f"kv-{prefix}-{suffix}", "tfstate-cmk-key"
-if ask_user("\n🚦 Starten? (j/n)", "j").lower() != "j":
-    print("👋 Niets aangemaakt. Tot later!")
+if ask_user("\n🚦 Start? (y/n)", "y").lower() != "y":
+    print("👋 Nothing created. See you later!")
     sys.exit(0)
 
-print(f"\n🚀 Daar gaan we, in {location}. Dit duurt een paar minuten.\n")
+print(f"\n🚀 Here we go, in {location}. This takes a few minutes.\n")
 az("group", "create", "--name", rg, "--location", location, "-o", "none")
 print(f"📁 Resource group: {rg}")
 
-# A. De identiteit van de opslag, en wachten tot Azure hem kent.
-print(f"🪪 Identiteit voor de opslag: {mi_name}")
+# A. The identity of the storage, and wait until Azure knows it.
+print(f"🪪 Identity for the storage: {mi_name}")
 az_retry("identity", "create", "--name", mi_name, "--resource-group", rg, "--location", location, "-o", "none")
-print("   ⏳ Even wachten tot Azure hem overal kent...")
+print("   ⏳ Waiting a moment until Azure knows it everywhere...")
 for _ in range(12):
     mi_principal_id = az("identity", "show", "--name", mi_name, "--resource-group", rg,
                          "--query", "principalId", "-o", "tsv", ignore_error=True)
@@ -149,7 +149,7 @@ for _ in range(12):
     time.sleep(5)
 uami_id = f"/subscriptions/{sub_id}/resourceGroups/{rg}/providers/Microsoft.ManagedIdentity/userAssignedIdentities/{mi_name}"
 
-# B. Key Vault met gescheiden rollen: jij beheert de sleutel, de identiteit mag hem alleen gebruiken.
+# B. Key Vault with separated roles: you manage the key, the identity may only use it.
 print(f"🔐 Key Vault: {kv_name}")
 az("keyvault", "create", "--name", kv_name, "--resource-group", rg, "--location", location,
    "--enable-rbac-authorization", "true", "--enable-purge-protection", "true", "--retention-days", "90", "-o", "none")
@@ -157,14 +157,14 @@ kv_scope = f"/subscriptions/{sub_id}/resourceGroups/{rg}/providers/Microsoft.Key
 assign("Key Vault Crypto Officer", me, kv_scope)
 assign("Key Vault Crypto Service Encryption User", mi_principal_id, kv_scope)
 
-# C. De eigen sleutel (RSA 4096).
-print(f"🗝️  Eigen sleutel (RSA 4096): {key_name}")
+# C. The own key (RSA 4096).
+print(f"🗝️  Own key (RSA 4096): {key_name}")
 time.sleep(15)
 az_retry("keyvault", "key", "create", "--vault-name", kv_name, "--name", key_name, "--kty", "RSA", "--size", "4096", "-o", "none")
 
-# D. De opslag, versleuteld met die sleutel, alleen over HTTPS en niet publiek.
-# Zonder accountsleutels: anders leest wie de sleutels mag opvragen de state buiten de rollen om; Terraform logt in via Entra.
-print(f"📦 Opslag: {sa_name}, versleuteld met die sleutel, alleen over HTTPS en zonder accountsleutels")
+# D. The storage, encrypted with that key, only over HTTPS and not public.
+# Without account keys: otherwise whoever may request the keys reads the state outside the roles; Terraform signs in through Entra.
+print(f"📦 Storage: {sa_name}, encrypted with that key, only over HTTPS and without account keys")
 kv_uri = az("keyvault", "show", "--name", kv_name, "--query", "properties.vaultUri", "-o", "tsv")
 az_retry("storage", "account", "create", "--name", sa_name, "--resource-group", rg, "--location", location,
          "--sku", "Standard_LRS", "--kind", "StorageV2", "--allow-blob-public-access", "false",
@@ -173,24 +173,24 @@ az_retry("storage", "account", "create", "--name", sa_name, "--resource-group", 
          "--encryption-key-source", "Microsoft.Keyvault", "--encryption-key-vault", kv_uri,
          "--encryption-key-name", key_name, "--encryption-services", "blob",
          "--key-vault-user-identity-id", uami_id, "-o", "none")
-print("♻️  Vorige versies bewaren, en 7 dagen terughalen na verwijderen")
+print("♻️  Keeping previous versions, and 7 days to restore after deleting")
 az_retry("storage", "account", "blob-service-properties", "update", "--account-name", sa_name, "--resource-group", rg,
          "--enable-versioning", "true", "--enable-delete-retention", "true", "--delete-retention-days", "7",
          "--enable-container-delete-retention", "true", "--container-delete-retention-days", "7", "-o", "none")
 sa_scope = f"/subscriptions/{sub_id}/resourceGroups/{rg}/providers/Microsoft.Storage/storageAccounts/{sa_name}"
-# Wat HashiCorp voor het backend aanraadt. De identiteit krijgt hier niets: Storage gebruikt hem alleen voor de sleutel.
+# What HashiCorp recommends for the backend. The identity gets nothing here: Storage only uses it for the key.
 assign("Storage Blob Data Contributor", me, sa_scope)
-print(f"⏳ {PROPAGATION_WAIT // 60} minuten wachten tot Azure de sleutel en de rechten overal kent... ☕")
+print(f"⏳ Waiting {PROPAGATION_WAIT // 60} minutes until Azure knows the key and the rights everywhere... ☕")
 time.sleep(PROPAGATION_WAIT)
 az_retry("storage", "container", "create", "--name", container, "--account-name", sa_name, "--auth-mode", "login", "-o", "none")
 print(f"🗃️  Container: {container}")
 
-# E. Het backend-bestand voor terraform init; één omgeving, dus één state.
+# E. The backend file for terraform init; one environment, so one state.
 with open(BACKEND_CONF, "w", encoding="utf-8", newline="\n") as f:
     f.write(f'resource_group_name  = "{rg}"\nstorage_account_name = "{sa_name}"\ncontainer_name       = "{container}"\n'
             f'key                  = "terraform.tfstate"\nuse_azuread_auth     = true\n\n'
             f'subscription_id      = "{sub_id}"\ntenant_id            = "{tenant_id}"\n')
 
-print(f"\n📝 backend.conf geschreven: {BACKEND_CONF}")
-print("\n🎉 Klaar! De deur voor Terraform staat open.")
-print("👉 De rest doet python scripts/deployment.py azure; als dat dit script startte, gaat het nu vanzelf verder.\n")
+print(f"\n📝 backend.conf written: {BACKEND_CONF}")
+print("\n🎉 Done! The door for Terraform is open.")
+print("👉 python scripts/deployment.py azure does the rest; if that started this script, it now continues by itself.\n")

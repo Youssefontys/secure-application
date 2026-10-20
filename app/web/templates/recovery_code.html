@@ -15,7 +15,7 @@
   <div class="card">
     <p>Lost your phone? Log in with your password and this recovery code. Forgot your password? Set a new one with this recovery code and the code from your app.</p>
     <span id="recovery-code" class="secret">{{ code }}</span>
-    {# Kopiëren, downloaden en het vinkje werken met JavaScript; zonder blijven de code en Verder, en dat werkt ook. #}
+    {# Copy, download and the checkbox work with JavaScript; without it the code and Continue remain, and that works too. #}
     <div class="note-actions recovery-actions" data-js hidden>
       <button type="button" class="secondary" id="recovery-copy">Copy</button>
       <button type="button" class="secondary" id="recovery-download">Download</button>
@@ -27,7 +27,7 @@
       {% if not first %}<li>Your previous recovery code no longer works.</li>{% endif %}
     </ul>
     <label class="check" data-js hidden><input type="checkbox" id="recovery-saved"> I have saved it, separate from my phone</label>
-    {# Na het aanzetten naar de notities, na een nieuwe code terug naar het profiel, na een nieuw wachtwoord inloggen. #}
+    {# After turning it on to the notes, after a new code back to the profile, after a new password to the login. #}
     <a class="button" id="recovery-done" href="{{ url_for('auth.login') if reset else url_for('notes.index') if first else url_for('account.index') }}">Continue</a>
   </div>
 {% endblock %}

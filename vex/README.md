@@ -1,86 +1,86 @@
-# Triage van meldingen, en de VEX
+# Triage of findings, and the VEX
 
-Elke melding van HIGH of CRITICAL houdt de check tegen, ook als er nog geen oplossing is. Hij gaat pas door als er een
-beslissing is: bijwerken, weghalen, afschermen, of een verklaring in `openvex.json` dat de image niet geraakt wordt,
-met de reden erbij (MIT-41). Zo'n verklaring geldt voor één versie van een pakket. Komt er een nieuwe versie, dan komt
-de melding terug, en beslis je opnieuw.
+Every finding of HIGH or CRITICAL blocks the check, also if there is no fix yet. It only passes once there is a
+decision: update, remove, shield, or a statement in `openvex.json` that the image is not affected, with the reason
+(MIT-41). Such a statement applies to one version of a package. When a new version comes, the finding comes back,
+and you decide again.
 
-Dit is het product van deelvraag 2 van het onderzoek (SBoM in CI/CD): "Hoe kunnen kwetsbare componenten uit een
-SBoM-scan worden getrieerd?"
+This is the product of sub-question 2 of the research (SBOM in CI/CD): "How can vulnerable components from an SBOM
+scan be triaged?"
 
-## Waarom
+## Why
 
-Tot deze stap hield de scan alleen een lek mét oplossing tegen (`--ignore-unfixed`). Dat is ook een beslissing: alle
-lekken zonder oplossing accepteren, zonder ernaar te kijken. Op de image van `main` (368a30d) waren dat er 164, waarvan
-44 HIGH (T-114). Wat die meldingen waard zijn, bleek pas bij het nakijken:
+Up to this step the scan only blocked a vulnerability with a fix (`--ignore-unfixed`). That is a decision too: accepting
+all vulnerabilities without a fix, without looking at them. On the image of `main` (368a30d) there were 164, of which
+44 HIGH (T-114). What those findings are worth only became clear when checking them:
 
-- **44 meldingen waren 8 lekken.** Eén lek in util-linux staat bij elk van de 9 pakketten die uit util-linux komen.
-- **Geen enkele staat in CISA KEV** (de lijst van lekken die echt misbruikt worden), en de hoogste EPSS-score van de 8
-  is 0,005: een kans van een half procent op misbruik in de komende 30 dagen, ergens ter wereld.
-- **Ernst en EPSS wijzen elk een andere kant op.** De hoogste EPSS-scores (tot 0,058) horen bij oude glibc-lekken van
-  ernst LOW, die de scan niet eens meetelt.
-- **Bij 5 van de 8 zit de lekke code niet in de image, of draait hij nooit.** Bij de andere 3, alle drie in mount,
-  houdt een maatregel het tegen: een lege `/etc/fstab`, en sinds deze stap geen setuid-bit meer op mount (MIT-42).
+- **44 findings were 8 vulnerabilities.** One vulnerability in util-linux is listed for each of the 9 packages built from util-linux.
+- **None is in CISA KEV** (the list of vulnerabilities that are really exploited), and the highest EPSS score of the 8
+  is 0.005: a chance of half a percent of exploitation in the next 30 days, anywhere in the world.
+- **Severity and EPSS each point another way.** The highest EPSS scores (up to 0.058) belong to old glibc
+  vulnerabilities of severity LOW, which the scan does not even count.
+- **For 5 of the 8 the vulnerable code is not in the image, or never runs.** For the other 3, all three in mount,
+  a mitigation stops it: an empty `/etc/fstab`, and since this step no setuid bit on mount anymore (MIT-42).
 
-Ernst alleen zegt dus weinig over deze image. Wat telt, is of de lekke code er is, of hij draait, en of een aanvaller
-erbij kan.
+Severity alone therefore says little about this image. What counts is whether the vulnerable code is there, whether it
+runs, and whether an attacker can reach it.
 
-## De flow
+## The flow
 
-Per lek, niet per melding: eerst de meldingen van hetzelfde lek samennemen.
+Per vulnerability, not per finding: first group the findings of the same vulnerability.
 
-1. **Is er een oplossing?** Bijwerken: Dependabot stelt een nieuwe versie of digest voor (MIT-33), of zet de digest van
-   de base-image zelf bij. Klaar.
-2. **Is het onderdeel nodig?** Nee: weghalen uit de image. Zo ging pip weg (b31d334), met zijn vier lekken (T-105).
-   Weghalen is beter dan een verklaring: een onderdeel dat er niet is, geeft ook geen nieuwe meldingen.
-3. **Staat het lek in CISA KEV, of is de EPSS-score 0,1 of hoger?** Dan eerst dit lek, dezelfde dag: weghalen of
-   afschermen. Een verklaring alleen is dan niet genoeg. De grens van 0,1 is een eigen keuze; op 19-10-2026 kwam geen
-   enkele melding in de buurt.
-4. **Zit de lekke code in de image?** Kijk welk bestand of programma het lek heeft, en of het pakket dat bevat
-   (`dpkg -L <pakket>` in de container). Nee: `not_affected`, met `vulnerable_code_not_present`.
-5. **Draait de lekke code?** Kijk welke bibliotheken de processen van de app laden (`/proc/<pid>/maps`), en of de app
-   het programma ooit start. Nee: `not_affected`, met `vulnerable_code_not_in_execute_path`.
-6. **Kan een aanvaller er toch bij, maar houdt iets het tegen?** Bijvoorbeeld: mount zonder setuid-bit, en een lege
-   `/etc/fstab`. Leg de maatregel vast in de Dockerfile, en dan `not_affected` met
+1. **Is there a fix?** Update: Dependabot proposes a new version or digest (MIT-33), or update the digest of
+   the base image yourself. Done.
+2. **Is the component needed?** No: remove it from the image. That is how pip went (b31d334), with its four
+   vulnerabilities (T-105). Removing is better than a statement: a component that is not there gives no new findings either.
+3. **Is the vulnerability in CISA KEV, or is the EPSS score 0.1 or higher?** Then this vulnerability first, the same day:
+   remove or shield. A statement alone is not enough then. The threshold of 0.1 is our own choice; on 19-10-2026 no
+   finding came close.
+4. **Is the vulnerable code in the image?** Check which file or program has the vulnerability, and whether the package
+   contains it (`dpkg -L <package>` in the container). No: `not_affected`, with `vulnerable_code_not_present`.
+5. **Does the vulnerable code run?** Check which libraries the processes of the app load (`/proc/<pid>/maps`), and
+   whether the app ever starts the program. No: `not_affected`, with `vulnerable_code_not_in_execute_path`.
+6. **Can an attacker still reach it, but something stops it?** For example: mount without a setuid bit, and an empty
+   `/etc/fstab`. Record the mitigation in the Dockerfile, and then `not_affected` with
    `inline_mitigations_already_exist`.
-7. **Anders is de image geraakt.** Zet `affected` met een `action_statement`: wat je gaat doen, en wanneer. De check
-   blijft dan falen. Moet er toch iets door, dan alleen tijdelijk: een regel met `expired_at` in een ignore-bestand van
-   Trivy. Dat werkt (T-115), maar is nog niet nodig geweest, dus staat het niet in de workflow.
+7. **Otherwise the image is affected.** Set `affected` with an `action_statement`: what you are going to do, and when.
+   The check then keeps failing. If something must pass anyway, only temporarily: a rule with `expired_at` in an
+   ignore file of Trivy. That works (T-115), but has not been needed yet, so it is not in the workflow.
 
-Een melding van MEDIUM of LOW houdt de check niet tegen. Stap 3 geldt daar wel: een lek in KEV, of met een hoge
-EPSS-score, krijgt voorrang, wat de ernst ook is. Dat kijk je met de hand na op de bewaarde SBoM, zoals in T-114;
-automatisch gebeurt het nog niet.
+A finding of MEDIUM or LOW does not block the check. Step 3 does apply there: a vulnerability in KEV, or with a high
+EPSS score, gets priority, whatever the severity. You check that by hand on the kept SBOM, as in T-114;
+it does not happen automatically yet.
 
-## Regels voor `openvex.json`
+## Rules for `openvex.json`
 
-- **OpenVEX 0.2.0, met een PURL per pakket.** Een CycloneDX-VEX wijst via het `serialNumber` naar één SBoM. Trivy geeft
-  elke SBoM een nieuw nummer, ook bij dezelfde image (T-114), dus zo'n VEX zou bij elke build opnieuw moeten. Een
-  PURL blijft hetzelfde zolang het pakket hetzelfde is.
-- **Altijd met versie, zonder qualifiers.** Zonder versie geldt de verklaring voor elke versie, ook een die je nooit
-  bekeken hebt (T-115). Met de qualifier `distro` valt hij weg bij elke nieuwe Debian-versie.
-- **Altijd een reden:** bij `not_affected` een `justification` en een `impact_statement`, bij `affected` een
-  `action_statement`. Trivy filtert ook een `not_affected` zonder reden weg (T-115). Daarom controleert de stap VEX
-  controleren in `image.yml` dat eerst, en faalt hij anders.
-- **Geen `fixed`.** Trivy filtert ook die weg, maar of een lek is opgelost, zie je aan de versie; dat hoort de scan
-  zelf te zien.
-- **Alleen via een pull request,** zoals elke wijziging op `main`. Verhoog `version` bij elke wijziging, en zet
+- **OpenVEX 0.2.0, with a PURL per package.** A CycloneDX VEX points to one SBOM through the `serialNumber`. Trivy gives
+  every SBOM a new number, also for the same image (T-114), so such a VEX would have to be redone on every build. A
+  PURL stays the same as long as the package is the same.
+- **Always with a version, without qualifiers.** Without a version the statement applies to every version, also one you
+  never looked at (T-115). With the qualifier `distro` it falls away with every new Debian version.
+- **Always a reason:** for `not_affected` a `justification` and an `impact_statement`, for `affected` an
+  `action_statement`. Trivy also filters out a `not_affected` without a reason (T-115). That is why the step Check VEX
+  in `image.yml` checks that first, and fails otherwise.
+- **No `fixed`.** Trivy filters that out too, but whether a vulnerability is fixed shows in the version; the scan should
+  see that itself.
+- **Only through a pull request,** like every change on `main`. Raise `version` on every change, and set
   `last_updated`.
 
-## Wat het niet oplost
+## What it does not solve
 
-- **Een verklaring kan fout zijn.** De check ziet of er een reden staat, niet of hij klopt. Dat ziet alleen wie de
-  pull request mergt (MC-30, stap 6).
-- **Het werk.** Elk nieuw lek van HIGH of CRITICAL in Debian, ook zonder oplossing, houdt elke pull request tegen tot
-  er een beslissing is, ook een pull request die alleen de BoK verandert.
-- **Een lek dat na de build bekend wordt,** ziet de scan pas bij de volgende pull request of push.
-- **De VEX is openbaar.** Hij vertelt welke lekken er in de image zitten, en waarom wij denken dat ze niet bereikbaar
-  zijn. Dat staat ook in de SBoM; de code en de image zijn al openbaar.
+- **A statement can be wrong.** The check sees whether there is a reason, not whether it is right. Only whoever merges
+  the pull request sees that (MC-30, step 6).
+- **The work.** Every new vulnerability of HIGH or CRITICAL in Debian, also without a fix, blocks every pull request
+  until there is a decision, also a pull request that only changes the BoK.
+- **A vulnerability that becomes known after the build** is only seen by the scan at the next pull request or push.
+- **The VEX is public.** It tells which vulnerabilities are in the image, and why we think they cannot be reached.
+  That is in the SBOM too; the code and the image are already public.
 
-## Bronnen
+## Sources
 
-Opgehaald op 19-10-2026.
+Retrieved on 19-10-2026.
 
-- OpenVEX, specificatie v0.2.0 (statussen en justifications): https://github.com/openvex/spec/blob/main/OPENVEX-SPEC.md
-- Trivy, VEX als bestand (CycloneDX via BOM-Link met `serialNumber`, OpenVEX via PURL; "EXPERIMENTAL"): https://trivy.dev/latest/docs/supply-chain/vex/file/
-- CISA, Known Exploited Vulnerabilities (catalogus 2026.10.16, 1748 lekken): https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json
-- FIRST, EPSS API (scores van 19-10-2026): https://api.first.org/data/v1/epss
+- OpenVEX, specification v0.2.0 (statuses and justifications): https://github.com/openvex/spec/blob/main/OPENVEX-SPEC.md
+- Trivy, VEX as a file (CycloneDX through BOM-Link with `serialNumber`, OpenVEX through PURL; "EXPERIMENTAL"): https://trivy.dev/latest/docs/supply-chain/vex/file/
+- CISA, Known Exploited Vulnerabilities (catalogue 2026.10.16, 1748 vulnerabilities): https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json
+- FIRST, EPSS API (scores of 19-10-2026): https://api.first.org/data/v1/epss

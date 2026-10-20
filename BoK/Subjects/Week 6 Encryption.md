@@ -150,7 +150,7 @@ Waar de geheimen nu staan, wie ze kan lezen en hoe ze gemaakt worden:
 - **Zelf gemaakt, nooit getoond.** `python scripts/deployment.py lokaal` vult een ontbrekende of lege sleutel aan met 256 bits uit de module `secrets` van Python, en noemt alleen de naam. Een bestaande sleutel blijft staan.
 - **Niet leeg starten.** Compose start niet als een van de vier leeg is (`${...:?}`). De app start niet met een `DATA_ENCRYPTION_KEY` die geen 256 bits is.
 - **Eén doel per sleutel, op één na.** De gegevenssleutel staat los van de rest. `FLASK_SECRET_KEY` heeft twee taken. Een nieuwe sessiesleutel maakt daardoor ook alle tellers van de poginglimieten ongeldig (A-05).
-- **De Azure-scripts zetten niets in GitHub.** Tot a9b2a23 kon `azuresetup_v2.py` ID's als GitHub-secret zetten, via stdin aan `gh`; geen workflow las ze, dus dat stuk is weg. Uitrollen vanuit GitHub krijgt later een eigen identiteit met een federated credential (OIDC), niet die van de opslag; tot b733d12 zette het script juist die in GitHub.
+- **De Azure-scripts zetten niets in GitHub.** Tot a9b2a23 kon `azuresetup_v2.py` (nu `setup_azure.py`) ID's als GitHub-secret zetten, via stdin aan `gh`; geen workflow las ze, dus dat stuk is weg. Uitrollen vanuit GitHub krijgt later een eigen identiteit met een federated credential (OIDC), niet die van de opslag; tot b733d12 zette het script juist die in GitHub.
 - **De sleutel van de Terraform-state.** Een eigen RSA-4096-sleutel in Key Vault, met purge protection en 90 dagen bewaartijd na verwijderen. De rollen zijn gescheiden: wie het script draait, beheert de sleutel (Key Vault Crypto Officer); de managed identity mag hem alleen gebruiken (Key Vault Crypto Service Encryption User).
 
 Wat nog mist:
@@ -167,7 +167,7 @@ Uitgerold op 18-10-2026, in France Central (zie Week 8 voor de uitrol). In Conta
 - **Kwijtraken kan niet zomaar.** Purge protection en 90 dagen bewaartijd na verwijderen. Belangrijk, want sleutel kwijt is notities kwijt.
 - **Een nieuwe sleutel.** De databasewachtwoorden en de sessiesleutel veranderen als `secret_version` omhoog gaat; Terraform start dan zelf de schema-job, die het nieuwe wachtwoord van de app-rol zet. De gegevenssleutel staat vast op versie 1, tot `v2:` gebouwd is.
 - **Eventueel envelope-versleuteling:** een tweede sleutel (KEK) in Key Vault die `DATA_ENCRYPTION_KEY` (de DEK) versleutelt. Volgens OWASP werkt dat alleen als de KEK apart van de DEK staat; de versleutelde DEK mag dan bij de data.
-- **De opslag van de Terraform-state** wordt al versleuteld met een eigen sleutel (RSA 4096) in Key Vault, door `scripts/azuresetup_v2.py`. Dat is key management voor de infrastructuur.
+- **De opslag van de Terraform-state** wordt al versleuteld met een eigen sleutel (RSA 4096) in Key Vault, door `scripts/setup_azure.py`. Dat is key management voor de infrastructuur.
 
 Trivy 0.75.0 vond op 17-10-2026 zeven punten in `terraform/`, met per punt een besluit:
 
