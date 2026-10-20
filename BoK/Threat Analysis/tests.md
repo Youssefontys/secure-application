@@ -1,7 +1,7 @@
 # Tests
 
 De tests per use case en misuse case, gemeten met de hand (curl, Edge, `az`) en met de
-securitytest (`tests/securitytest.py`, met een test per onderwerp; lokaal en niet in de repo, op een runner alleen in de proef van T-121).
+securitytest (`tests/securitytest.py`, met een test per onderwerp; sinds d6b675f in de repo, en tegen de lokale stack; in de pipeline draait hij nog niet).
 
 Sinds 3204eb0 is de interface Engels. Meldingen in eerdere metingen staan
 in het Nederlands, zoals de app ze toen gaf.
