@@ -21,6 +21,7 @@ output "schema_job_command" {
 }
 
 # For the environment azure in GitHub (deploy_azure.py): the identity the deploy job signs in as. Not a secret.
+# null without deploy_from_github.
 output "deploy_client_id" {
-  value = azurerm_user_assigned_identity.deploy.client_id
+  value = one(azurerm_user_assigned_identity.deploy[*].client_id)
 }

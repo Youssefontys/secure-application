@@ -44,6 +44,12 @@ variable "alert_email" {
   }
 }
 
+# true: an identity for deploying from GitHub after an approval (deploy.tf, MIT-44). deploy_azure.py sets it.
+variable "deploy_from_github" {
+  type    = bool
+  default = false
+}
+
 # How the OIDC token of a job names this repo (deploy.tf): repo:owner/name, or with the IDs (repo:owner@1/name@2) if
 # the repo uses immutable subjects. deploy_azure.py reads it from GitHub.
 variable "github_oidc_prefix" {
