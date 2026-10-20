@@ -16,7 +16,7 @@ def run():
     r = req(c, "/account/2fa")
     sec = secret(r[1])
     check("setup page", f"{r[0]} {r[2].get('Cache-Control')}", "200 no-store")
-    check("reloading keeps the same secret", secret(req(c, "/account/2fa")[1]), sec)
+    check("reloading keeps the same secret", secret(req(c, "/account/2fa")[1]) == sec, True)
     check("qr.svg during the setup", req(c, "/account/2fa/qr.svg")[0], 200)
     check("wrong code at the setup", req(c, "/account/2fa", {"code": "000000"})[0], 400)
     r = req(c, "/account/2fa", {"code": fresh(sec, "anna")})
