@@ -1,6 +1,6 @@
-# Bouwt de image, maakt de SBoM en scant die: bij elke pull request naar main in de job check, die niets publiceert en
-# die een ruleset op main verplicht maakt (MIT-39), en bij elke push naar main opnieuw in de job image, die de image na
-# een schone scan op ghcr.io zet met het token van de run.
+# Bouwt de image, maakt de SBoM en scant die: bij elke pull request naar main in de job check, die daarna ook de
+# securitytest draait, niets publiceert en die een ruleset op main verplicht maakt (MIT-39), en bij elke push naar main
+# opnieuw in de job image, die de image na een schone scan op ghcr.io zet met het token van de run.
 # Een pakket dat zo ontstaat, krijgt de zichtbaarheid van de repo; Container Apps haalt het dus zonder inloggen op.
 # Twee tags, nooit latest (MIT-03): de commit, en de inhoud van app/ (de tree-hash van git). deployment.py azure zoekt op de
 # tweede: een commit die alleen Terraform of de BoK verandert, heeft zo geen nieuwe build nodig.
@@ -84,6 +84,15 @@ jobs:
       - &scannen
         name: Scannen op bekende lekken
         run: docker run --rm -v "$PWD:/scan" "$TRIVY" sbom /scan/sbom.cdx.json --severity HIGH,CRITICAL --vex /scan/vex/openvex.json --show-suppressed --exit-code 1 --no-progress
+
+      # De securitytest (tests/securitytest.py) tegen de stack van compose.yaml, alleen in de check: faalt een controle, dan
+      # faalt de check en houdt de ruleset de merge tegen (MIT-39). Zonder terminal stelt deployment.py geen vragen en maakt
+      # het wegwerpgeheimen in .env, die alleen op deze runner bestaan. De test duurde op een runner zo'n vijf minuten (T-121).
+      - name: Securitytest
+        timeout-minutes: 20
+        run: |
+          python3 scripts/deployment.py lokaal < /dev/null
+          python3 tests/securitytest.py --wis
 
   # Bij een push naar main, of met de hand: dezelfde stappen, en pas na een schone scan naar ghcr.io.
   image:
