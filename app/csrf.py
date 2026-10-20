@@ -1,4 +1,4 @@
-# CSRF-token per sessie (MIT-20): elk formulier stuurt het mee, en een andere site kent het niet (MC-05).
+# CSRF token per session (MIT-20): every form sends it along, and another site does not know it (MC-05).
 
 import hmac
 import secrets
@@ -7,18 +7,18 @@ from flask import render_template, request, session
 
 import events
 
-# Wat de bezoeker ziet als het token ontbreekt of niet klopt.
+# What the visitor sees if the token is missing or wrong.
 REFUSED = "This form did not come from this site, or the page was too old. Reload the page and try again."
 
 
-# Het token van deze sessie; de templates zetten het in elk formulier.
+# The token of this session; the templates put it in every form.
 def token():
     if "csrf" not in session:
         session["csrf"] = secrets.token_urlsafe(32)
     return session["csrf"]
 
 
-# Elke POST zonder het juiste token wordt geweigerd, ook als de browser de cookie meestuurt.
+# Every POST without the right token is refused, even if the browser sends the cookie along.
 def check():
     if request.endpoint == "static":
         return None

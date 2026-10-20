@@ -1,5 +1,5 @@
-# Maakt de Flask-app en hangt auth, account en notes eraan; de modules staan in de README.
-# Zwakke plekken staan als misuse case in de BoK; in de code staat het MC-nummer erbij.
+# Creates the Flask app and attaches auth, account and notes to it; the modules are listed in the README.
+# Weak spots are misuse cases in the BoK; the code names the MC number next to them.
 
 import os
 from datetime import datetime, timedelta
@@ -17,35 +17,35 @@ import passwords
 from db import TIMEZONE, close_connection
 
 
-# Configuratie is ook invoer: alleen een bekende waarde, anders start de app niet (MIT-23).
+# Configuration is input too: only a known value, otherwise the app does not start (MIT-23).
 def setting(name, default, allowed):
     value = os.environ.get(name, default)
     if value not in allowed:
-        raise RuntimeError(f"{name} moet {' of '.join(allowed)} zijn, niet {value!r}.")
+        raise RuntimeError(f"{name} must be {' or '.join(allowed)}, not {value!r}.")
     return value
 
 
-# De website (HTML-templates en statische bestanden) staat in web/, los van de code.
+# The website (HTML templates and static files) is in web/, apart from the code.
 app = Flask(__name__, template_folder="web/templates", static_folder="web/static")
-# Flask ondertekent de sessiecookie met deze sleutel; deployment.py maakt er een van 64 tekens.
+# Flask signs the session cookie with this key; deployment.py makes one of 64 characters.
 app.secret_key = os.environ["FLASK_SECRET_KEY"]
 if len(app.secret_key) < 32:
-    raise RuntimeError("FLASK_SECRET_KEY moet minstens 32 tekens zijn.")
-# Op Azure: het echte clientadres achter de ene proxy van Container Apps (MC-18). Lokaal 0.
-# Alleen 0 of 1: met -1 of 2 kiest een aanvaller zelf zijn adres en omzeilt hij de limieten.
+    raise RuntimeError("FLASK_SECRET_KEY must be at least 32 characters.")
+# On Azure: the real client address behind the one proxy of Container Apps (MC-18). Locally 0.
+# Only 0 or 1: with -1 or 2 an attacker picks their own address and gets around the limits.
 if setting("TRUSTED_PROXIES", "0", ("0", "1")) == "1":
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1)
-# Standaard veilig: de sessiecookie alleen over HTTPS (MC-04). Lokaal, op HTTP, zet compose.yaml dit uit.
+# Safe by default: the session cookie only over HTTPS (MC-04). Locally, on HTTP, compose.yaml turns this off.
 app.config["SESSION_COOKIE_SECURE"] = setting("HTTPS_ONLY", "1", ("0", "1")) == "1"
-# Niet meesturen met een formulier van een andere site (MC-05); het CSRF-token is de tweede laag.
+# Not sent with a form from another site (MC-05); the CSRF token is the second layer.
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
-# Flask weigert een cookie waarvan de handtekening ouder is; zonder deze regel 31 dagen (MIT-29, MC-04).
-# De app schrijft de cookie vooral bij het inloggen, dus dit is ongeveer 8 uur na de login.
+# Flask refuses a cookie whose signature is older; without this line 31 days (MIT-29, MC-04).
+# The app writes the cookie mainly at login, so this is about 8 hours after the login.
 app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(hours=8)
-# Het grootste formulier is een notitie van 250 tekens; meer wordt geweigerd voordat het is ingelezen (MC-10).
+# The largest form is a note of 250 characters; more is refused before it is read (MC-10).
 app.config["MAX_CONTENT_LENGTH"] = 16 * 1024
 
-# Vóór het laden van de gebruiker, zodat een verlopen sessie gewoon naar de inlogpagina gaat (MIT-20).
+# Before the user is loaded, so an expired session simply goes to the login page (MIT-20).
 app.before_request(csrf.check)
 for blueprint in (auth.bp, account.bp, notes.bp):
     app.register_blueprint(blueprint)
@@ -56,19 +56,19 @@ app.jinja_env.globals.update(
 )
 
 
-# Alleen eigen bestanden en geen inline script: een tweede laag tegen XSS (MC-07); geen frame op een andere site (MC-24).
+# Only own files and no inline script: a second layer against XSS (MC-07); no frame on another site (MC-24).
 CSP = "default-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
 
 
-# Op elk antwoord, ook op foutpagina's (MIT-21). HSTS alleen over HTTPS, anders onthoudt de browser het verkeerd.
+# On every response, error pages too (MIT-21). HSTS only over HTTPS, otherwise the browser remembers it wrongly.
 @app.after_request
 def security_headers(response):
     response.headers["Content-Security-Policy"] = CSP
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["Referrer-Policy"] = "same-origin"
-    # Geen pagina in een browser- of proxycache: na uitloggen toont Terug niets meer (MIT-28), en geheim en
-    # herstelcode blijven nergens staan (MIT-08, MIT-11). Statische bestanden mogen wel in de cache.
+    # No page in a browser or proxy cache: after logging out, Back shows nothing (MIT-28), and the secret and
+    # recovery code are kept nowhere (MIT-08, MIT-11). Static files may be cached.
     if request.endpoint != "static":
         response.headers["Cache-Control"] = "no-store"
     if app.config["SESSION_COOKIE_SECURE"]:
@@ -76,11 +76,11 @@ def security_headers(response):
     return response
 
 
-# Korte meldingen voor de fouten die een bezoeker kan veroorzaken; 413 komt voordat het verzoek is ingelezen (MIT-22).
+# Short messages for the errors a visitor can cause; 413 comes before the request is read (MIT-22).
 HTTP_MESSAGES = {404: "This page does not exist.", 405: "That is not possible here.", 413: "This request is too large."}
 
 
-# Status en headers (zoals Allow bij 405) blijven; alleen de pagina wordt de eigen foutpagina.
+# Status and headers (such as Allow on 405) stay; only the page becomes the own error page.
 @app.errorhandler(HTTPException)
 def http_error(error):
     response = error.get_response()
@@ -88,11 +88,11 @@ def http_error(error):
     return response
 
 
-# Veilig falen (MIT-25): de bezoeker ziet geen details, de log wel. %r, zodat een regeleinde
-# in de URL geen valse logregel maakt (log injection).
+# Fail safely (MIT-25): the visitor sees no details, the log does. %r, so a line break
+# in the URL does not make a false log line (log injection).
 @app.errorhandler(Exception)
 def unexpected_error(error):
-    app.logger.exception("Onverwachte fout bij %s %r", request.method, request.path)
+    app.logger.exception("Unexpected error at %s %r", request.method, request.path)
     return render_template("error.html", code=500, message="Something went wrong. Please try again later."), 500
 
 
@@ -101,7 +101,7 @@ def format_date(value, with_time=True):
     return value.strftime("%d-%m-%Y %H:%M" if with_time else "%d-%m-%Y")
 
 
-# Per blok van zes uur, naar de Nederlandse tijd; 's nachts Hello, want good night is een afscheid.
+# Per block of six hours, in Dutch time; at night Hello, because good night is a goodbye.
 @app.template_global()
 def greeting():
     return ("Hello", "Good morning", "Good afternoon", "Good evening")[datetime.now(ZoneInfo(TIMEZONE)).hour // 6]
