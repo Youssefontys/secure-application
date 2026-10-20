@@ -687,10 +687,10 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 
 ### MIT-21 Beveiligingsheaders
 - Houdt tegen: MC-07 stap 2 (tweede laag), MC-24 stap 2
-- Wat: op elk antwoord, ook op foutpagina's: `Content-Security-Policy: default-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'`, `X-Frame-Options: DENY` voor oudere browsers, `X-Content-Type-Options: nosniff` en `Referrer-Policy: same-origin`. De app had al geen inline script of style, dus de CSP kan streng; op de belangrijkste pagina's gaf de browser geen enkele overtreding (T-75). `Strict-Transport-Security` alleen als de app op HTTPS draait, anders zou de browser het lokaal verkeerd onthouden
+- Wat: op elk antwoord, ook op foutpagina's: `Content-Security-Policy: default-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'`, `X-Frame-Options: DENY` voor oudere browsers, `X-Content-Type-Options: nosniff` en `Referrer-Policy: same-origin`. De app had al geen inline script of style, dus de CSP kan streng; op de belangrijkste pagina's gaf de browser geen enkele overtreding (T-75). `Strict-Transport-Security` alleen als de app op HTTPS draait, anders zou de browser het lokaal verkeerd onthouden Sinds dce75f3 ook `Permissions-Policy: camera=(), geolocation=(), microphone=(), payment=(), usb=()` en, tegen Spectre, `Cross-Origin-Opener-Policy: same-origin`, `Cross-Origin-Resource-Policy: same-origin` en `Cross-Origin-Embedder-Policy: require-corp`: die vond ZAP als ontbrekend (MIT-46, T-135).
 - Waar: `security_headers()` in `app/app.py`
-- Status: bewezen (T-18, T-74, T-75; gemeten van 2026-10-15 tot 2026-10-16)
-- Sinds: 2587a60
+- Status: bewezen (T-18, T-74, T-75; gemeten van 2026-10-15 tot 2026-10-16; de vier nieuwe headers T-136, gemeten op 2026-10-20)
+- Sinds: 2587a60; de vier headers van ZAP sinds dce75f3
 
 ### MIT-22 Invoercontrole
 - Houdt tegen: MC-10 stap 1, MC-07 stap 1 (gebruikersnaam), MC-18 stap 3
@@ -859,3 +859,10 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 - Waar: de instellingen van de repo, die niet in de repo staan; `SECURITY.md`; `check()` in `tests/securitytest.py`
 - Status: bewezen (T-130, T-131, T-132, T-134; gemeten op 2026-10-20). Sinds 2026-10-20 eist de ruleset ook de uitkomst van CodeQL: een melding van high of hoger, of een fout, houdt de merge tegen, net als de check (T-134). Validity checks en patronen die niet van een provider zijn, bleven uit (T-130)
 - Sinds: 2026-10-20 (de instellingen); de fix voor T-131 sinds 6314360
+
+### MIT-46 DAST: de ZAP baseline bij elke pull request, met een beslissing per melding
+- Houdt tegen: een header of cookie die ontbreekt of verdwijnt, en een pagina die meer laat zien dan nodig, gezien zoals een bezoeker de app ziet, vóór de merge (MC-04, MC-07 en MC-24 stap 2, MC-26)
+- Wat: de job `dast` in `CI-image.yml` start bij elke pull request de stack van `compose.yaml`, naast de job `check`, en draait daartegen het profiel `scan`: de ZAP baseline 2.17.0, vast op versie en digest. Passief: hij leest headers, cookies en pagina's, en valt niet aan. Elke regel van ZAP heeft een beslissing in `zap-rules.tsv`, zoals de VEX bij de scan: een opgeloste staat op FAIL, zodat hij niet terugkomt, een geaccepteerde op IGNORE met de reden. Een melding zonder beslissing laat de job falen. De eerste run vond zes meldingen, waarvan twee van Low: geen Permissions-Policy, en geen isolatie tegen Spectre; die zijn opgelost in MIT-21. De vier informatieve zijn geaccepteerd: woorden als `select` in de JavaScript, `no-store` (bewust, MIT-28), en dat ZAP het inlogformulier en de sessiecookie herkent (T-135, T-136). Hetzelfde kan lokaal: `docker compose --profile scan run --rm zap`; Dependabot houdt de image bij, omdat hij in `compose.yaml` staat
+- Waar: de job `dast` in `.github/workflows/CI-image.yml`; de service `zap` in `compose.yaml`; `zap-rules.tsv`
+- Status: bewezen (T-135, T-136; gemeten op 2026-10-20). De job `dast` is niet verplicht in de ruleset: een rode `dast` houdt een merge niet tegen, alleen wie hem ziet. ZAP ziet alleen wat een bezoeker zonder account ziet, en valt niet actief aan
+- Sinds: fa79285; de beslissingen sinds dce75f3

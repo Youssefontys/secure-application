@@ -1,0 +1,9 @@
+# The decisions on the findings of the ZAP baseline (MIT-46), like vex/openvex.json for the scan: a rule that is fixed
+# stays on FAIL so it cannot come back, an accepted one is IGNORE with the reason. A rule that is not listed is WARN:
+# a new finding fails the job dast until it has a decision here. Format of zap-baseline.py -c: id, level, (name), reason.
+10063	FAIL	(Permissions Policy Header Not Set)	Fixed: app.py sends Permissions-Policy on every response.
+90004	FAIL	(Insufficient Site Isolation Against Spectre Vulnerability)	Fixed: app.py sends COOP, CORP and COEP.
+10027	IGNORE	(Information Disclosure - Suspicious Comments)	The words select, where and from in the JavaScript; no secret, the code is public anyway.
+10049	IGNORE	(Content Cacheability)	Cache-Control: no-store on every page is deliberate (MIT-28).
+10111	IGNORE	(Authentication Request Identified)	Informational: ZAP recognises the login form.
+10112	IGNORE	(Session Management Response Identified)	Informational: ZAP recognises the session cookie.
