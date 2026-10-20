@@ -27,7 +27,7 @@ def close_connection(error=None):
         conn.close()
 
 
-# One SQL statement; with one=True the first row or None.
+# One SQL statement; with one=True the first row, or None.
 def query(sql, params=(), one=False):
     # SQL and values go to the database separately, so input never becomes SQL (MIT-02).
     cur = connection().execute(sql, params)
