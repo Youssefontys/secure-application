@@ -6,7 +6,7 @@ import re
 import shutil
 import subprocess
 
-from common import ENV, REPO, SECRETS, check_tools, stop, terraform, yes
+from deployment import ENV, REPO, SECRETS, check_tools, stop, terraform, yes
 
 
 def run():

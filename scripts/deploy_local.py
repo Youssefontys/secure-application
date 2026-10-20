@@ -4,8 +4,8 @@ import secrets
 import shutil
 import subprocess
 
-import common
-from common import ENV, REPO, SECRETS, check_tools, hackstand, stop
+import deployment
+from deployment import ENV, REPO, SECRETS, check_tools, hackstand, stop
 
 
 def read_env():
@@ -52,10 +52,10 @@ def run():
     print(f"\n🔑 Nieuwe geheimen in .env: {', '.join(added)} (elk 256 willekeurige bits, nooit getoond)" if added
           else "\n🔐 .env: alle geheimen staan er al")
     # Zonder terminal blijft wat er in .env staat; HTTPS_ONLY zet compose.yaml lokaal op 0 (HTTP).
-    if common.INTERACTIVE:
+    if deployment.INTERACTIVE:
         settings = hackstand()
         # Nog steeds interactief: er is echt geantwoord, dus de keuze mag in .env.
-        if common.INTERACTIVE:
+        if deployment.INTERACTIVE:
             for name, value in settings.items():
                 set_env(name, value)
     print("\n🐳 Containers bouwen en starten... ☕ de eerste keer duurt dit even.\n")

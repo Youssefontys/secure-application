@@ -39,7 +39,7 @@ def as_args(*args):
     return [shutil.which(args[0]) or args[0], *args[1:]]
 
 
-# Stoppen met de melding, met witregels eromheen zodat hij opvalt; zelfde vorm als common.py.
+# Stoppen met de melding, met witregels eromheen zodat hij opvalt; zelfde vorm als deployment.py.
 def stop(message, icon="❌"):
     sys.exit(f"\n{icon} {message}\n\n🛑 Stoppen.\n")
 

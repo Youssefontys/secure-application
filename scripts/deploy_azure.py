@@ -1,4 +1,4 @@
-# Op Azure uitrollen: de state-opslag als die er nog niet is (azuresetup_v2.py), de image die GitHub bouwde,
+# Op Azure uitrollen: de state-opslag als die er nog niet is (setup_azure.py), de image die GitHub bouwde,
 # en Terraform. Start via deployment.py.
 
 import json
@@ -9,8 +9,8 @@ import sys
 import urllib.error
 import urllib.request
 
-import common
-from common import REPO, ask, check_tools, hackstand, stop, terraform
+import deployment
+from deployment import REPO, ask, check_tools, hackstand, stop, terraform
 
 # Eist een tenant MFA, dan slaat az login hem over (AADSTS50076) en is er geen subscription; --tenant vraagt er wel om.
 AZ_LOGIN_HELP = """Eerst even inloggen bij Azure: je bent nog niet ingelogd, of er is geen subscription gevonden.
@@ -65,8 +65,8 @@ def run():
     if (REPO / "backend.conf").exists():
         print("🗄️  Opslag voor de Terraform-state: staat er al (backend.conf)")
     else:
-        print("\n🗄️  Nog geen opslag voor de Terraform-state; azuresetup_v2.py zet die nu eenmalig klaar.")
-        if subprocess.run([sys.executable, str(REPO / "scripts" / "azuresetup_v2.py")], cwd=REPO).returncode != 0:
+        print("\n🗄️  Nog geen opslag voor de Terraform-state; setup_azure.py zet die nu eenmalig klaar.")
+        if subprocess.run([sys.executable, str(REPO / "scripts" / "setup_azure.py")], cwd=REPO).returncode != 0:
             sys.exit(1)
 
     # De tag is de inhoud van app/ in je laatste commit (zie image.yml): een commit zonder app-wijziging hergebruikt hem.
@@ -84,10 +84,10 @@ def run():
              "   Daarna opnieuw: python scripts/deployment.py azure", icon="⏳")
     print("   ✅ Staat klaar, en Container Apps mag hem ophalen")
 
-    hack = hackstand() if common.INTERACTIVE else {"THROTTLE_IP_MODE": None, "THROTTLE_PAIR_EXEMPT_USERS": None}
+    hack = hackstand() if deployment.INTERACTIVE else {"THROTTLE_IP_MODE": None, "THROTTLE_PAIR_EXEMPT_USERS": None}
     # De mail bij een blokkade (alerts.tf): standaard het adres waarmee je bij az bent ingelogd. Niet in de repo, die is openbaar.
     email = login if re.fullmatch(EMAIL, login) else ""
-    if common.INTERACTIVE:
+    if deployment.INTERACTIVE:
         print("\n📧 Bij een blokkade stuurt Azure binnen een paar minuten een mail.")
         email = ask("Naar welk adres?", email or "-", EMAIL)
     if not re.fullmatch(EMAIL, email):

@@ -10,10 +10,7 @@ __pycache__/
 # Cache van pytest, zodra er tests zijn.
 .pytest_cache/
 
-# De lokale securitytests (securitytest.py en een test per onderwerp): staan in de map, maar niet in de repo.
-tests/
-
-# Gemaakt door scripts/azuresetup_v2.py: subscription- en tenant-id van je Azure-omgeving.
+# Gemaakt door scripts/setup_azure.py: subscription- en tenant-id van je Azure-omgeving.
 backend.conf
 
 # Uitvoer van de scanners (zie de profiles in compose.yaml).
