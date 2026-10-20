@@ -93,6 +93,26 @@ def terraform(*args):
     return subprocess.run([shutil.which("terraform"), "-chdir=terraform", *args], cwd=REPO).returncode == 0
 
 
+# Git in this folder; None if it does not work.
+def git(*args):
+    result = subprocess.run([shutil.which("git"), *args], cwd=REPO, capture_output=True, text=True)
+    return result.stdout.strip() if result.returncode == 0 else None
+
+
+# owner/name of the GitHub repo, from the remote origin; also for whoever copied the repo. An allowlist (MIT-22).
+def github_repo():
+    match = re.search(r"github\.com[:/]([\w.-]+/[\w.-]+?)(?:\.git)?/?$", git("remote", "get-url", "origin") or "")
+    return match and match.group(1)
+
+
+# The GitHub CLI, signed in; None if it is not there. Only for deploying from GitHub (MIT-44), so not in NEEDS.
+def gh(*args, stdin=None):
+    if not shutil.which("gh"):
+        return None
+    result = subprocess.run([shutil.which("gh"), *args], input=stdin, capture_output=True, text=True)
+    return result.stdout.strip() if result.returncode == 0 else None
+
+
 if __name__ == "__main__":
     # Only here: the targets import what is above, so that must exist already.
     import deploy_azure

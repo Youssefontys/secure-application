@@ -44,6 +44,16 @@ variable "alert_email" {
   }
 }
 
+# owner/name of the GitHub repo, exactly as on GitHub: the OIDC token of a job names it that way (deploy.tf).
+variable "github_repo" {
+  type = string
+
+  validation {
+    condition     = can(regex("^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$", var.github_repo))
+    error_message = "Give owner/name of the GitHub repo, such as Youssefontys/secure-application."
+  }
+}
+
 variable "throttle_pair_exempt_users" {
   type    = string
   default = ""

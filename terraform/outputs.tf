@@ -19,3 +19,8 @@ output "security_log_command" {
 output "schema_job_command" {
   value = "az containerapp job start --name ${azurerm_container_app_job.schema.name} --resource-group ${azurerm_resource_group.main.name}"
 }
+
+# For the environment azure in GitHub (deploy_azure.py): the identity the deploy job signs in as. Not a secret.
+output "deploy_client_id" {
+  value = azurerm_user_assigned_identity.deploy.client_id
+}
