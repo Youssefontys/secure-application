@@ -1,8 +1,8 @@
 # Week 8: CI/CD security checks
 
-Vijf stappen van de pipeline staan. Bij elke push naar `main` bouwt GitHub Actions de image en zet hem op ghcr.io (MIT-34): het token van de run mag alleen dat, `actions/checkout` staat vast op een commit, en een eigen token is niet meer nodig. Trivy maakt van elke image een SBoM (MIT-36), en scant die: een bekend lek van HIGH of CRITICAL houdt de image tegen (MIT-35), sinds deelvraag 2 van het onderzoek ook als er nog geen oplossing is, tot er een beslissing in de VEX staat (MIT-41). De eerste scan vond vier lekken, allemaal in pip, dat nu uit de image gaat. Sinds deelvraag 1 van het onderzoek draaien dezelfde stappen ook bij elke pull request, zonder te publiceren, en maakt een ruleset op `main` die check verplicht (MIT-39): een bekend lek komt dan niet eens meer op `main`. En sinds de securitytest in de repo staat, draait de check die ook: een wijziging die een maatregel breekt, komt niet op `main` (MIT-39, T-125).
+Zes stappen van de pipeline staan. Bij elke push naar `main` bouwt GitHub Actions de image en zet hem op ghcr.io (MIT-34): het token van de run mag alleen dat, `actions/checkout` staat vast op een commit, en een eigen token is niet meer nodig. Trivy maakt van elke image een SBoM (MIT-36), en scant die: een bekend lek van HIGH of CRITICAL houdt de image tegen (MIT-35), sinds deelvraag 2 van het onderzoek ook als er nog geen oplossing is, tot er een beslissing in de VEX staat (MIT-41). De eerste scan vond vier lekken, allemaal in pip, dat nu uit de image gaat. Sinds deelvraag 1 van het onderzoek draaien dezelfde stappen ook bij elke pull request, zonder te publiceren, en maakt een ruleset op `main` die check verplicht (MIT-39): een bekend lek komt dan niet eens meer op `main`. En sinds de securitytest in de repo staat, draait de check die ook: een wijziging die een maatregel breekt, komt niet op `main` (MIT-39, T-125). En sinds MIT-44 zet `deploy.yml` een nieuwe image op Azure zodra de beheerder het goedkeurt, met OIDC en zonder sleutel in GitHub.
 
-De details staan in de entries (MC-30, MC-11, MC-14, MIT-34 tot MIT-36, MIT-39 en MIT-41 tot MIT-43; C-06, C-11, A-12, A-14, A-18, F-06, F-07, F-12, B-04, B-06 en AZ-16 in de architectuur) en de tests T-103, T-105, T-106, T-110 tot T-112 en T-114 tot T-126. De triageflow staat in `vex/README.md`.
+De details staan in de entries (MC-30, MC-11, MC-14, MIT-34 tot MIT-36, MIT-39 en MIT-41 tot MIT-44; C-06, C-11, A-12, A-14, A-18, A-19, F-06, F-07, F-12, F-13, B-04, B-06, AU-14, AZ-16 en AZ-17 in de architectuur) en de tests T-103, T-105, T-106, T-110 tot T-112 en T-114 tot T-129. De triageflow staat in `vex/README.md`.
 
 ## De dreiging
 
@@ -23,7 +23,7 @@ De details staan in de entries (MC-30, MC-11, MC-14, MIT-34 tot MIT-36, MIT-39 e
 | Bekende lekken in de image | Niemand keek; er zaten vier keer HIGH in, in pip | Trivy vóór het publiceren; 0, want pip gaat na het installeren uit de image |
 | Een pull request | Er draaide niets; een pull request met pip werd gewoon gemerged (pull request #2, 19-10-2026) | De job `check` bouwt, maakt de SBoM en scant; faalt hij, dan houdt de ruleset de merge tegen |
 | Tests | Alleen lokaal, met de hand | De securitytest in de check van elke pull request: 182 controles |
-| Uitrollen | Vijf stappen van de routekaart in `setup.py` (nu `deployment.py`) | `python scripts/deployment.py azure`: het zoekt de image bij je laatste commit en draait Terraform |
+| Uitrollen | Vijf stappen van de routekaart in `setup.py` (nu `deployment.py`) | `python scripts/deployment.py azure`: het zoekt de image bij je laatste commit en draait Terraform. Daarna na elke merge vanuit GitHub, na één klik op Approve |
 
 ## Hoe het werkt
 
@@ -34,6 +34,7 @@ De details staan in de entries (MC-30, MC-11, MC-14, MIT-34 tot MIT-36, MIT-39 e
 - **De VEX:** `vex/openvex.json`, OpenVEX 0.2.0, per lek welke pakketten met welke versie de image niet raken, en waarom. Vóór de scan controleert een stap met jq dat elke verklaring een geldige reden heeft en een PURL met versie; Trivy zelf controleert dat niet (T-115).
 - **De scan:** tussen de SBoM en het pushen. Trivy scant de SBoM, niet de image zelf, met de VEX erbij. Een lek van HIGH of CRITICAL stopt de job, ook zonder oplossing, tenzij de VEX het voor die versie uitsluit; wat de VEX wegfiltert, staat apart in de log. Stopt de job, dan komt er geen nieuwe image op ghcr.io, en kan `deployment.py azure` hem ook niet uitrollen. Bij een pull request faalt de check.
 - **De securitytest:** alleen in `check`, na de scan. `deployment.py local` start de stack van `compose.yaml` zonder vragen, met wegwerpgeheimen in `.env` op de runner; daarna draait `tests/securitytest.py --wipe`, met een test per onderwerp. Een controle die faalt, laat de check falen. `--wipe` moet erbij, omdat de test de accounts van de database leegmaakt; op de runner is dat de bedoeling.
+- **Uitrollen (`deploy.yml`):** na een geslaagde Image op `main`, in de environment `azure`, die alleen `main` toestaat en op goedkeuring wacht. De job logt met OIDC in als `id-notes-deploy`, leest de template van de app uit Azure, zet alleen de image, en controleert de nieuwe revisie en `/login`. Terraform blijft de bron van al het andere. Een aparte workflow, zodat CI (`image.yml`) en CD elk hun eigen rechten hebben.
 - **De ruleset op `main`:** een pull request is verplicht, de check `check` moet slagen, en de bypass-lijst is leeg, ook voor de beheerder. Goedkeuren door een tweede persoon is niet nodig: er is maar één beheerder.
 - **Twee tags:** de commit-hash, en `app-` met de tree-hash van `app/`. `deployment.py azure` rekent die tweede zelf uit met `git rev-parse HEAD:app`, en kijkt anoniem bij ghcr.io of de image er is en openbaar is, zoals Container Apps hem ophaalt. Een commit die alleen Terraform of de BoK verandert, heeft zo geen nieuwe build nodig.
 - **Dependabot** houdt `actions/checkout` bij, net als de pakketten en de images (MIT-33).
@@ -53,11 +54,14 @@ De details staan in de entries (MC-30, MC-11, MC-14, MIT-34 tot MIT-36, MIT-39 e
 | Een verklaring zonder reden telt niet | De stap Check VEX, vóór de scan | T-116: vijf kapotte varianten geweigerd, de echte VEX door |
 | Een wijziging die een maatregel breekt, komt niet op `main` | De securitytest in de check, die de ruleset verplicht maakt | T-125: 182 controles, alles goed, in 212 s |
 | mount draait niet als root | Geen programma met een setuid- of setgid-bit (MIT-42) | T-116: 0, eerst 11; de regressietest slaagt |
+| Geen sleutel voor Azure in GitHub | OIDC: Entra ID accepteert alleen het token van een job in de environment `azure` van deze repo, met de vaste ID's | T-127: een token met een ander subject geweigerd (`AADSTS700213`) |
+| Uitrollen gaat niet ongezien | De environment `azure` wacht op goedkeuring van de beheerder | T-128: de job begon pas na Approve, en zette de image in 76 s |
+| De pipeline kan op Azure alleen de app wijzigen | Eén eigen rol, alleen op de container app | T-129: één toekenning, drie acties, alleen op `ca-notes` |
 | Geen token dat kan uitlekken | Geen eigen token meer; dat van de run vervalt na de run | De stap met een token (classic) is weg uit `setup.py` (nu `deployment.py`) |
 
 ## Wat het niet oplost
 
-- **Wie een pull request kan mergen, bepaalt de image,** en kan hem met `deployment.py azure` uitrollen. Als beheerder kan hij ook de ruleset uitzetten. Je GitHub-account, met tweestapsverificatie, is dus de sleutel.
+- **Wie een pull request kan mergen, bepaalt de image,** en kan hem uitrollen: met `deployment.py azure`, of door de uitrol vanuit GitHub goed te keuren. Die goedkeuring komt van hetzelfde account als de merge: ze houdt een uitrol tegen die je niet wilde, niet een overgenomen account. Als beheerder kan hij ook de ruleset uitzetten. Je GitHub-account, met tweestapsverificatie, is dus de sleutel.
 - **De check draait uit de pull request zelf.** Een pull request die de workflow aanpast, kan de check groen maken (MC-30, stap 6); alleen wie mergt, ziet dat in de wijzigingen.
 - **De securitytest test de lokale stack, niet Azure.** Key Vault, TLS naar de database en de alerts ziet hij niet. En een pull request die de test aanpast, kan hem groen maken, net als de scan (MC-30, stap 6).
 - **Elke pull request wacht langer:** de check duurt zo'n 4 minuten, vooral door de securitytest.
@@ -83,7 +87,7 @@ De details staan in de entries (MC-30, MC-11, MC-14, MIT-34 tot MIT-36, MIT-39 e
 - **Trivy, niet Syft met Grype.** Uit deelvraag 1 van het onderzoek: in een labmeting en een benchmark op GitHub-runners vond Trivy precies de vier lekken van pip, in één tool, en was het per run ruim een minuut sneller. Syft met Grype liet met de standaardinstellingen diezelfde lekken door.
 - **Eén workflow met twee jobs, en YAML-ankers.** Twee workflows met dezelfde stappen kunnen uit elkaar lopen; één job voor beide zou bij een pull request ook `packages: write` krijgen. Dependabot leest de ankers ook (`aliases: true` in zijn parser).
 - **Een lege bypass-lijst.** Anders is de rem met één klik te omzeilen, ook door jezelf, per ongeluk, zoals bij pull request #2.
-- **Nog geen uitrol vanuit GitHub (CD).** Dat vraagt een identiteit in Azure die de pipeline mag gebruiken, met rechten op de resource group. Eerst de checks.
+- **Uitrollen vanuit GitHub, maar pas na goedkeuring (20-10-2026).** Automatisch na elke merge is sneller, maar dan rolt wie mergt meteen uit. Met een rol alleen op de container app, niet op de resource group: dan kon de pipeline ook de database, de job of het netwerk wijzigen.
 
 ## De eerste uitrol (18-10-2026)
 
@@ -120,9 +124,9 @@ Gemeten en opgezocht na de eerste uitrol, om te zien of een andere regio sneller
 4. Gedaan (19-10-2026): daaruit een check bij elke pull request die de image bouwt, de SBoM maakt en scant, en niets publiceert, verplicht via een ruleset (MIT-39).
 5. Gedaan (19-10-2026): deelvraag 2 van het onderzoek: elk lek van HIGH of CRITICAL vraagt een beslissing, vastgelegd in de VEX (MIT-41), en geen setuid-bits meer in de image (MIT-42).
 6. De SBoM van de image op `main` elke dag opnieuw scannen, zodat een lek dat na de build bekend wordt niet op de volgende pull request wacht (MC-11).
-7. In de check van stap 4 de image ook starten en testen, zodat een image die stuk is niet op `main` komt. Dat zijn dan ook de tests in de pipeline.
+7. Gedaan (20-10-2026): de securitytest in de check van stap 4, zodat een wijziging die een maatregel breekt niet op `main` komt (MIT-39, T-125).
 8. SAST (statische code-analyse), als workflow-bestand, zodat het meegaat met een kopie van de repo.
-9. Uitrollen vanuit GitHub (CD), alleen de image, en alleen als er voor Azure is gekozen. `deployment.py azure` maakt dan een identiteit voor GitHub (OIDC, zonder secret) en zet drie repository-variabelen met de ID's; de deploy-job draait alleen als die variabelen er zijn, na het publiceren. In een fork of kopie zonder Azure wordt de job dus overgeslagen en mislukt hij niet. `deployment.py undo` haalt identiteit en variabelen weer weg. Niet nodig voor het onderzoek: een image met een bekend lek komt nu al niet op ghcr.io, en `deployment.py azure` rolt alleen een gepubliceerde image uit.
+9. Gedaan (20-10-2026): uitrollen vanuit GitHub (CD), alleen de image, met OIDC en zonder sleutel, pas na goedkeuring, en alleen als er voor Azure is gekozen (MIT-44). `deployment.py azure` zet de environment `azure` en de drie ID's als environment secrets, niet als repository-variabelen: dan staan ze niet in de openbare log. In een fork of kopie zonder Azure doet de job niets. `deployment.py undo` haalt de environment weer weg.
 
 ## Screenshots
 
