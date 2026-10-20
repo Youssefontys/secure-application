@@ -20,6 +20,7 @@ Every feature that is added has an entry in `BoK/`: the use case, the misuse cas
 - `.github/workflows/image.yml` - on every pull request to `main`, builds the image, makes its SBoM and scans it with the VEX, without publishing (the job `check`, required by a ruleset on `main`); on every push to `main`, does the same and then publishes the image to ghcr.io, tagged with the commit
 - `vex/` - `openvex.json`, which says per vulnerability in the image whether it affects the image and why, and in `README.md` (Dutch) how a finding is triaged
 - `scripts/` - `deployment.py` to deploy, locally or to Azure, and to remove it all again. It asks what to do and starts `deploy_local.py`, `deploy_azure.py` or `undo.py`, which take what they share from it: paths, questions, stopping and the hack mode. `azuresetup_v2.py` is the one-time Terraform state bootstrap that `deploy_azure.py` starts when it is missing
+- `tests/` - the security test against the local stack: `securitytest.py` runs one test per topic (`bruteforcetest.py` and the others), each with the normal flow, the attack and the mitigation it proves. It empties the local accounts, so it only runs with `--wis`
 - `terraform/` - Azure: Container Apps, PostgreSQL B1ms in a private network and Key Vault; secrets stay out of the Terraform state. Deployed on 18 October 2026 in France Central, and removed again on 19 October 2026 with `deployment.py undo`
 
 ## Requirements
