@@ -1,9 +1,9 @@
-# Bouwt de image, maakt de SBoM en scant die: bij elke pull request naar main in de job check, die daarna ook de
-# securitytest draait, niets publiceert en die een ruleset op main verplicht maakt (MIT-39), en bij elke push naar main
-# opnieuw in de job image, die de image na een schone scan op ghcr.io zet met het token van de run.
-# Een pakket dat zo ontstaat, krijgt de zichtbaarheid van de repo; Container Apps haalt het dus zonder inloggen op.
-# Twee tags, nooit latest (MIT-03): de commit, en de inhoud van app/ (de tree-hash van git). deployment.py azure zoekt op de
-# tweede: een commit die alleen Terraform of de BoK verandert, heeft zo geen nieuwe build nodig.
+# Builds the image, makes the SBoM and scans it: on every pull request to main in the job check, which then also
+# runs the security test, publishes nothing and is made required by a ruleset on main (MIT-39), and on every push to main
+# again in the job image, which puts the image on ghcr.io after a clean scan with the token of the run.
+# A package created this way gets the visibility of the repo; Container Apps therefore pulls it without signing in.
+# Two tags, never latest (MIT-03): the commit, and the content of app/ (the tree hash of git). deployment.py azure looks for
+# the second one: a commit that only changes Terraform or the BoK thus needs no new build.
 name: Image
 
 on:
@@ -13,59 +13,59 @@ on:
     branches: [main]
   workflow_dispatch:
 
-# Standaard geen rechten; elke job krijgt alleen wat hij nodig heeft.
+# No rights by default; every job only gets what it needs.
 permissions: {}
 
 env:
-  # Vast op versie en digest (MIT-03); Dependabot ziet een image in een run-regel niet, dus die werk je zelf bij.
+  # Pinned on version and digest (MIT-03); Dependabot does not see an image in a run line, so you update it yourself.
   TRIVY: aquasec/trivy:0.76.0@sha256:2416d1f74045b57274df1a340eee6b510cacd73c66a6ccb8da092b117eb7d222
 
 jobs:
-  # De rem bij een pull request, alleen met leesrechten: bij een pull request vanuit een fork geeft GitHub sowieso niet meer.
-  # De stappen met een & staan in de job image nog een keer, met een *: zo scant de check precies wat er gepubliceerd wordt.
+  # The brake on a pull request, only with read rights: on a pull request from a fork GitHub gives no more anyway.
+  # The steps with an & are in the job image once more, with a *: this way the check scans exactly what is published.
   check:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-24.04
     permissions:
       contents: read
     steps:
-      # Vast op een commit, niet op een tag die kan verschuiven (MIT-03); Dependabot houdt hem bij (MIT-33).
+      # Pinned on a commit, not on a tag that can move (MIT-03); Dependabot keeps it up to date (MIT-33).
       - &checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
-      # ghcr.io wil kleine letters; het label koppelt het pakket aan deze repo.
-      - &bouwen
-        name: Bouwen
+      # ghcr.io wants lower case; the label links the package to this repo.
+      - &build
+        name: Build
         run: |
           image="ghcr.io/${GITHUB_REPOSITORY,,}"
           docker build --label "org.opencontainers.image.source=https://github.com/$GITHUB_REPOSITORY" \
             -t "$image:$GITHUB_SHA" -t "$image:app-$(git rev-parse HEAD:app)" app
           echo "IMAGE=$image" >> "$GITHUB_ENV"
 
-      # De SBoM (MIT-36): alle onderdelen van de image als CycloneDX, alleen de lijst, zonder lekken of VEX. Trivy leest de
-      # image als tar-bestand, zonder de Docker-socket, dus kan het de image die straks gepusht wordt niet veranderen.
-      # Trivy noemt het hoofdonderdeel naar het tar-bestand; jq zet er de naam en tag van de image voor in de plaats.
+      # The SBoM (MIT-36): all components of the image as CycloneDX, only the list, without vulnerabilities or VEX. Trivy reads
+      # the image as a tar file, without the Docker socket, so it cannot change the image that is pushed later.
+      # Trivy names the main component after the tar file; jq puts the name and tag of the image there instead.
       - &sbom
-        name: SBoM maken
+        name: Make SBoM
         run: |
           docker save "$IMAGE:$GITHUB_SHA" -o "$RUNNER_TEMP/image.tar"
           docker run --rm -v "$RUNNER_TEMP:/scan" "$TRIVY" image --input /scan/image.tar --format cyclonedx --output /scan/sbom.json --quiet
           jq --arg name "$IMAGE:$GITHUB_SHA" '.metadata.component.name = $name' "$RUNNER_TEMP/sbom.json" > sbom.cdx.json
 
-      # Bij de run bewaard, ook als de scan hierna een lek vindt; GitHub houdt hem 90 dagen, het maximum voor een openbare repo.
-      - &bewaren
+      # Kept with the run, also if the scan after this finds a vulnerability; GitHub keeps it 90 days, the maximum for a public repo.
+      - &keep
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: sbom-${{ github.sha }}
           path: sbom.cdx.json
           retention-days: 90
 
-      # Trivy filtert ook een not_affected zonder reden weg (T-115). Daarom eerst zelf: elke verklaring in de VEX heeft een
-      # geldige justification en een uitleg, of bij affected een actie, en noemt pakketten met versie (MIT-41).
+      # Trivy also filters out a not_affected without a reason (T-115). So first ourselves: every statement in the VEX has a
+      # valid justification and an explanation, or for affected an action, and names packages with a version (MIT-41).
       - &vex
-        name: VEX controleren
+        name: Check VEX
         run: |
           jq -e '
             def ok:
@@ -75,26 +75,26 @@ jobs:
                elif .status == "affected" then (.action_statement // "") != ""
                else .status == "under_investigation" end)
               and (.products | length > 0) and all(.products[]; .["@id"] | test("^pkg:[a-z]+/[^@]+@."));
-            [.statements[] | select(ok | not) | .vulnerability.name] | if . == [] then true else error("ongeldig: \(.)") end
+            [.statements[] | select(ok | not) | .vulnerability.name] | if . == [] then true else error("invalid: \(.)") end
           ' vex/openvex.json
 
-      # De rem (MIT-35), op de SBoM: elk bekend lek van HIGH of CRITICAL laat de job falen, ook als er nog geen oplossing is,
-      # tenzij vex/openvex.json voor die versie zegt dat de image niet geraakt wordt (MIT-41). De weggefilterde meldingen
-      # staan apart in de log. Bij een pull request houdt de ruleset dan de merge tegen, bij een push stopt de job vóór het publiceren.
-      - &scannen
-        name: Scannen op bekende lekken
+      # The brake (MIT-35), on the SBoM: every known vulnerability of HIGH or CRITICAL makes the job fail, also if there is no
+      # fix yet, unless vex/openvex.json says for that version that the image is not affected (MIT-41). The filtered findings
+      # are listed separately in the log. On a pull request the ruleset then blocks the merge, on a push the job stops before publishing.
+      - &scan
+        name: Scan for known vulnerabilities
         run: docker run --rm -v "$PWD:/scan" "$TRIVY" sbom /scan/sbom.cdx.json --severity HIGH,CRITICAL --vex /scan/vex/openvex.json --show-suppressed --exit-code 1 --no-progress
 
-      # De securitytest (tests/securitytest.py) tegen de stack van compose.yaml, alleen in de check: faalt een controle, dan
-      # faalt de check en houdt de ruleset de merge tegen (MIT-39). Zonder terminal stelt deployment.py geen vragen en maakt
-      # het wegwerpgeheimen in .env, die alleen op deze runner bestaan. De stap duurt zo'n 212 seconden (T-125).
-      - name: Securitytest
+      # The security test (tests/securitytest.py) against the stack of compose.yaml, only in the check: if a check fails,
+      # the job fails and the ruleset blocks the merge (MIT-39). Without a terminal deployment.py asks no questions and makes
+      # throwaway secrets in .env, which only exist on this runner. The step takes about 212 seconds (T-125).
+      - name: Security test
         timeout-minutes: 20
         run: |
-          python3 scripts/deployment.py lokaal < /dev/null
+          python3 scripts/deployment.py local < /dev/null
           python3 tests/securitytest.py --wipe
 
-  # Bij een push naar main, of met de hand: dezelfde stappen, en pas na een schone scan naar ghcr.io.
+  # On a push to main, or by hand: the same steps, and only after a clean scan to ghcr.io.
   image:
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-24.04
@@ -103,14 +103,14 @@ jobs:
       packages: write
     steps:
       - *checkout
-      - *bouwen
+      - *build
       - *sbom
-      - *bewaren
+      - *keep
       - *vex
-      - *scannen
+      - *scan
 
-      # Het token via stdin en een omgevingsvariabele, niet in de opdracht zelf.
-      - name: Pushen naar ghcr.io
+      # The token through stdin and an environment variable, not in the command itself.
+      - name: Push to ghcr.io
         env:
           TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
