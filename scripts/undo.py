@@ -1,5 +1,5 @@
-# Alles weer weg, op Azure en lokaal. Start via deployment.py undo.
-# Elke stap vraagt eerst, standaard nee; zonder terminal gebeurt er dus niets.
+# Everything gone again, on Azure and locally. Start through deployment.py undo.
+# Every step asks first, no by default; so without a terminal nothing happens.
 
 import os
 import re
@@ -11,37 +11,37 @@ from deployment import ENV, REPO, SECRETS, check_tools, stop, terraform, yes
 
 def run():
     conf = REPO / "backend.conf"
-    # Azure eerst, en de state-opslag als laatste: zonder state weet Terraform niet meer wat er weg moet.
+    # Azure first, and the state storage last: without state Terraform no longer knows what must go.
     if not conf.exists():
-        print("☁️  Geen backend.conf, dus geen uitrol op Azure die Terraform kent.")
-    elif yes("☁️  Alles op Azure weghalen: de app, de database met alle notities, en de opslag van de state?"):
+        print("☁️  No backend.conf, so no deployment on Azure that Terraform knows.")
+    elif yes("☁️  Remove everything on Azure: the app, the database with all notes, and the storage of the state?"):
         check_tools("azure")
-        # Voor weghalen maakt de waarde niet uit, maar Terraform wil ze hebben, en controleert het adres.
+        # For removing the values do not matter, but Terraform wants them, and checks the address.
         if not (terraform("init", "-input=false", "-reconfigure", "-backend-config=../backend.conf")
-                and terraform("destroy", "-var=app_image=weg", "-var=alert_email=niemand@example.com")):
-            stop("terraform destroy lukte niet, of je typte geen yes; de state-opslag en backend.conf blijven staan.\n"
-                 "   💡 Is de state-opslag zelf al weg? Haal dan alleen backend.conf weg.")
+                and terraform("destroy", "-var=app_image=gone", "-var=alert_email=nobody@example.com")):
+            stop("terraform destroy did not work, or you did not type yes; the state storage and backend.conf stay.\n"
+                 "   💡 Is the state storage itself already gone? Then only remove backend.conf.")
         rg = re.search(r'^resource_group_name\s*=\s*"([A-Za-z0-9_.-]+)"', conf.read_text(encoding="utf-8"), re.M)
         if not rg:
-            stop("Geen resource group in backend.conf; haal de state-opslag zelf weg in de portal.")
-        print(f"\n🗄️  De state-opslag weghalen: {rg.group(1)}. ☕ Dit duurt een paar minuten.")
+            stop("No resource group in backend.conf; remove the state storage yourself in the portal.")
+        print(f"\n🗄️  Removing the state storage: {rg.group(1)}. ☕ This takes a few minutes.")
         if subprocess.run([shutil.which("az"), "group", "delete", "--name", rg.group(1), "--yes"]).returncode != 0:
-            stop("az group delete lukte niet; backend.conf blijft staan, zodat je het opnieuw kunt proberen.")
+            stop("az group delete did not work; backend.conf stays, so you can try again.")
         conf.unlink()
-        # Alleen een cache: de providers en waar de state stond; init haalt hem opnieuw op.
+        # Only a cache: the providers and where the state was; init fetches it again.
         shutil.rmtree(REPO / "terraform" / ".terraform", ignore_errors=True)
-        print("   ✅ Weg, met backend.conf en terraform/.terraform. De Key Vaults blijven door purge protection\n"
-              "      90 dagen als verwijderd staan; dat kost niets, en een nieuwe uitrol kiest nieuwe namen.\n"
-              "   💡 NetworkWatcherRG maakt Azure zelf bij een virtueel netwerk; die kost niets en komt bij een\n"
-              "      nieuwe uitrol vanzelf terug, dus die blijft staan.")
-    if yes("🐳 Lokaal weghalen: de containers, de database met alle notities, de gebouwde image en .env?"):
-        check_tools("lokaal")
-        # Eerst de database: zonder .env maar met de oude database in het volume start de app niet meer.
-        # compose.yaml eist de geheimen ook bij down (${...:?}), dus zonder .env vulwaarden; down gebruikt ze niet.
+        print("   ✅ Gone, with backend.conf and terraform/.terraform. Through purge protection the Key Vaults stay\n"
+              "      deleted for 90 days; that costs nothing, and a new deployment picks new names.\n"
+              "   💡 Azure makes NetworkWatcherRG itself for a virtual network; it costs nothing and comes back\n"
+              "      by itself on a new deployment, so it stays.")
+    if yes("🐳 Remove locally: the containers, the database with all notes, the built image and .env?"):
+        check_tools("local")
+        # The database first: without .env but with the old database in the volume the app no longer starts.
+        # compose.yaml requires the secrets on down too (${...:?}), so without .env placeholder values; down does not use them.
         env = {**os.environ, **dict.fromkeys(SECRETS, "undo")}
         if subprocess.run([shutil.which("docker"), "compose", "down", "--volumes", "--rmi", "local"], cwd=REPO, env=env).returncode != 0:
-            stop("docker compose down lukte niet; .env blijft staan, anders past hij niet meer bij de database.\n"
-                 "   💡 Draait Docker (op Windows: Docker Desktop)? Start het en probeer het opnieuw.")
+            stop("docker compose down did not work; .env stays, otherwise it no longer matches the database.\n"
+                 "   💡 Is Docker running (on Windows: Docker Desktop)? Start it and try again.")
         ENV.unlink(missing_ok=True)
-        print("   ✅ Weg. Opnieuw beginnen: python scripts/deployment.py lokaal")
-    print("\n👋 Klaar.\n")
+        print("   ✅ Gone. Start again: python scripts/deployment.py local")
+    print("\n👋 Done.\n")
