@@ -143,7 +143,11 @@ def together(fns):
 def check(name, got, want):
     ok = want(got) if callable(want) else got == want
     results.append((name, ok))
-    print(f"{'ok  ' if ok else 'FAIL'} {name:58} {got}")
+    # Never a secret in the output: the log of a run in CI is public (CodeQL py/clear-text-logging-sensitive-data).
+    shown = str(got)
+    for s in secrets_seen:
+        shown = shown.replace(s, "[secret]")
+    print(f"{'ok  ' if ok else 'FAIL'} {name:58} {shown}")
 
 
 def code(key, offset=0):

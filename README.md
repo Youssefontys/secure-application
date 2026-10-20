@@ -64,6 +64,7 @@ The baseline plus the first security features, each with an entry in `BoK/Threat
 - taken from BOK-SECENGINEER and an audit: no page in the browser cache, sessions of at most 8 hours, a limit on registrations and notes, every security event as a JSON line in the log, an owner-only `.env`, and Dependabot (MIT-28 to MIT-33); see `BoK/Subjects/Week 6 Logging.md`
 - the image built, its SBoM made and scanned for known vulnerabilities, and published by GitHub Actions with only the rights it needs and no own token (MIT-34 to MIT-36), the same build, SBoM and scan as a required check on every pull request, so a known vulnerability does not reach `main`, and the security test in that check, so a change that breaks a mitigation does not either (MIT-39), and a mail when a lockout starts on Azure (MIT-37); see `BoK/Subjects/Week 8 CI-CD.md`
 - every known HIGH or CRITICAL vulnerability, also one without a fix, stops the check until there is a decision in the VEX (MIT-41), and no program in the image has a setuid or setgid bit (MIT-42); see `vex/README.md`
+- code scanning with CodeQL on every pull request, Dependabot alerts and security updates, and private vulnerability reporting (MIT-45); see `SECURITY.md`
 - psycopg with the libpq of Debian instead of psycopg-binary and its 15 bundled libraries, so the scan sees what it loads and Debian updates it (MIT-43)
 - the Terraform state in its own storage with its own key, reachable only through Entra ID (MIT-38), and TLS on Azure checked against the NCSC guidelines (MIT-40); see `BoK/Subjects/Week 6 Encryption.md`
 

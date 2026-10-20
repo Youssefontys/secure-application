@@ -2,7 +2,7 @@
 
 Zes stappen van de pipeline staan. Bij elke push naar `main` bouwt GitHub Actions de image en zet hem op ghcr.io (MIT-34): het token van de run mag alleen dat, `actions/checkout` staat vast op een commit, en een eigen token is niet meer nodig. Trivy maakt van elke image een SBoM (MIT-36), en scant die: een bekend lek van HIGH of CRITICAL houdt de image tegen (MIT-35), sinds deelvraag 2 van het onderzoek ook als er nog geen oplossing is, tot er een beslissing in de VEX staat (MIT-41). De eerste scan vond vier lekken, allemaal in pip, dat nu uit de image gaat. Sinds deelvraag 1 van het onderzoek draaien dezelfde stappen ook bij elke pull request, zonder te publiceren, en maakt een ruleset op `main` die check verplicht (MIT-39): een bekend lek komt dan niet eens meer op `main`. En sinds de securitytest in de repo staat, draait de check die ook: een wijziging die een maatregel breekt, komt niet op `main` (MIT-39, T-125). En sinds MIT-44 zet `deploy.yml` een nieuwe image op Azure zodra de beheerder het goedkeurt, met OIDC en zonder sleutel in GitHub.
 
-De details staan in de entries (MC-30, MC-11, MC-14, MIT-34 tot MIT-36, MIT-39 en MIT-41 tot MIT-44; C-06, C-11, A-12, A-14, A-18, A-19, F-06, F-07, F-12, F-13, B-04, B-06, AU-14, AZ-16 en AZ-17 in de architectuur) en de tests T-103, T-105, T-106, T-110 tot T-112 en T-114 tot T-129. De triageflow staat in `vex/README.md`.
+De details staan in de entries (MC-30, MC-11, MC-14, MIT-34 tot MIT-36, MIT-39 en MIT-41 tot MIT-45; C-06, C-11, A-12, A-14, A-18, A-19, F-06, F-07, F-12, F-13, B-04, B-06, AU-14, AZ-16 en AZ-17 in de architectuur) en de tests T-103, T-105, T-106, T-110 tot T-112 en T-114 tot T-132. De triageflow staat in `vex/README.md`.
 
 ## De dreiging
 
@@ -51,6 +51,7 @@ De details staan in de entries (MC-30, MC-11, MC-14, MIT-34 tot MIT-36, MIT-39 e
 | Een bekend lek komt niet op `main` | Dezelfde scan bij elke pull request, en de ruleset maakt die verplicht | T-110: een image zonder lek gaat door (Trivy 0.76.0). T-111: een pull request met pip faalt met 4 keer HIGH, en GitHub houdt de merge tegen |
 | Niemand komt om de check heen | De ruleset, met een lege bypass-lijst | T-112: een push rechtstreeks naar `main` geweigerd (`GH013`) |
 | Een lek zonder oplossing gaat niet ongezien door | Geen `--ignore-unfixed` meer; alleen een verklaring in de VEX laat het door | T-114: 44 meldingen van HIGH, 8 lekken, alle zonder oplossing en eerder ongezien. T-116: met de VEX 0 over, de 44 apart in de log |
+| Een bekend patroon in de eigen code valt op | CodeQL bij elke pull request en push, voor Python, JavaScript en de workflows | T-131: een TOTP-geheim in de log van de check gevonden; T-132: weg na de fix |
 | Een verklaring zonder reden telt niet | De stap Check VEX, vóór de scan | T-116: vijf kapotte varianten geweigerd, de echte VEX door |
 | Een wijziging die een maatregel breekt, komt niet op `main` | De securitytest in de check, die de ruleset verplicht maakt | T-125: 182 controles, alles goed, in 212 s |
 | mount draait niet als root | Geen programma met een setuid- of setgid-bit (MIT-42) | T-116: 0, eerst 11; de regressietest slaagt |
@@ -64,6 +65,7 @@ De details staan in de entries (MC-30, MC-11, MC-14, MIT-34 tot MIT-36, MIT-39 e
 - **Wie een pull request kan mergen, bepaalt de image,** en kan hem uitrollen: met `deployment.py azure`, of door de uitrol vanuit GitHub goed te keuren. Die goedkeuring komt van hetzelfde account als de merge: ze houdt een uitrol tegen die je niet wilde, niet een overgenomen account. Als beheerder kan hij ook de ruleset uitzetten. Je GitHub-account, met tweestapsverificatie, is dus de sleutel.
 - **De check draait uit de pull request zelf.** Een pull request die de workflow aanpast, kan de check groen maken (MC-30, stap 6); alleen wie mergt, ziet dat in de wijzigingen.
 - **De securitytest test de lokale stack, niet Azure.** Key Vault, TLS naar de database en de alerts ziet hij niet. En een pull request die de test aanpast, kan hem groen maken, net als de scan (MC-30, stap 6).
+- **CodeQL houdt een merge niet tegen.** De ruleset eist zijn uitkomst nog niet; een nieuwe melding ziet alleen wie in het Security-tabblad of op de pull request kijkt (MIT-45).
 - **Elke pull request wacht langer:** de check duurt zo'n 4 minuten, vooral door de securitytest.
 - **De scan ziet niet alles.** Een lek dat pas later bekend wordt, ziet de scan pas bij de volgende pull request of push, een draaiende image wordt niet opnieuw gescand, en MEDIUM en LOW houden niet tegen. En hij ziet niets van wat buiten dpkg en pip om in de image zit: Python zelf en de OpenSSL in `cryptography` (T-118, deelvraag 3 van het onderzoek). De 15 bibliotheken die psycopg-binary meenam, zijn sinds MIT-43 weg; libpq komt nu uit Debian (T-121).
 - **Een verklaring in de VEX kan fout zijn.** De check ziet of er een reden staat, niet of die klopt; dat ziet alleen wie mergt.
@@ -125,7 +127,7 @@ Gemeten en opgezocht na de eerste uitrol, om te zien of een andere regio sneller
 5. Gedaan (19-10-2026): deelvraag 2 van het onderzoek: elk lek van HIGH of CRITICAL vraagt een beslissing, vastgelegd in de VEX (MIT-41), en geen setuid-bits meer in de image (MIT-42).
 6. De SBoM van de image op `main` elke dag opnieuw scannen, zodat een lek dat na de build bekend wordt niet op de volgende pull request wacht (MC-11).
 7. Gedaan (20-10-2026): de securitytest in de check van stap 4, zodat een wijziging die een maatregel breekt niet op `main` komt (MIT-39, T-125).
-8. SAST (statische code-analyse), als workflow-bestand, zodat het meegaat met een kopie van de repo.
+8. Gedaan (20-10-2026): SAST met CodeQL, voor Python, JavaScript en de workflows, met Dependabot alerts en private vulnerability reporting (MIT-45). Als default setup in de instellingen, niet als workflow-bestand: minder om bij te houden, maar een kopie van de repo krijgt het dus niet vanzelf.
 9. Gedaan (20-10-2026): uitrollen vanuit GitHub (CD), alleen de image, met OIDC en zonder sleutel, pas na goedkeuring, en alleen als er voor Azure is gekozen (MIT-44). `deployment.py azure` zet de environment `azure` en de drie ID's als environment secrets, niet als repository-variabelen: dan staan ze niet in de openbare log. In een fork of kopie zonder Azure doet de job niets. `deployment.py undo` haalt de environment weer weg.
 
 ## Screenshots
