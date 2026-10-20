@@ -72,6 +72,9 @@ def check_tools(target):
         stop("Not found yet:\n" + "\n".join(missing) + "\n   💡 Install what is missing and then start this script again.")
     for tool, why in NEEDS[target]:
         print(f"   ✅ {tool}: {why}")
+    if target == "azure":
+        print("   ✅ gh: the GitHub CLI, signed in, to deploy from GitHub after your approval (MIT-44)" if gh("auth", "status") is not None
+              else "   ➖ gh: not found or not signed in (gh auth login); optional, only for deploying from GitHub")
 
 
 # Hackmode for the hacking week (MC-18), off by default. Returns the settings, or None per setting.

@@ -44,13 +44,14 @@ variable "alert_email" {
   }
 }
 
-# owner/name of the GitHub repo, exactly as on GitHub: the OIDC token of a job names it that way (deploy.tf).
-variable "github_repo" {
+# How the OIDC token of a job names this repo (deploy.tf): repo:owner/name, or with the IDs (repo:owner@1/name@2) if
+# the repo uses immutable subjects. deploy_azure.py reads it from GitHub.
+variable "github_oidc_prefix" {
   type = string
 
   validation {
-    condition     = can(regex("^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$", var.github_repo))
-    error_message = "Give owner/name of the GitHub repo, such as Youssefontys/secure-application."
+    condition     = can(regex("^repo:[A-Za-z0-9_.@-]+/[A-Za-z0-9_.@-]+$", var.github_oidc_prefix))
+    error_message = "Give the start of the subject, such as repo:Youssefontys/secure-application."
   }
 }
 

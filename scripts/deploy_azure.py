@@ -113,7 +113,9 @@ def run():
     # Only with gh, signed in to GitHub; without it, deploying stays this script.
     from_github = deployment.INTERACTIVE and gh("auth", "status") is not None and yes(
         "\n🚀 Deploy from GitHub after a merge, only once you approve it in the Actions tab (MIT-44)?")
-    variables = [f"app_image={image}", f"alert_email={email}", f"github_repo={github}"]
+    # Exactly as the token of a job names the repo; with immutable subjects that includes the IDs of owner and repo.
+    oidc = gh("api", f"repos/{github}/actions/oidc/customization/sub", "--jq", ".sub_claim_prefix // empty") or f"repo:{github}"
+    variables = [f"app_image={image}", f"alert_email={email}", f"github_oidc_prefix={oidc}"]
     if hack["THROTTLE_IP_MODE"]:
         variables += ["throttle_ip_mode=hackweek", "min_replicas=1"]
     if hack["THROTTLE_PAIR_EXEMPT_USERS"]:
