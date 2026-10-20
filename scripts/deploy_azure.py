@@ -38,6 +38,13 @@ def image_public(repo, tag):
         return False
 
 
+# One output of Terraform as text; "" if it is not there (no state yet, or null).
+def output(name):
+    result = subprocess.run([shutil.which("terraform"), "-chdir=terraform", "output", "-raw", name],
+                            cwd=REPO, capture_output=True, text=True)
+    return result.stdout.strip() if result.returncode == 0 else ""
+
+
 # The environment azure in GitHub (MIT-44): only main may deploy, and only after your approval. The three IDs as
 # environment secrets: not secret, but this way the public log of a run does not show them. Already there counts as fine.
 def setup_github(github):
@@ -51,11 +58,9 @@ def setup_github(github):
     if done and "main" not in (branches or "").split():
         done = gh("api", "-X", "POST", f"repos/{github}/environments/azure/deployment-branch-policies",
                   "-f", "name=main", "-f", "type=branch") is not None
-    output = subprocess.run([shutil.which("terraform"), "-chdir=terraform", "output", "-raw", "deploy_client_id"],
-                            cwd=REPO, capture_output=True, text=True).stdout.strip()
     account = subprocess.run([shutil.which("az"), "account", "show", "--query", "[tenantId, id]", "-o", "tsv"],
                              capture_output=True, text=True).stdout.split()
-    ids = dict(zip(("AZURE_CLIENT_ID", "AZURE_TENANT_ID", "AZURE_SUBSCRIPTION_ID"), [output, *account]))
+    ids = dict(zip(("AZURE_CLIENT_ID", "AZURE_TENANT_ID", "AZURE_SUBSCRIPTION_ID"), [output("deploy_client_id"), *account]))
     for name, value in ids.items():
         done = done and bool(value) and gh("secret", "set", name, "--env", "azure", "--repo", github, stdin=value) is not None
     if done:
@@ -110,28 +115,32 @@ def run():
         email = ask("To which address?", email or "-", EMAIL)
     if not re.fullmatch(EMAIL, email):
         stop("No email address for the alert; run this script in a terminal and fill one in.", icon="📧")
-    # Only with gh, signed in to GitHub; without it, deploying stays this script.
-    from_github = deployment.INTERACTIVE and gh("auth", "status") is not None and yes(
-        "\n🚀 Deploy from GitHub after a merge, only once you approve it in the Actions tab (MIT-44)?")
-    # Exactly as the token of a job names the repo; with immutable subjects that includes the IDs of owner and repo.
-    oidc = gh("api", f"repos/{github}/actions/oidc/customization/sub", "--jq", ".sub_claim_prefix // empty") or f"repo:{github}"
-    variables = [f"app_image={image}", f"alert_email={email}", f"github_oidc_prefix={oidc}"]
-    if hack["THROTTLE_IP_MODE"]:
-        variables += ["throttle_ip_mode=hackweek", "min_replicas=1"]
-    if hack["THROTTLE_PAIR_EXEMPT_USERS"]:
-        variables.append(f"throttle_pair_exempt_users={hack['THROTTLE_PAIR_EXEMPT_USERS']}")
-
     print("\n🏗️  Terraform. It first shows what it is going to do, and only starts when you type yes.\n")
     # backend.conf is the only source: after a new bootstrap .terraform still knows the old storage, and then init stops
     # without -reconfigure. No state goes along; that belongs to the storage.
     if not terraform("init", "-input=false", "-reconfigure", "-backend-config=../backend.conf"):
         stop("terraform init did not work; the message is above.")
+    # Deploying from GitHub (MIT-44): once on, it stays on, also without gh; undo removes it. Otherwise only with gh.
+    signed_in = gh("auth", "status") is not None
+    from_github = bool(output("deploy_client_id"))
+    if from_github:
+        print("\n🚀 Deploying from GitHub after your approval: on, and it stays on")
+    elif deployment.INTERACTIVE and signed_in:
+        from_github = yes("\n🚀 Deploy from GitHub after a merge, only once you approve it in the Actions tab (MIT-44)?")
+    # Exactly as the token of a job names the repo; with immutable subjects that includes the IDs of owner and repo.
+    oidc = gh("api", f"repos/{github}/actions/oidc/customization/sub", "--jq", ".sub_claim_prefix // empty") or f"repo:{github}"
+    variables = [f"app_image={image}", f"alert_email={email}", f"github_oidc_prefix={oidc}",
+                 f"deploy_from_github={'true' if from_github else 'false'}"]
+    if hack["THROTTLE_IP_MODE"]:
+        variables += ["throttle_ip_mode=hackweek", "min_replicas=1"]
+    if hack["THROTTLE_PAIR_EXEMPT_USERS"]:
+        variables.append(f"throttle_pair_exempt_users={hack['THROTTLE_PAIR_EXEMPT_USERS']}")
+
     # The question for yes stays: this turns on resources that cost money.
     if not terraform("apply", *(f"-var={v}" for v in variables)):
         stop("terraform apply did not work, or you did not type yes; the message is above.")
-    url = subprocess.run([shutil.which("terraform"), "-chdir=terraform", "output", "-raw", "app_url"],
-                         cwd=REPO, capture_output=True, text=True).stdout.strip()
-    if from_github:
+    url = output("app_url")
+    if from_github and signed_in:
         setup_github(github)
     print(f"\n🎉 Done! The app is on {url}")
     print("⏳ Terraform has started the schema job; if logging in gives an error in the first minute, try again shortly.")

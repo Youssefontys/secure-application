@@ -44,6 +44,11 @@ def stop(message, icon="❌"):
     sys.exit(f"\n{icon} {message}\n\n🛑 Stopping.\n")
 
 
+# Ctrl+C: a message instead of a traceback. What az already made stays; deploy_azure.py then starts this again.
+sys.excepthook = lambda kind, value, tb: (print("\n✋ Stopped with Ctrl+C.\n\n🛑 Stopping.\n") if kind is KeyboardInterrupt
+                                         else sys.__excepthook__(kind, value, tb))
+
+
 # The error of az once: the lines Code, Message and Target usually repeat the first line.
 def az_error(stderr):
     lines = [line for line in stderr.strip().splitlines() if not line.startswith("WARNING:")] or [""]

@@ -91,9 +91,15 @@ def hackmode():
     return {"THROTTLE_IP_MODE": "hackweek", "THROTTLE_PAIR_EXEMPT_USERS": None if demo == "-" else demo}
 
 
-# Terraform in terraform/, with the output and the questions simply in this terminal.
+# Terraform in terraform/, with the output and the questions simply in this terminal. On Ctrl+C Terraform stops cleanly
+# by itself; it is not killed, otherwise the state stays locked.
 def terraform(*args):
-    return subprocess.run([shutil.which("terraform"), "-chdir=terraform", *args], cwd=REPO).returncode == 0
+    process = subprocess.Popen([shutil.which("terraform"), "-chdir=terraform", *args], cwd=REPO)
+    while True:
+        try:
+            return process.wait() == 0
+        except KeyboardInterrupt:
+            print("\n⏳ Waiting until Terraform has stopped cleanly...")
 
 
 # Git in this folder; None if it does not work.
@@ -128,9 +134,16 @@ if __name__ == "__main__":
     if len(sys.argv) > 1:
         choice = sys.argv[1]
     elif INTERACTIVE:
-        choice = ask("🧭 Where do you deploy? local or azure (or undo)", "local", r"local|azure|undo")
+        try:
+            choice = ask("🧭 Where do you deploy? local or azure (or undo)", "local", r"local|azure|undo")
+        except KeyboardInterrupt:
+            stop("Stopped with Ctrl+C; nothing was done.", icon="✋")
     else:
         choice = "local"
     if choice not in TARGETS:
         stop(f"Unknown choice: {choice!r}. Choose local, azure or undo.", icon="🤔")
-    TARGETS[choice].run()
+    # Ctrl+C stops with a message instead of a traceback; what was done before it stays, and a new run continues.
+    try:
+        TARGETS[choice].run()
+    except KeyboardInterrupt:
+        stop("Stopped with Ctrl+C. What was done before stays; running it again continues from there.", icon="✋")

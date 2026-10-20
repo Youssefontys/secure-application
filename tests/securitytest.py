@@ -199,7 +199,9 @@ if __name__ == "__main__":
     sql("DELETE FROM auth_throttle; DELETE FROM users;")
     for name in chosen:
         print(f"\n#### {name}test.py")
+        began = time.monotonic()
         importlib.import_module(f"{name}test").run()
+        print(f"     ({time.monotonic() - began:.0f} s)")
     sql("DELETE FROM auth_throttle; DELETE FROM users;")
     fails = [n for n, ok in results if not ok]
     print(f"\nALL GOOD: {len(results)} checks" if not fails else f"\n{len(fails)} of {len(results)} FAILED: {fails}")

@@ -93,7 +93,7 @@ jobs:
         timeout-minutes: 20
         run: |
           python3 scripts/deployment.py local < /dev/null
-          python3 tests/securitytest.py --wipe
+          python3 -u tests/securitytest.py --wipe
 
   # On a push to main, or by hand: the same steps, and only after a clean scan to ghcr.io.
   image:
