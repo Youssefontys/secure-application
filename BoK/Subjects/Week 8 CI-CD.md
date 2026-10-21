@@ -2,7 +2,7 @@
 
 Zeven stappen van de pipeline staan. Bij elke push naar `main` bouwt GitHub Actions de image en zet hem op ghcr.io (MIT-34): het token van de run mag alleen dat, `actions/checkout` staat vast op een commit, en een eigen token is niet meer nodig. Trivy maakt van elke image een SBoM (MIT-36), en scant die: een bekend lek van HIGH of CRITICAL houdt de image tegen (MIT-35), sinds deelvraag 2 van het onderzoek ook als er nog geen oplossing is, tot er een beslissing in de VEX staat (MIT-41). De eerste scan vond vier lekken, allemaal in pip, dat nu uit de image gaat. Sinds deelvraag 1 van het onderzoek draaien dezelfde stappen ook bij elke pull request, zonder te publiceren, en maakt een ruleset op `main` die check verplicht (MIT-39): een bekend lek komt dan niet eens meer op `main`. En sinds de securitytest in de repo staat, draait de check die ook: een wijziging die een maatregel breekt, komt niet op `main` (MIT-39, T-125). En sinds MIT-44 zet `CD-azure.yml` een nieuwe image op Azure zodra de beheerder het goedkeurt, met OIDC en zonder sleutel in GitHub. En sinds MIT-46 draait bij elke pull request ook de ZAP baseline, met een beslissing per melding.
 
-De details staan in de entries (MC-30, MC-11, MC-14, MIT-34 tot MIT-36, MIT-39 en MIT-41 tot MIT-46; C-06, C-11, A-12, A-14, A-18, A-19, F-06, F-07, F-12, F-13, B-04, B-06, AU-14, AZ-16 en AZ-17 in de architectuur) en de tests T-103, T-105, T-106, T-110 tot T-112 en T-114 tot T-136. De triageflow staat in `vex/README.md`.
+De details staan in de entries (MC-30, MC-11, MC-14, MIT-34 tot MIT-36, MIT-39 en MIT-41 tot MIT-47; C-06, C-11, A-12, A-14, A-18, A-19, F-06, F-07, F-12, F-13, B-04, B-06, AU-14, AZ-16 en AZ-17 in de architectuur) en de tests T-103, T-105, T-106, T-110 tot T-112 en T-114 tot T-138. De triageflow staat in `vex/README.md`.
 
 ## De dreiging
 
@@ -53,6 +53,7 @@ De details staan in de entries (MC-30, MC-11, MC-14, MIT-34 tot MIT-36, MIT-39 e
 | Niemand komt om de check heen | De ruleset, met een lege bypass-lijst | T-112: een push rechtstreeks naar `main` geweigerd (`GH013`) |
 | Een lek zonder oplossing gaat niet ongezien door | Geen `--ignore-unfixed` meer; alleen een verklaring in de VEX laat het door | T-114: 44 meldingen van HIGH, 8 lekken, alle zonder oplossing en eerder ongezien. T-116: met de VEX 0 over, de 44 apart in de log |
 | Wat een bezoeker ziet, heeft geen open melding | De ZAP baseline bij elke pull request, met een beslissing per melding | T-135: zes meldingen, twee van Low; T-136: opgelost of geaccepteerd, 0 open |
+| Een slechtere instelling in Terraform valt op | `trivy config` op `terraform/` in `CI-iac.yml`, met een beslissing per melding in `.trivyignore.yaml` (MIT-47) | T-137: negen meldingen zonder beslissingen, exit 1. T-138: met beslissingen exit 0 |
 | Een bekend patroon in de eigen code valt op | CodeQL bij elke pull request en push, voor Python, JavaScript en de workflows | T-131: een TOTP-geheim in de log van de check gevonden; T-132: weg na de fix; T-134: een melding van high houdt de merge tegen |
 | Een verklaring zonder reden telt niet | De stap Check VEX, vóór de scan | T-116: vijf kapotte varianten geweigerd, de echte VEX door |
 | Een wijziging die een maatregel breekt, komt niet op `main` | De securitytest in de check, die de ruleset verplicht maakt | T-125: 182 controles, alles goed, in 212 s |

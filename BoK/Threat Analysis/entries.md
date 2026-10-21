@@ -866,3 +866,10 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 - Waar: `.github/workflows/CI-dast.yml`; `zap-rules.tsv`
 - Status: bewezen (T-135, T-136; gemeten op 2026-10-20). De job `dast` is niet verplicht in de ruleset: een rode `dast` houdt een merge niet tegen, alleen wie hem ziet. ZAP ziet alleen wat een bezoeker zonder account ziet, en valt niet actief aan
 - Sinds: fa79285; de beslissingen sinds dce75f3
+
+### MIT-47 IaC-scan: Trivy op `terraform/` bij elke pull request die Terraform verandert, met een beslissing per melding
+- Houdt tegen: een instelling in de infrastructuur die onbedoeld slechter wordt, zoals een Key Vault met een open netwerk, of een database die niets logt, vóór de merge (MC-22, MC-31)
+- Wat: de workflow `CI-iac.yml` draait bij elke pull request die `terraform/` of `.trivyignore.yaml` verandert `trivy config` op `terraform/`, met dezelfde Trivy-image als `CI-image.yml`, vast op versie en digest. Hij leest alleen de bestanden: er wordt niets gepland of toegepast. Elke melding heeft een beslissing in `.trivyignore.yaml`, met de reden, zoals de VEX bij de image en `zap-rules.tsv` bij ZAP; een melding zonder beslissing laat de job falen. Een eigen workflow, zoals `CI-dast.yml`. De eerste run vond negen meldingen: AZU-0013 (twee vaults zonder netwerkregels, CRITICAL), AZU-0017 (vier geheimen zonder vervaldatum, LOW) en AZU-0019, AZU-0021, AZU-0024 (de databaselog, MEDIUM). De eerste twee zijn bewust geaccepteerd, met de reden uit Week 6 (Encryption); de drie van de databaselog staan als nog niet beslist: ze wachten op de plek waar die log naartoe gaat (T-137, T-138). Checkov, Terrascan en Snyk zijn er niet bij gekomen: Trivy doet dit al voor de image en heeft dezelfde regels voor Azure (AZU-)
+- Waar: `.github/workflows/CI-iac.yml`; `.trivyignore.yaml`
+- Status: bewezen (T-137, T-138; gemeten op 2026-10-21). De job `iac` is niet verplicht in de ruleset en draait alleen als Terraform verandert: een rode `iac` houdt een merge niet tegen, alleen wie hem ziet. Trivy leest de code, niet wat er op Azure staat: een wijziging in de portal ziet hij niet
+- Sinds: c877ee2; de beslissingen sinds db6b814
