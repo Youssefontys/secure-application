@@ -31,7 +31,7 @@ jobs:
         with:
           persist-credentials: false
 
-      # All severities: the decisions in .trivyignore.yaml cover the low ones too. --show-suppressed lists what a decision hides.
+      # All severities: the decisions in .trivyignore.yaml cover the low ones too. lists what a decision hides.
       - name: Trivy config
         run: |
-          docker run --rm -v "$PWD:/scan" "$TRIVY" config /scan/terraform --ignorefile /scan/.trivyignore.yaml             --severity UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL --show-suppressed --exit-code 1 --no-progress
+          docker run --rm -v "$PWD:/scan" "$TRIVY" config /scan/terraform --ignorefile /scan/.trivyignore.yaml             --severity UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL --exit-code 1 --no-progress
