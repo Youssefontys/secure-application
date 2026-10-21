@@ -1,0 +1,3 @@
+# The decision per finding of Trivy on terraform/ (MIT-47, CI-iac.yml): a finding without a decision here fails the job.
+# Per finding the rule, the file and the reason; a fixed finding is removed, so that it comes back as a failure.
+misconfigurations: []
