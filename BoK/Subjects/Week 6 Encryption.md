@@ -169,7 +169,7 @@ Uitgerold op 18-10-2026, in France Central (zie Week 8 voor de uitrol). In Conta
 - **Eventueel envelope-versleuteling:** een tweede sleutel (KEK) in Key Vault die `DATA_ENCRYPTION_KEY` (de DEK) versleutelt. Volgens OWASP werkt dat alleen als de KEK apart van de DEK staat; de versleutelde DEK mag dan bij de data.
 - **De opslag van de Terraform-state** wordt al versleuteld met een eigen sleutel (RSA 4096) in Key Vault, door `scripts/setup_azure.py`. Dat is key management voor de infrastructuur.
 
-Trivy 0.75.0 vond op 17-10-2026 zeven punten in `terraform/`, met per punt een besluit:
+Trivy 0.75.0 vond op 17-10-2026 zeven punten in `terraform/`, met per punt een besluit. Sinds MIT-47 draait die scan bij elke pull request die Terraform verandert (`CI-iac.yml`), en staan de besluiten ook in `.trivyignore.yaml`; Trivy 0.76.0 telt er negen (T-137), met AZU-0013 per vault en AZU-0017 per geheim:
 
 | Punt | Ernst | Besluit |
 |---|---|---|

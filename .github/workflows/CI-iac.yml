@@ -1,0 +1,37 @@
+# IaC scan (MIT-47): Trivy reads terraform/ on every pull request that changes it, and checks it for misconfigurations
+# (a Key Vault without a firewall, a secret without an expiry date, a database that does not log connections). Every
+# finding has a decision in .trivyignore.yaml, with the reason, like the VEX for the image scan and zap-rules.tsv for ZAP;
+# a finding without one fails the job. It only reads the files: nothing is planned or applied. A workflow of its own, like
+# CI-dast.yml, so that it shares nothing with CI-image.yml.
+name: IaC
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - terraform/**
+      - .trivyignore.yaml
+      - .github/workflows/CI-iac.yml
+
+# No rights by default; the job only reads the code.
+permissions: {}
+
+env:
+  # The same image as in CI-image.yml, pinned on version and digest (MIT-03); update both together.
+  TRIVY: aquasec/trivy:0.76.0@sha256:2416d1f74045b57274df1a340eee6b510cacd73c66a6ccb8da092b117eb7d222
+
+jobs:
+  iac:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      # Pinned on a commit, not on a tag that can move (MIT-03); Dependabot keeps it up to date (MIT-33).
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # All severities: the decisions in .trivyignore.yaml cover the low ones too. lists what a decision hides.
+      - name: Trivy config
+        run: |
+          docker run --rm -v "$PWD:/scan" "$TRIVY" config /scan/terraform --ignorefile /scan/.trivyignore.yaml             --severity UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL --exit-code 1

@@ -1,0 +1,32 @@
+# The decision per finding of Trivy on terraform/ (MIT-47, CI-iac.yml): a finding without a decision here fails the job.
+# Per finding the rule, the file and the reason, like the VEX for the image and zap-rules.tsv for ZAP. A fixed finding is
+# removed from this file, so that it fails again if it comes back. The same nine findings as in the BoK (Week 6).
+misconfigurations:
+  - id: AZU-0013
+    paths:
+      - keyvault.tf
+    statement: >-
+      Accepted, both vaults (kv- and kvdb-): reading needs an Entra token and a role, and a firewall needs a fixed address
+      for whoever runs Terraform, and first a test that Container Apps still fetches the secrets through it.
+  - id: AZU-0017
+    paths:
+      - keyvault.tf
+    statement: >-
+      Accepted, four secrets: without automatic rotation an expiry date stops the app on one day, and the data key must
+      never expire (a new one makes all notes unreadable).
+  - id: AZU-0019
+    paths:
+      - database.tf
+    statement: >-
+      Open, not decided: the database log goes nowhere yet (Week 6, Logging). It becomes a fix when the log has a place
+      to go, and this decision is then removed.
+  - id: AZU-0021
+    paths:
+      - database.tf
+    statement: >-
+      Open, not decided: the app limits attempts itself (MIT-10); the database parameter waits for the same step as AZU-0019.
+  - id: AZU-0024
+    paths:
+      - database.tf
+    statement: >-
+      Open, not decided: waits for the same step as AZU-0019.
