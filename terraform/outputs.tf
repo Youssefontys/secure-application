@@ -25,3 +25,9 @@ output "schema_job_command" {
 output "deploy_client_id" {
   value = one(azurerm_user_assigned_identity.deploy[*].client_id)
 }
+
+# For deploy_azure.py, so that a new run offers the same Blue Teamers again instead of dropping them. Personal data, so sensitive.
+output "blue_team_emails" {
+  value     = join(",", var.blue_team_emails)
+  sensitive = true
+}
