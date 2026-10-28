@@ -80,7 +80,7 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 - Sinds: 75c9967
 
 ### UC-11 Een melding krijgen bij een blokkade
-- Actor: beheerder
+- Actor: beheerder, en de Blue Teamers die hij opgeeft (`blue_team_emails`; zonder opgave alleen de beheerder)
 - Doel: binnen ongeveer 10 minuten een mail krijgen als er een blokkade begint, zodat een aanval niet onopgemerkt blijft
 - Onderdelen: C-05, C-08 (AZ-13)
 - Assets: A-11, A-13
@@ -806,10 +806,10 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 
 ### MIT-37 Een mail bij een blokkade
 - Houdt tegen: MC-28 stap 1, en de andere stappen voor zover ze een teller op slot zetten
-- Wat: een log search alert op Azure kijkt elke 5 minuten of er in Log Analytics een `lockout_started` staat, en mailt dan de beheerder via een action group. Na een mail blijft de regel een uur stil, zodat één aanval niet elke 5 minuten een mail geeft. De regel leest met een eigen identiteit, die alleen Log Analytics Reader op de workspace is; zonder eigen identiteit leest een regel volgens Microsoft met de rechten van wie hem het laatst wijzigde. Het adres stelt `deployment.py azure` voor uit `az login` en staat niet in de repo. Vaker kijken kost meer (elke minuut €2,64 per maand in plaats van €1,32) en scheelt weinig, want een regel staat pas na een paar minuten in Log Analytics (T-107)
+- Wat: een log search alert op Azure kijkt elke 5 minuten of er in Log Analytics een `lockout_started` staat, en mailt dan de beheerder via een action group. Na een mail blijft de regel een uur stil, zodat één aanval niet elke 5 minuten een mail geeft. De regel leest met een eigen identiteit, die alleen Log Analytics Reader op de workspace is; zonder eigen identiteit leest een regel volgens Microsoft met de rechten van wie hem het laatst wijzigde. Het adres stelt `deployment.py azure` voor uit `az login` en staat niet in de repo. Dezelfde action group mailt ook de Blue Teamers die de beheerder opgeeft (`blue_team_emails`, een eigen vraag in `deployment.py azure`; een nieuwe run biedt dezelfde adressen weer aan): zij lezen alleen de mail, de log zelf blijft bij de beheerder. Vaker kijken kost meer (elke minuut €2,64 per maand in plaats van €1,32) en scheelt weinig, want een regel staat pas na een paar minuten in Log Analytics (T-107)
 - Waar: `terraform/alerts.tf`; de vraag naar het adres in `run()` van `scripts/deploy_azure.py`
-- Status: bewezen (T-107, T-108; gemeten op 2026-10-18)
-- Sinds: c4ce459
+- Status: bewezen (T-107, T-108; gemeten op 2026-10-18). De extra ontvangers voor de Blue Teamers zijn gebouwd, maar nog niet op Azure gemeten
+- Sinds: c4ce459; de Blue Teamers sinds de pull request van `blue_team_emails`
 
 ### MIT-38 De Terraform-state: eigen sleutel, alleen via Entra ID
 - Houdt tegen: MC-31 stap 3 en 4

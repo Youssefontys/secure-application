@@ -10,6 +10,16 @@ resource "azurerm_monitor_action_group" "security" {
     email_address           = var.alert_email
     use_common_alert_schema = true
   }
+
+  # The Blue Teamers (UC-11): the same mail as the administrator. They only read the mail; the log itself stays with the administrator.
+  dynamic "email_receiver" {
+    for_each = var.blue_team_emails
+    content {
+      name                    = "blue-${email_receiver.key + 1}"
+      email_address           = email_receiver.value
+      use_common_alert_schema = true
+    }
+  }
 }
 
 # Every 5 minutes (€1.32 per month): a line only shows up in Log Analytics after a few minutes, so looking more often helps little.
