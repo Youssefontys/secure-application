@@ -150,12 +150,15 @@ def use_case_diagram():
     for n, uc in enumerate(ucs):
         pos[uc] = (380, top + 20 + n * row)
     pos["UC-10"], pos["UC-11"] = (805, 150), (805, 250)
-    actors = {"Bezoeker": (80, pos["UC-01"][1] + 10), "Gebruiker": (80, top + row * 5), "Beheerder": (1030, 230), "Red Teamer": (80, pos["UC-12"][1] + 10), "Blue Teamer": (1030, 370)}
+    actors = {"Bezoeker": (80, pos["UC-01"][1] + 10), "Gebruiker": (80, top + row * 5), "Beheerder": (1030, 230), "Red Teamer": (80, pos["UC-12"][1] + 10), "Blue Teamer": (805, 400)}
     for actor, (ax, ay) in actors.items():
         for uc in ACTORS[actor]:
             ux, uy = pos[uc]
             if actor == "Beheerder":
                 svg.line(ax - 18, ay - 10, ux + 130, uy)
+            elif actor == "Blue Teamer":
+                # Under the box of UC-10 and UC-11, straight up to UC-11.
+                svg.line(ax, ay - 40, ux, uy + 29)
             else:
                 svg.line(ax + 18, ay - 10, ux - 130, uy)
         svg.actor(ax, ay, actor)
