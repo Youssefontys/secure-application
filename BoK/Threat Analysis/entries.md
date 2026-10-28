@@ -86,6 +86,13 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 - Assets: A-11, A-13
 - Sinds: c4ce459
 
+### UC-12 De code lezen en de live omgeving aanvallen
+- Actor: Red Teamer (een medestudent met de opdracht de omgeving aan te vallen; een gewone bezoeker, zonder eigen rechten)
+- Doel: de code lezen (de repo en de image zijn openbaar) en de live omgeving op Azure aanvallen in de hacking week, met een eigen account (UC-01), binnen wat `SECURITY.md` zegt, zonder dat een klas achter één adres elkaar buitensluit met de blokkade (de hackmode)
+- Onderdelen: C-01, C-02 (B-01; AU-01, AU-05; `THROTTLE_IP_MODE` en `THROTTLE_PAIR_EXEMPT_USERS`), C-06 (de openbare code)
+- Assets: A-01, A-04, A-12
+- Sinds: 8c3fc87 (de hackmode)
+
 ## Misuse cases
 
 ### MC-01 Wachtwoorden uit de database lezen

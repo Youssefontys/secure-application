@@ -25,7 +25,7 @@ GROUPS = [
     ("misuse-5-omgeving", "Doel: de app of de omgeving op Azure overnemen", "Aanvaller op de app, de pipeline of de beheerder",
      ["MC-08", "MC-11", "MC-14", "MC-22", "MC-30", "MC-31"]),
 ]
-ACTORS = {"Bezoeker": ["UC-01"], "Gebruiker": [f"UC-{n:02d}" for n in range(2, 10)], "Beheerder": ["UC-10", "UC-11"]}
+ACTORS = {"Bezoeker": ["UC-01"], "Gebruiker": [f"UC-{n:02d}" for n in range(2, 10)], "Beheerder": ["UC-10", "UC-11"], "Red Teamer": ["UC-12"]}
 
 
 # Elk blok in entries.md dat begint met "### <prefix>-".
@@ -140,7 +140,7 @@ def draw_uc(svg, cx, cy, uc, w=260, h=58):
 
 
 def use_case_diagram():
-    ucs = [f"UC-{n:02d}" for n in range(1, 10)]
+    ucs = [f"UC-{n:02d}" for n in range(1, 10)] + ["UC-12"]
     row, top = 74, 90
     height = top + row * len(ucs) + 40
     svg = Svg(1100, height, "Use cases van de notitie-app")
@@ -150,7 +150,7 @@ def use_case_diagram():
     for n, uc in enumerate(ucs):
         pos[uc] = (380, top + 20 + n * row)
     pos["UC-10"], pos["UC-11"] = (805, 150), (805, 250)
-    actors = {"Bezoeker": (80, pos["UC-01"][1] + 10), "Gebruiker": (80, top + row * 5), "Beheerder": (1030, 230)}
+    actors = {"Bezoeker": (80, pos["UC-01"][1] + 10), "Gebruiker": (80, top + row * 5), "Beheerder": (1030, 230), "Red Teamer": (80, pos["UC-12"][1] + 10)}
     for actor, (ax, ay) in actors.items():
         for uc in ACTORS[actor]:
             ux, uy = pos[uc]
