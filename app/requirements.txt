@@ -12,5 +12,5 @@ click==8.5.0            # via flask: the command line of Flask; the Dockerfile n
 itsdangerous==2.2.0     # via flask: signs the session cookie (A-03) with FLASK_SECRET_KEY (A-05)
 jinja2==3.1.6           # via flask: renders the HTML templates, escapes by default (MIT-01)
 markupsafe==3.0.4       # via jinja2: the actual escaping of text into safe HTML (MIT-01)
-pycparser==3.11         # via cffi: reads C declarations for cffi
+pycparser==3.12         # via cffi: reads C declarations for cffi
 werkzeug==3.1.9         # via flask: HTTP handling, ProxyFix (MC-18) and the error pages
