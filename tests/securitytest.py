@@ -83,8 +83,11 @@ def registration_counter():
     return register_key
 
 
-def req(c, path, data=None, csrf=True):
-    """(status, body, headers) of a GET, or of a POST if there is data; a POST gets the CSRF token, as in a form."""
+def req(c, path, data=None, csrf=True, consent=True):
+    """(status, body, headers) of a GET, or of a POST if there is data; a POST gets the CSRF token, as in a form, and a
+    registration the ticked box of the privacy statement (MIT-48), unless consent is False."""
+    if path == "/register" and data is not None and consent and "consent" not in data:
+        data = {**data, "consent": "yes"}
     if path == "/register" and data is not None and not count_registrations:
         sql(f"DELETE FROM auth_throttle WHERE key = '{registration_counter()}'")
     if data is not None and csrf and "csrf_token" not in data:

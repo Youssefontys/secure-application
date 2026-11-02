@@ -27,7 +27,7 @@ CodeError = namedtuple("CodeError", "message minutes")
 # Without two-step verification you only get here (MIT-12).
 SETUP_ENDPOINTS = {"account.setup_2fa", "account.qr_2fa"}
 # The only routes without a login; every other route is closed by default (MIT-24).
-PUBLIC_ENDPOINTS = {"auth.register", "auth.login", "auth.login_code", "auth.login_recover", "auth.forgot_password", "auth.logout", "static"}
+PUBLIC_ENDPOINTS = {"auth.register", "auth.login", "auth.login_code", "auth.login_recover", "auth.forgot_password", "auth.logout", "auth.privacy", "static"}
 # 3 to 20 characters: letters, digits and _ (MIT-22). At login another name counts as unknown.
 USERNAME = re.compile(r"[A-Za-z0-9_]{3,20}")
 # One message for every error in forgot password, also for an unknown name (MC-21).
@@ -92,6 +92,12 @@ def logged_out_only(view):
     return wrapper
 
 
+# The privacy statement: public, because someone has to read it before registering (MIT-48).
+@bp.route("/privacy")
+def privacy():
+    return render_template("privacy.html")
+
+
 @bp.route("/register", methods=["GET", "POST"])
 @logged_out_only
 def register():
@@ -102,6 +108,9 @@ def register():
     password = request.form.get("password", "")
     if not username or not password:
         return render_template("auth.html", error="Enter a username and a password."), 400
+    # The consent is checked here, not only by `required` in the form: a script posts without a browser (MIT-48).
+    if request.form.get("consent") != "yes":
+        return render_template("auth.html", error="Tick the box to agree to the privacy statement."), 400
     if not USERNAME.fullmatch(username):
         return render_template("auth.html", error="Choose a username of 3 to 20 characters: letters, digits and _."), 400
     if error := passwords.password_problem(password):

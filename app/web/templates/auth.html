@@ -22,6 +22,11 @@
         <label>Password <small>({{ PASSWORD_MIN }} to {{ PASSWORD_MAX }} characters)</small>
           <input name="password" type="password" autocomplete="new-password" minlength="{{ PASSWORD_MIN }}" maxlength="{{ PASSWORD_MAX }}" required>
         </label>
+        {# Not ticked in advance, and checked again on the server (MIT-48). #}
+        <label class="check">
+          <input type="checkbox" name="consent" value="yes" required>
+          <span>I have read the <a href="{{ url_for('auth.privacy') }}" target="_blank" rel="noopener">privacy statement</a> and I agree that my username and notes are stored, encrypted, for as long as my account exists.</span>
+        </label>
       {% endif %}
       <button type="submit">{{ "Log in" if login else "Create account" }}</button>
     </form>
