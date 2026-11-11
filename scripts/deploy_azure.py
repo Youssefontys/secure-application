@@ -21,6 +21,7 @@ AZ_LOGIN_HELP = """First sign in to Azure: you are not signed in yet, or no subs
    Then again: python scripts/deployment.py azure"""
 # An email address, as an allowlist (MIT-22); the same rule as the validation of alert_email in terraform/variables.tf.
 EMAIL = r"[^@\s]+@[^@\s]+\.[A-Za-z]{2,}"
+EMAILS = rf"-|{EMAIL}(,{EMAIL})*"  # none (-), or addresses separated by commas
 
 
 # Is the image there, and may everyone pull it? It must: Container Apps does not sign in to ghcr.io.
@@ -110,11 +111,15 @@ def run():
     hack = hackmode() if deployment.INTERACTIVE else {"THROTTLE_IP_MODE": None, "THROTTLE_PAIR_EXEMPT_USERS": None}
     # The mail on a lockout (alerts.tf): by default the address you signed in to az with. Not in the repo, which is public.
     email = login if re.fullmatch(EMAIL, login) else ""
+    # The Blue Teamers get the same mail (UC-11). A new run offers the same ones again, so they are not dropped.
+    blue = output("blue_team_emails") or "-"
     if deployment.INTERACTIVE:
         print("\n📧 On a lockout Azure sends a mail within a few minutes.")
         email = ask("To which address?", email or "-", EMAIL)
+        blue = ask("Extra addresses for the Blue Teamers, separated by commas (- for none)", blue, EMAILS)
     if not re.fullmatch(EMAIL, email):
         stop("No email address for the alert; run this script in a terminal and fill one in.", icon="📧")
+    blue = [] if blue == "-" else blue.split(",")
     print("\n🏗️  Terraform. It first shows what it is going to do, and only starts when you type yes.\n")
     # backend.conf is the only source: after a new bootstrap .terraform still knows the old storage, and then init stops
     # without -reconfigure. No state goes along; that belongs to the storage.
@@ -130,7 +135,7 @@ def run():
     # Exactly as the token of a job names the repo; with immutable subjects that includes the IDs of owner and repo.
     oidc = gh("api", f"repos/{github}/actions/oidc/customization/sub", "--jq", ".sub_claim_prefix // empty") or f"repo:{github}"
     variables = [f"app_image={image}", f"alert_email={email}", f"github_oidc_prefix={oidc}",
-                 f"deploy_from_github={'true' if from_github else 'false'}"]
+                 f"deploy_from_github={'true' if from_github else 'false'}", f"blue_team_emails={json.dumps(blue)}"]
     if hack["THROTTLE_IP_MODE"]:
         variables += ["throttle_ip_mode=hackweek", "min_replicas=1"]
     if hack["THROTTLE_PAIR_EXEMPT_USERS"]:
