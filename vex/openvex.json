@@ -4,7 +4,8 @@
   "author": "Youssefontys",
   "role": "Maintainer of the secure-application image",
   "timestamp": "2026-10-19T19:00:00Z",
-  "version": 1,
+  "last_updated": "2026-11-11T12:00:00Z",
+  "version": 2,
   "statements": [
     {
       "vulnerability": {
@@ -227,6 +228,19 @@
       "status": "not_affected",
       "justification": "vulnerable_code_not_present",
       "impact_statement": "The flaw is in the Perl module Archive::Tar. perl-base does not contain that module, and no other Perl modules are installed."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-119373"
+      },
+      "products": [
+        {
+          "@id": "pkg:deb/debian/libsqlite3-0@3.46.1-7%2Bdeb13u2"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "The flaw is in the FTS5 extension of SQLite. The library is in the image because liblastlog2-2 (util-linux, the last-login database) needs it, so removing it would break that package. The app talks to PostgreSQL, never imports sqlite3 and starts no program that loads either library: the security test checks that no process of the app has loaded libsqlite3 or liblastlog2 (MIT-41)."
     }
   ]
 }

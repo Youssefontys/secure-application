@@ -1,11 +1,22 @@
 """Application security: configuration as input, input validation, the consent at registration, closed by default, headers,
-CSRF, only POST, cache and session lifetime, and the rights of the database role (MIT-20 to MIT-29, MIT-48). Runs through securitytest.py."""
+CSRF, only POST, cache and session lifetime, the rights of the database role, and the libraries the app loads (MIT-20 to MIT-29, MIT-41, MIT-48). Runs through securitytest.py."""
 from securitytest import *
 
 CSP = "default-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
 PERMISSIONS = "camera=(), geolocation=(), microphone=(), payment=(), usb=()"
 HEADERS = ("Content-Security-Policy", "X-Frame-Options", "X-Content-Type-Options", "Referrer-Policy", "Permissions-Policy",
            "Cross-Origin-Opener-Policy", "Cross-Origin-Resource-Policy", "Cross-Origin-Embedder-Policy")
+# Every process in the container, then which of the libraries the VEX says are never used it has loaded (MIT-41).
+MAPS_PROBE = """import glob
+libs, n = set(), 0
+for f in glob.glob('/proc/[0-9]*/maps'):
+    try:
+        lines = open(f).read().splitlines()
+    except OSError:
+        continue
+    n += 1
+    libs |= {l.split()[-1] for l in lines if 'sqlite' in l or 'lastlog2' in l}
+print(n, sorted(libs))"""
 NAME_RULE = "Choose a username of 3 to 20 characters: letters, digits and _."
 CONSENT_RULE = "Tick the box to agree to the privacy statement."
 AGE_PROBE = """import json, time, urllib.error, urllib.request
@@ -137,3 +148,9 @@ def run():
     check("  only reading and writing is allowed", probe, {"SELECT count(*) FROM users": "allowed", "CREATE TABLE trial (x int)": "refused",
           "DROP TABLE notes": "refused", "TRUNCATE notes": "refused", "ALTER TABLE users ADD COLUMN x int": "refused",
           "CREATE ROLE intruder": "refused", "COPY (SELECT 1) TO PROGRAM 'true'": "refused"})
+
+    print("== libraries the app loads (MIT-41)")
+    # vex/openvex.json says libsqlite3-0 is not in the execute path: it is there because liblastlog2-2 needs it, and the app
+    # never loads either. After all tests above, every process (gunicorn and its workers) has been in use.
+    seen = in_app(MAPS_PROBE).stdout.strip()
+    check("no process of the app has loaded libsqlite3 or liblastlog2", (int(seen.split()[0]) >= 3, seen.split(" ", 1)[1]), (True, "[]"))
