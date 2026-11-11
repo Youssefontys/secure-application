@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{# The privacy statement (MIT-48). Dutch source: BoK/Subjects/Privacyverklaring.md; what is in it comes from the code. #}
+{% block title %}Privacy statement{% endblock %}
+
+{% block content %}
+  <h1>Privacy statement</h1>
+
+  <div class="card">
+    <h2>Who am I?</h2>
+    <p>I am youssefontys, a student, and I build this app for an assignment. I am responsible for the data you enter here.
+      Questions or requests: this@maildoestnotexit.com.</p>
+
+    <h2>What data do I keep?</h2>
+    <ul>
+      <li>Your username, and your password as a hash: the password itself is stored nowhere.</li>
+      <li>If you turn on two-step verification: the secret of your authenticator app (encrypted) and a hash of your recovery code.</li>
+      <li>Your notes: title and text, encrypted, with the time they were created and changed.</li>
+      <li>A security log: time, kind of event (for example "login failed"), your IP address and, if your account exists, your
+        username. Passwords and codes are never in it.</li>
+      <li>A session cookie to keep you logged in, for 8 hours at most. I use no other cookies and no tracking.</li>
+    </ul>
+    <p>I do not ask for an email address, a name or a phone number. In your notes you can type anything yourself. Please do not
+      put sensitive data in them, such as health data: this is a test environment.</p>
+
+    <h2>Why, and on what ground?</h2>
+    <ul>
+      <li>I keep your account and notes to make the app work, with <strong>your consent</strong>: the box you tick when you register.
+        You can withdraw it at any time by deleting your account.</li>
+      <li>I keep the security log to see and stop attacks, because of a <strong>legitimate interest</strong>. That interest comes first
+        because the log is worthless otherwise, so it does not depend on your consent.</li>
+      <li>I use your data only for this. No marketing, and I share it with no one other than listed below.</li>
+    </ul>
+
+    <h2>How long?</h2>
+    <table>
+      <thead><tr><th>Data</th><th>How long</th></tr></thead>
+      <tbody>
+        <tr><td>Account and notes</td><td>Until you delete them yourself</td></tr>
+        <tr><td>A deleted account or note</td><td>Also gone from the backup within 7 days</td></tr>
+        <tr><td>Security log</td><td>30 days</td></tr>
+      </tbody>
+    </table>
+
+    <h2>Where, and who has it?</h2>
+    <ul>
+      <li>On Microsoft Azure in France Central, in the European Union. Microsoft processes the data on my behalf (processor).</li>
+      <li>No one else gets your data. The code is public on GitHub, but without the data of users.</li>
+      <li>When an address is blocked (too many failed attempts), an administrator gets a message by email.</li>
+    </ul>
+
+    <h2>The hacking week</h2>
+    <p>In the hacking week, fellow students attack the app, with permission. As a result, data in the environment may come into the
+      hands of people who normally do not see it. So do not use real data in that week.</p>
+
+    <h2>What are your rights?</h2>
+    <p>You can view your profile and notes, change notes, and delete your account with all its notes. The app has no export of your
+      notes yet; ask for one at this@maildoestnotexit.com if you want them. I answer a request within a month.</p>
+
+    <h2>A complaint?</h2>
+    <p>If we cannot work it out, you can file a complaint with the Dutch Data Protection Authority
+      (Autoriteit Persoonsgegevens, autoriteitpersoonsgegevens.nl).</p>
+  </div>
+
+  <nav class="auth-links hint" aria-label="Back">
+    <a href="{{ url_for('auth.register') }}">Back to registering</a>
+  </nav>
+{% endblock %}

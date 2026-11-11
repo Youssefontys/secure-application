@@ -44,6 +44,18 @@ variable "alert_email" {
   }
 }
 
+# Blue Teamers who get the same mail on a lockout (UC-11, MIT-37). Not in the repo, which is public: deploy_azure.py asks for
+# them. Empty: only alert_email.
+variable "blue_team_emails" {
+  type    = list(string)
+  default = []
+
+  validation {
+    condition     = alltrue([for e in var.blue_team_emails : can(regex("^[^@[:space:]]+@[^@[:space:]]+[.][A-Za-z]{2,}$", e))])
+    error_message = "Give email addresses, such as name@example.com."
+  }
+}
+
 # true: an identity for deploying from GitHub after an approval (deploy.tf, MIT-44). deploy_azure.py sets it.
 variable "deploy_from_github" {
   type    = bool
