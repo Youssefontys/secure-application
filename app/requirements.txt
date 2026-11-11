@@ -1,7 +1,7 @@
 # Everything pinned, including what Flask and cryptography pull in (the second block).
 # That way every build installs the same versions, and an SBoM matches what runs.
 flask==3.1.3            # web framework: routes, sessions, templates
-psycopg==3.3.6          # PostgreSQL driver in pure Python, with the libpq of Debian (libpq5 in the Dockerfile), not with its own copy (MIT-43)
+psycopg==3.3.8          # PostgreSQL driver in pure Python, with the libpq of Debian (libpq5 in the Dockerfile), not with its own copy (MIT-43)
 segno==1.6.6            # QR code for setting up two-step verification; pure Python, no dependencies of its own
 cryptography==50.0.2    # AES-256-GCM for the TOTP secret and the notes (MIT-17, MIT-18), and Argon2id for passwords (MIT-19), through OpenSSL
 gunicorn==26.2.0        # WSGI server for production, instead of the development server of Flask (MC-14); no dependencies of its own
