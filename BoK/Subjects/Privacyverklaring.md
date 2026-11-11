@@ -14,8 +14,8 @@ Terraform-bestanden of de entries; de verwijzingen eronder zeggen waar.
 
 ## Privacyverklaring Notities
 
-**Wie ben ik?** Ik ben [naam], student, en ik bouw deze app voor een opdracht. Ik ben verantwoordelijk voor de gegevens die
-je hier invult. Vragen of verzoeken: [contactadres].
+**Wie ben ik?** Ik ben youssefontys, student, en ik bouw deze app voor een opdracht. Ik ben verantwoordelijk voor de gegevens die
+je hier invult. Vragen of verzoeken: this@maildoestnotexit.com.
 
 **Welke gegevens bewaar ik?**
 
@@ -55,7 +55,7 @@ gegevens in, zoals over je gezondheid: dit is een testomgeving.
 de omgeving in handen komen van mensen die ze normaal niet zien. Gebruik in die week dus geen echte gegevens.
 
 **Wat zijn je rechten?** Je kunt je profiel en notities inzien, notities aanpassen, en je account met alle notities
-verwijderen. Een export van je notities heeft de app nog niet; vraag er naar via [contactadres] als je ze wilt hebben. Een
+verwijderen. Een export van je notities heeft de app nog niet; vraag er naar via this@maildoestnotexit.com als je ze wilt hebben. Een
 verzoek beantwoord ik binnen een maand.
 
 **Klacht?** Kom je er met mij niet uit, dan kun je een klacht indienen bij de Autoriteit Persoonsgegevens

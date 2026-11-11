@@ -17,6 +17,10 @@ for f in glob.glob('/proc/[0-9]*/maps'):
     n += 1
     libs |= {l.split()[-1] for l in lines if 'sqlite' in l or 'lastlog2' in l}
 print(n, sorted(libs))"""
+# The VEX also says the app uses no Kerberos: its database connection is not GSSAPI, and nothing is configured for it (MIT-41).
+KRB_PROBE = """import glob, json, os, psycopg
+gss = psycopg.connect(os.environ['DATABASE_URL']).execute('SELECT gss_authenticated FROM pg_stat_gssapi WHERE pid = pg_backend_pid()').fetchone()[0]
+print(json.dumps([gss, os.path.exists('/etc/krb5.conf'), sorted(k for k in os.environ if k.startswith('KRB5')), glob.glob('/tmp/krb5cc*')]))"""
 NAME_RULE = "Choose a username of 3 to 20 characters: letters, digits and _."
 CONSENT_RULE = "Tick the box to agree to the privacy statement."
 AGE_PROBE = """import json, time, urllib.error, urllib.request
@@ -154,3 +158,5 @@ def run():
     # never loads either. After all tests above, every process (gunicorn and its workers) has been in use.
     seen = in_app(MAPS_PROBE).stdout.strip()
     check("no process of the app has loaded libsqlite3 or liblastlog2", (int(seen.split()[0]) >= 3, seen.split(" ", 1)[1]), (True, "[]"))
+    check("  no Kerberos: the database login is not GSSAPI, no krb5.conf, no KRB5 variable, no ticket cache",
+          json.loads(in_app(KRB_PROBE).stdout), [False, False, [], []])

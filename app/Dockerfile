@@ -8,8 +8,10 @@ WORKDIR /app
 
 # The libpq of Debian, pinned on version (MIT-03): psycopg loads it, Debian updates it and the scan sees it, with what
 # it pulls in (MIT-43). When a newer version comes out, this one disappears from Debian and the build fails: update it then.
+# apt and zlib1g too, on the version Debian Security has (CVE-2026-109518; CVE-2026-76844 and CVE-2026-85091): the base image of
+# 21-10-2026 does not have them yet. Pinned the same way; when the base image has them, they disappear from Debian: remove them then.
 RUN apt-get update \
- && apt-get install --yes --no-install-recommends libpq5=17.11-0+deb13u1 \
+ && apt-get install --yes --no-install-recommends libpq5=17.11-0+deb13u1 apt=3.0.4 zlib1g=1:1.3.dfsg+really1.3.1-1+deb13u1 \
  && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
