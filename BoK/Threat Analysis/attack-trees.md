@@ -17,9 +17,9 @@ Notities van een ander lezen of wijzigen
               OR  een query met de rechten van de app (lezen mag die nog, MC-08)
               OR  het volume of een backup lezen
         AND de gegevenssleutel hebben (MC-22)                              [open]
-  OR  Eigen code laten uitrollen, die de sleutel dan heeft (MC-30)          [MIT-34, MIT-39, deels]
+  OR  Eigen code laten uitrollen, die de sleutel dan heeft (MC-30)          [MIT-34, MIT-39, MIT-44, deels]
   OR  De app overnemen, die de sleutel heeft (MC-11)
-        OR  bekende kwetsbaarheid, niet bijgewerkt                         [MIT-33, MIT-35, MIT-39, deels]
+        OR  bekende kwetsbaarheid, niet bijgewerkt                         [MIT-33, MIT-35, MIT-39, MIT-41, MIT-43, deels]
         OR  kwaadaardige nieuwe pakketversie                               [MIT-03]
         OR  kwetsbaarheid of andere image achter de tag                    [MIT-03, MIT-33]
   OR  Script in een notitie laten uitvoeren (MC-07)                       [MIT-01, MIT-21]
@@ -109,5 +109,5 @@ Alles op Azure in handen (MC-31)                                           [MIT-
   OR  Een geldige az login-sessie op de pc van de beheerder gebruiken      [open]
   OR  De Terraform-state wijzigen of wissen                                [MIT-38, deels: een Owner geeft zich een rol]
   OR  De state lezen met een accountsleutel, buiten de rollen om           [MIT-38]
-  OR  Eigen code laten uitrollen via de pipeline (MC-30)                   [MIT-34, MIT-35, MIT-39, deels]
+  OR  Eigen code laten uitrollen via de pipeline (MC-30)                   [MIT-34, MIT-35, MIT-39, MIT-44, deels]
 ```
