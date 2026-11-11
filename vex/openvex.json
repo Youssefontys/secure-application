@@ -4,7 +4,8 @@
   "author": "Youssefontys",
   "role": "Maintainer of the secure-application image",
   "timestamp": "2026-10-19T19:00:00Z",
-  "version": 1,
+  "last_updated": "2026-11-11T15:00:00Z",
+  "version": 2,
   "statements": [
     {
       "vulnerability": {
@@ -227,6 +228,353 @@
       "status": "not_affected",
       "justification": "vulnerable_code_not_present",
       "impact_statement": "The flaw is in the Perl module Archive::Tar. perl-base does not contain that module, and no other Perl modules are installed."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-119373"
+      },
+      "products": [
+        {
+          "@id": "pkg:deb/debian/libsqlite3-0@3.46.1-7%2Bdeb13u2"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "The flaw is in the FTS5 extension of SQLite. The library is in the image because liblastlog2-2 (util-linux, the last-login database) needs it, so removing it would break that package. The app talks to PostgreSQL, never imports sqlite3 and starts no program that loads either library: the security test checks that no process of the app has loaded libsqlite3 or liblastlog2 (MIT-41)."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-112315"
+      },
+      "products": [
+        {
+          "@id": "pkg:deb/debian/libgssapi-krb5-2@1.21.3-5%2Bdeb13u1"
+        },
+        {
+          "@id": "pkg:deb/debian/libk5crypto3@1.21.3-5%2Bdeb13u1"
+        },
+        {
+          "@id": "pkg:deb/debian/libkrb5-3@1.21.3-5%2Bdeb13u1"
+        },
+        {
+          "@id": "pkg:deb/debian/libkrb5support0@1.21.3-5%2Bdeb13u1"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The flaw is in kadmind, the Kerberos administration server (or the RPC library it uses). Neither is in the image: it has only the four client libraries of krb5 (libgssapi-krb5-2, libk5crypto3, libkrb5-3, libkrb5support0), and no krb5-admin-server, libgssrpc4t64 or libkadm5srv-mit12 (SBoM)."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-112316"
+      },
+      "products": [
+        {
+          "@id": "pkg:deb/debian/libgssapi-krb5-2@1.21.3-5%2Bdeb13u1"
+        },
+        {
+          "@id": "pkg:deb/debian/libk5crypto3@1.21.3-5%2Bdeb13u1"
+        },
+        {
+          "@id": "pkg:deb/debian/libkrb5-3@1.21.3-5%2Bdeb13u1"
+        },
+        {
+          "@id": "pkg:deb/debian/libkrb5support0@1.21.3-5%2Bdeb13u1"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The flaw is in kadmind, the Kerberos administration server (or the RPC library it uses). Neither is in the image: it has only the four client libraries of krb5 (libgssapi-krb5-2, libk5crypto3, libkrb5-3, libkrb5support0), and no krb5-admin-server, libgssrpc4t64 or libkadm5srv-mit12 (SBoM)."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-112318"
+      },
+      "products": [
+        {
+          "@id": "pkg:deb/debian/libgssapi-krb5-2@1.21.3-5%2Bdeb13u1"
+        },
+        {
+          "@id": "pkg:deb/debian/libk5crypto3@1.21.3-5%2Bdeb13u1"
+        },
+        {
+          "@id": "pkg:deb/debian/libkrb5-3@1.21.3-5%2Bdeb13u1"
+        },
+        {
+          "@id": "pkg:deb/debian/libkrb5support0@1.21.3-5%2Bdeb13u1"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The flaw is in kadmind, the Kerberos administration server (or the RPC library it uses). Neither is in the image: it has only the four client libraries of krb5 (libgssapi-krb5-2, libk5crypto3, libkrb5-3, libkrb5support0), and no krb5-admin-server, libgssrpc4t64 or libkadm5srv-mit12 (SBoM)."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-112319"
+      },
+      "products": [
+        {
+          "@id": "pkg:deb/debian/libgssapi-krb5-2@1.21.3-5%2Bdeb13u1"
+        },
+        {
+          "@id": "pkg:deb/debian/libk5crypto3@1.21.3-5%2Bdeb13u1"
+        },
+        {
+          "@id": "pkg:deb/debian/libkrb5-3@1.21.3-5%2Bdeb13u1"
+        },
+        {
+          "@id": "pkg:deb/debian/libkrb5support0@1.21.3-5%2Bdeb13u1"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The flaw is in kadmind, the Kerberos administration server (or the RPC library it uses). Neither is in the image: it has only the four client libraries of krb5 (libgssapi-krb5-2, libk5crypto3, libkrb5-3, libkrb5support0), and no krb5-admin-server, libgssrpc4t64 or libkadm5srv-mit12 (SBoM)."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-112320"
+      },
+      "products": [
+        {
+          "@id": "pkg:deb/debian/libgssapi-krb5-2@1.21.3-5%2Bdeb13u1"
+        },
+        {
+          "@id": "pkg:deb/debian/libk5crypto3@1.21.3-5%2Bdeb13u1"
+        },
+        {
+          "@id": "pkg:deb/debian/libkrb5-3@1.21.3-5%2Bdeb13u1"
+        },
+        {
+          "@id": "pkg:deb/debian/libkrb5support0@1.21.3-5%2Bdeb13u1"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The flaw is in kadmind, the Kerberos administration server (or the RPC library it uses). Neither is in the image: it has only the four client libraries of krb5 (libgssapi-krb5-2, libk5crypto3, libkrb5-3, libkrb5support0), and no krb5-admin-server, libgssrpc4t64 or libkadm5srv-mit12 (SBoM)."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-112321"
+      },
+      "products": [
+        {
+          "@id": "pkg:deb/debian/libgssapi-krb5-2@1.21.3-5%2Bdeb13u1"
+        },
+        {
+          "@id": "pkg:deb/debian/libk5crypto3@1.21.3-5%2Bdeb13u1"
+        },
+        {
+          "@id": "pkg:deb/debian/libkrb5-3@1.21.3-5%2Bdeb13u1"
+        },
+        {
+          "@id": "pkg:deb/debian/libkrb5support0@1.21.3-5%2Bdeb13u1"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The flaw is in kadmind, the Kerberos administration server (or the RPC library it uses). Neither is in the image: it has only the four client libraries of krb5 (libgssapi-krb5-2, libk5crypto3, libkrb5-3, libkrb5support0), and no krb5-admin-server, libgssrpc4t64 or libkadm5srv-mit12 (SBoM)."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-112322"
+      },
+      "products": [
+        {
+          "@id": "pkg:deb/debian/libgssapi-krb5-2@1.21.3-5%2Bdeb13u1"
+        },
+        {
+          "@id": "pkg:deb/debian/libk5crypto3@1.21.3-5%2Bdeb13u1"
+        },
+        {
+          "@id": "pkg:deb/debian/libkrb5-3@1.21.3-5%2Bdeb13u1"
+        },
+        {
+          "@id": "pkg:deb/debian/libkrb5support0@1.21.3-5%2Bdeb13u1"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The flaw is in kadmind, the Kerberos administration server (or the RPC library it uses). Neither is in the image: it has only the four client libraries of krb5 (libgssapi-krb5-2, libk5crypto3, libkrb5-3, libkrb5support0), and no krb5-admin-server, libgssrpc4t64 or libkadm5srv-mit12 (SBoM)."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-112323"
+      },
+      "products": [
+        {
+          "@id": "pkg:deb/debian/libgssapi-krb5-2@1.21.3-5%2Bdeb13u1"
+        },
+        {
+          "@id": "pkg:deb/debian/libk5crypto3@1.21.3-5%2Bdeb13u1"
+        },
+        {
+          "@id": "pkg:deb/debian/libkrb5-3@1.21.3-5%2Bdeb13u1"
+        },
+        {
+          "@id": "pkg:deb/debian/libkrb5support0@1.21.3-5%2Bdeb13u1"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The flaw is in kadmind, the Kerberos administration server (or the RPC library it uses). Neither is in the image: it has only the four client libraries of krb5 (libgssapi-krb5-2, libk5crypto3, libkrb5-3, libkrb5support0), and no krb5-admin-server, libgssrpc4t64 or libkadm5srv-mit12 (SBoM)."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-118380"
+      },
+      "products": [
+        {
+          "@id": "pkg:deb/debian/libgssapi-krb5-2@1.21.3-5%2Bdeb13u1"
+        },
+        {
+          "@id": "pkg:deb/debian/libk5crypto3@1.21.3-5%2Bdeb13u1"
+        },
+        {
+          "@id": "pkg:deb/debian/libkrb5-3@1.21.3-5%2Bdeb13u1"
+        },
+        {
+          "@id": "pkg:deb/debian/libkrb5support0@1.21.3-5%2Bdeb13u1"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The flaw is in kadmind, the Kerberos administration server (or the RPC library it uses). Neither is in the image: it has only the four client libraries of krb5 (libgssapi-krb5-2, libk5crypto3, libkrb5-3, libkrb5support0), and no krb5-admin-server, libgssrpc4t64 or libkadm5srv-mit12 (SBoM)."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-112317"
+      },
+      "products": [
+        {
+          "@id": "pkg:deb/debian/libgssapi-krb5-2@1.21.3-5%2Bdeb13u1"
+        },
+        {
+          "@id": "pkg:deb/debian/libk5crypto3@1.21.3-5%2Bdeb13u1"
+        },
+        {
+          "@id": "pkg:deb/debian/libkrb5-3@1.21.3-5%2Bdeb13u1"
+        },
+        {
+          "@id": "pkg:deb/debian/libkrb5support0@1.21.3-5%2Bdeb13u1"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The flaw is in the KDC, the Kerberos key distribution server (memory leak in the KDB keytab key code). Neither the KDC nor its database library is in the image: it has only the four client libraries of krb5 (SBoM)."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-71200"
+      },
+      "products": [
+        {
+          "@id": "pkg:deb/debian/libgssapi-krb5-2@1.21.3-5%2Bdeb13u1"
+        },
+        {
+          "@id": "pkg:deb/debian/libk5crypto3@1.21.3-5%2Bdeb13u1"
+        },
+        {
+          "@id": "pkg:deb/debian/libkrb5-3@1.21.3-5%2Bdeb13u1"
+        },
+        {
+          "@id": "pkg:deb/debian/libkrb5support0@1.21.3-5%2Bdeb13u1"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The flaw is in the KDC, the Kerberos key distribution server (NULL dereference in the PKINIT pre-authentication; krb5-pkinit is not in the image either). Neither the KDC nor its database library is in the image: it has only the four client libraries of krb5 (SBoM)."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-107364"
+      },
+      "products": [
+        {
+          "@id": "pkg:deb/debian/libgssapi-krb5-2@1.21.3-5%2Bdeb13u1"
+        },
+        {
+          "@id": "pkg:deb/debian/libk5crypto3@1.21.3-5%2Bdeb13u1"
+        },
+        {
+          "@id": "pkg:deb/debian/libkrb5-3@1.21.3-5%2Bdeb13u1"
+        },
+        {
+          "@id": "pkg:deb/debian/libkrb5support0@1.21.3-5%2Bdeb13u1"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "The flaw is in the ASN.1 decoder that libkrb5 shares with the KDC (a read overrun that stops a KDC, according to the advisory title; the component is not described in the Debian tracker). An attacker reaches it with a message to or from a Kerberos server. The app talks to no Kerberos server: its database connection logs in with a password, not GSSAPI, there is no krb5.conf, no KRB5 variable and no ticket cache. The security test checks all four, in the running container (MIT-41)."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-119079"
+      },
+      "products": [
+        {
+          "@id": "pkg:deb/debian/libgssapi-krb5-2@1.21.3-5%2Bdeb13u1"
+        },
+        {
+          "@id": "pkg:deb/debian/libk5crypto3@1.21.3-5%2Bdeb13u1"
+        },
+        {
+          "@id": "pkg:deb/debian/libkrb5-3@1.21.3-5%2Bdeb13u1"
+        },
+        {
+          "@id": "pkg:deb/debian/libkrb5support0@1.21.3-5%2Bdeb13u1"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "The flaw is in decode_sequence_of(), in the ASN.1 decoder that libkrb5 shares with the KDC; an attacker reaches it with a request to a KDC, or, in a client, with a reply from a KDC they control. The app talks to no Kerberos server: its database connection logs in with a password, not GSSAPI, there is no krb5.conf, no KRB5 variable and no ticket cache. libpq loads libgssapi-krb5, but nothing in the app can send input to it. The security test checks all four, in the running container (MIT-41)."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-71199"
+      },
+      "products": [
+        {
+          "@id": "pkg:deb/debian/libgssapi-krb5-2@1.21.3-5%2Bdeb13u1"
+        },
+        {
+          "@id": "pkg:deb/debian/libk5crypto3@1.21.3-5%2Bdeb13u1"
+        },
+        {
+          "@id": "pkg:deb/debian/libkrb5-3@1.21.3-5%2Bdeb13u1"
+        },
+        {
+          "@id": "pkg:deb/debian/libkrb5support0@1.21.3-5%2Bdeb13u1"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "The flaw is in the handling of the CAMMAC authorization data (a container for authentication indicators); whether it sits in the KDC or in libkrb5 is not described in the Debian tracker. An attacker reaches it with a message to or from a Kerberos server. The app talks to no Kerberos server: its database connection logs in with a password, not GSSAPI, there is no krb5.conf, no KRB5 variable and no ticket cache. The security test checks all four, in the running container (MIT-41)."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-119374"
+      },
+      "products": [
+        {
+          "@id": "pkg:deb/debian/libsqlite3-0@3.46.1-7%2Bdeb13u2"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "The flaw is in SQLite (FTS5 index). The library is in the image because liblastlog2-2 (util-linux, the last-login database) needs it, so removing it would break that package. The app talks to PostgreSQL, never imports sqlite3 and starts no program that loads either library: the security test checks that no process of the app has loaded libsqlite3 or liblastlog2 (MIT-41)."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-119379"
+      },
+      "products": [
+        {
+          "@id": "pkg:deb/debian/libsqlite3-0@3.46.1-7%2Bdeb13u2"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "The flaw is in SQLite (session changesets). The library is in the image because liblastlog2-2 (util-linux, the last-login database) needs it, so removing it would break that package. The app talks to PostgreSQL, never imports sqlite3 and starts no program that loads either library: the security test checks that no process of the app has loaded libsqlite3 or liblastlog2 (MIT-41)."
     }
   ]
 }

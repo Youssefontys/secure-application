@@ -40,12 +40,14 @@ De beveiligingseisen staan vooral in:
 | Privacy by design en by default (art. 25) | Geen e-mailadres gevraagd, geen beheerdersrol die notities kan lezen, alles standaard dicht (MIT-24) | |
 | Bijzondere persoonsgegevens (art. 9) | De app vraagt er niet om, maar een notitie is vrije tekst; daarom versleuteld | Of daarom een DPIA nodig is (art. 35), is niet beoordeeld |
 | Rechten van de gebruiker (art. 15 en 17) | Inzage: de gebruiker ziet zijn profiel en notities (UC-06). Verwijderen: het account en alle notities (UC-05) | Geen export van de eigen notities (art. 20) |
-| Informatie (art. 13) | | Geen privacyverklaring: doel, grondslag en bewaartermijn staan nergens voor de gebruiker |
-| Datalekken (art. 33) | Een aanval laat een spoor na (MIT-31), en een blokkade geeft een mail (MIT-37) | Geen procedure om binnen 72 uur te melden, en geen register van datalekken |
+| Informatie (art. 13) | Een privacyverklaring op `/privacy` met doel, grondslagen, bewaartermijnen en rechten (`Privacyverklaring.md`), en een vinkje bij het registreren dat de server controleert: zonder vinkje geen account (MIT-48) | Naam en contactadres staan nog niet ingevuld; de belangenafweging voor de beveiligingslog is niet vastgelegd |
+| Datalekken (art. 33) | Een aanval laat een spoor na (MIT-31), en een blokkade geeft een mail (MIT-37); een procedure om binnen 72 uur te melden, met een register (`Datalekprocedure.md`) | Nooit geoefend; wie meldt als ik zelf niet bereikbaar ben, staat open |
 | Waar de gegevens staan | Op Azure in France Central, in de EU | Microsoft is verwerker; de verwerkersvoorwaarden heb ik niet nagekeken |
 
-**Conclusie:** de technische kant staat; wat ontbreekt, is organisatorisch: een privacyverklaring met doel, grondslag en
-bewaartermijn, een afweging of een DPIA nodig is, en een procedure en register voor datalekken.
+**Conclusie:** de technische kant staat; wat ontbreekt, is vooral organisatorisch: de onderbouwing van de grondslagen (de
+belangenafweging voor de beveiligingslog), een afweging of een DPIA nodig is, een verwerkingsregister, het nakijken van de
+verwerkersvoorwaarden van Microsoft, en een export van de eigen notities. Een privacyverklaring met een vinkje (MIT-48) en
+een datalekprocedure met register zijn er nu wel.
 
 ## NIS2
 

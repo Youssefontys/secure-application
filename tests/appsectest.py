@@ -1,12 +1,28 @@
-"""Application security: configuration as input, input validation, closed by default, headers, CSRF, only POST, cache and
-session lifetime, and the rights of the database role (MIT-20 to MIT-29). Runs through securitytest.py."""
+"""Application security: configuration as input, input validation, the consent at registration, closed by default, headers,
+CSRF, only POST, cache and session lifetime, the rights of the database role, and the libraries the app loads (MIT-20 to MIT-29, MIT-41, MIT-48). Runs through securitytest.py."""
 from securitytest import *
 
 CSP = "default-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
 PERMISSIONS = "camera=(), geolocation=(), microphone=(), payment=(), usb=()"
 HEADERS = ("Content-Security-Policy", "X-Frame-Options", "X-Content-Type-Options", "Referrer-Policy", "Permissions-Policy",
            "Cross-Origin-Opener-Policy", "Cross-Origin-Resource-Policy", "Cross-Origin-Embedder-Policy")
+# Every process in the container, then which of the libraries the VEX says are never used it has loaded (MIT-41).
+MAPS_PROBE = """import glob
+libs, n = set(), 0
+for f in glob.glob('/proc/[0-9]*/maps'):
+    try:
+        lines = open(f).read().splitlines()
+    except OSError:
+        continue
+    n += 1
+    libs |= {l.split()[-1] for l in lines if 'sqlite' in l or 'lastlog2' in l}
+print(n, sorted(libs))"""
+# The VEX also says the app uses no Kerberos: its database connection is not GSSAPI, and nothing is configured for it (MIT-41).
+KRB_PROBE = """import glob, json, os, psycopg
+gss = psycopg.connect(os.environ['DATABASE_URL']).execute('SELECT gss_authenticated FROM pg_stat_gssapi WHERE pid = pg_backend_pid()').fetchone()[0]
+print(json.dumps([gss, os.path.exists('/etc/krb5.conf'), sorted(k for k in os.environ if k.startswith('KRB5')), glob.glob('/tmp/krb5cc*')]))"""
 NAME_RULE = "Choose a username of 3 to 20 characters: letters, digits and _."
+CONSENT_RULE = "Tick the box to agree to the privacy statement."
 AGE_PROBE = """import json, time, urllib.error, urllib.request
 from unittest import mock
 import app, db
@@ -72,14 +88,27 @@ def run():
     check("request of 17 KiB: 413, not read", big, 413)
     sql("DELETE FROM auth_throttle; DELETE FROM users WHERE username IN ('abc', 'a_b_c_1234567890_xyz')")
 
+    print("== consent at registration (MIT-48)")
+    form = req(client(), "/register")[1]
+    check("the form has the box, required and not ticked", bool(re.search(r'<input type="checkbox" name="consent" value="yes" required>', form)), True)
+    check("  with a link to the privacy statement", 'href="/privacy"' in form, True)
+    check("the privacy statement is public", (req(client(), "/privacy")[0], "Privacy statement" in req(client(), "/privacy")[1]), (200, True))
+    before = sql("SELECT count(*) FROM users")
+    r = req(client(), "/register", {"username": "consent1", "password": PW}, consent=False)
+    check("register without the box: 400, no account", (r[0], msg(r[1]), sql("SELECT count(*) FROM users")), (400, CONSENT_RULE, before))
+    r = req(client(), "/register", {"username": "consent1", "password": PW, "consent": "no"}, consent=False)
+    check("  with another value than yes: the same", (r[0], msg(r[1])), (400, CONSENT_RULE))
+    check("  with the box: the account is made (not 409)", req(client(), "/register", {"username": "consent1", "password": PW})[0], 302)
+    sql("DELETE FROM users WHERE username = 'consent1'")
+
     print("== closed by default (MIT-24)")
     rules = json.loads(in_app("import app, json, auth; print(json.dumps([[r.endpoint, r.rule, sorted(r.methods)]"
                               " for r in app.app.url_map.iter_rules() if r.endpoint not in auth.PUBLIC_ENDPOINTS]))").stdout)
     closed = [(e, loc(req(client(), rule.replace("<int:note_id>", "1"), None if "GET" in methods else {}))) for e, rule, methods in rules]
     check(f"all {len(rules)} non-public routes send an anonymous visitor to /login", [x for x in closed if x[1] != "302 /login"], [])
-    check("  only login, register, the recovery routes, logout and static are public",
+    check("  only login, register, the recovery routes, logout, the privacy statement and static are public",
           in_app("import auth; print(sorted(auth.PUBLIC_ENDPOINTS))").stdout.strip(),
-          "['auth.forgot_password', 'auth.login', 'auth.login_code', 'auth.login_recover', 'auth.logout', 'auth.register', 'static']")
+          "['auth.forgot_password', 'auth.login', 'auth.login_code', 'auth.login_recover', 'auth.logout', 'auth.privacy', 'auth.register', 'static']")
 
     print("== security headers (MIT-21)")
     for path in ("/login", "/", "/does-not-exist"):
@@ -123,3 +152,11 @@ def run():
     check("  only reading and writing is allowed", probe, {"SELECT count(*) FROM users": "allowed", "CREATE TABLE trial (x int)": "refused",
           "DROP TABLE notes": "refused", "TRUNCATE notes": "refused", "ALTER TABLE users ADD COLUMN x int": "refused",
           "CREATE ROLE intruder": "refused", "COPY (SELECT 1) TO PROGRAM 'true'": "refused"})
+
+    print("== libraries the app loads (MIT-41)")
+    # vex/openvex.json says libsqlite3-0 is not in the execute path: it is there because liblastlog2-2 needs it, and the app
+    # never loads either. After all tests above, every process (gunicorn and its workers) has been in use.
+    seen = in_app(MAPS_PROBE).stdout.strip()
+    check("no process of the app has loaded libsqlite3 or liblastlog2", (int(seen.split()[0]) >= 3, seen.split(" ", 1)[1]), (True, "[]"))
+    check("  no Kerberos: the database login is not GSSAPI, no krb5.conf, no KRB5 variable, no ticket cache",
+          json.loads(in_app(KRB_PROBE).stdout), [False, False, [], []])
