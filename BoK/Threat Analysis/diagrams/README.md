@@ -2,8 +2,9 @@
 
 Eerst het use case-diagram, daarna per doel van de aanvaller een misuse case-diagram: de use cases die hij bedreigt,
 de aanvaller, de aanvallen (misuse cases) en de maatregelen ertegen. Samen staan alle 31 misuse cases erin, elk één
-keer. De doelen volgen `../attack-trees.md`; het doel "als een ander handelen" is in tweeën gesplitst, inloggen en de
-sessie, anders past het niet op één diagram.
+keer. De diagrammen zijn ingedeeld naar het doel van de aanvaller; de attack trees in `../attack-trees.md` naar waar de aanvaller
+binnenkomt (de applicatie of het systeem). Het doel "als een ander handelen" is in tweeën gesplitst, inloggen en de sessie,
+anders past het niet op één diagram.
 
 ## Notatie
 

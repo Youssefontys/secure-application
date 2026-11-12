@@ -11,7 +11,7 @@ een doel van de aanvaller bovenin, daaronder de manieren om dat te bereiken
 ## Bestanden
 
 - `entries.md`: één entry per use case / misuse case / mitigation, nieuwste onderaan.
-- `attack-trees.md`: per aanvallersdoel de boom, opgebouwd uit de entries.
+- `attack-trees.md`: drie bomen, opgebouwd uit de entries: aanvallen op de applicatie, aanvallen op het systeem en de beheerketen, en onopgemerkt blijven.
 - `tests.md`: per use case en misuse case de test die de werking of de aanval laat zien.
 - `risk-matrix.md`: per misuse case kans × impact, zonder en met de maatregelen, op een matrix van 3 bij 3.
 - `diagrams/`: het use case-diagram en vijf misuse case-diagrammen (SVG), getekend uit `entries.md` en `risk-matrix.md` met `make_diagrams.py`.
