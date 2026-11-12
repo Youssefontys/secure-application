@@ -12,7 +12,7 @@ FONT = "Segoe UI, Helvetica, Arial, sans-serif"
 HALO = ' paint-order="stroke" stroke="#ffffff" stroke-width="4" stroke-linejoin="round"'
 RISK_COLOR = {"laag": "#2e7d32", "midden": "#e65100", "hoog": "#c62828"}
 
-# Elke misuse case staat in precies één diagram, naar het doel van de aanvaller (zoals in attack-trees.md).
+# Elke misuse case staat in precies één diagram, naar het doel van de aanvaller.
 GROUPS = [
     ("misuse-1-inloggen", "Doel: inloggen als een ander", "Aanvaller van buiten",
      ["MC-01", "MC-03", "MC-09", "MC-15", "MC-16", "MC-17", "MC-19", "MC-20", "MC-21"]),
