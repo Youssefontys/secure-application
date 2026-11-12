@@ -9,7 +9,7 @@ aanvaller binnen? Zo staat elke misuse case in één boom, en overlappen de bome
    Azure kan doen. Hier zit ook wat een aanvaller doet nadat hij de app heeft overgenomen.
 3. **Boom 3, onopgemerkt blijven:** geen eigen doel maar een voorwaarde die bij elke aanval kan horen.
 
-Een stap die bij de andere boom hoort, staat als verwijzing tussen haakjes ("zie boom 2"), niet nog een keer uitgewerkt. Wie het
+MC-12, MC-13 en MC-29 hebben dezelfde stappen en dezelfde maatregel (MIT-16), en staan daarom als één tak getekend. Een stap die bij de andere boom hoort, staat als verwijzing tussen haakjes ("zie boom 2"), niet nog een keer uitgewerkt. Wie het
 account van een gebruiker overneemt (boom 1), kan ook zijn notities lezen.
 
 Zo lees je ze:
@@ -52,14 +52,10 @@ Gebruikers aantasten via de app
               OR  cookie zelf ondertekenen                                                        [open]
         OR  Via een andere site handelen (CSRF, MC-05)                                            [MIT-20, MIT-23]
         OR  Laten klikken in een onzichtbaar frame (MC-24)                                        [MIT-21]
-        OR  Wachtwoord wijzigen (MC-12)                                                           [MIT-16, deels]
+        OR  Wachtwoord, 2FA of account wijzigen met zijn sessie (MC-12, 13, 29)   [MIT-16, deels]
               AND sessie van het slachtoffer (MC-04, MC-05)
               AND huidig wachtwoord (MC-01, MC-03)
               AND code uit zijn app (MC-15 tot MC-17)
-        OR  2FA vervangen door een eigen telefoon (MC-29)                                         [MIT-16]
-              AND sessie van het slachtoffer (MC-04)
-              AND één code uit zijn app (MC-16)
-              AND huidig wachtwoord (MC-01, MC-03)
   OR  Notities aantasten
         OR  Andermans notitie-id invullen (MC-02)                                                 [MIT-15]
         OR  Open functie zonder login bereiken (MC-25)                                            [MIT-24]
@@ -68,10 +64,6 @@ Gebruikers aantasten via de app
         OR  Gedeelde computer, na de vorige gebruiker (MC-27)
               OR  Terug drukken na uitloggen                                                      [MIT-28]
               OR  sessie die nog openstaat                                                        [MIT-29, deels]
-        OR  Account met notities verwijderen (MC-13)                                              [MIT-16, deels]
-              AND sessie van het slachtoffer (MC-04, MC-05)
-              AND huidig wachtwoord (MC-01, MC-03)
-              AND code uit zijn app (MC-15 tot MC-17)
   OR  Dienst hinderen
         OR  Overbelasten met verzoeken (MC-10)
               OR  te lange titel of notitie                                                       [MIT-04]
