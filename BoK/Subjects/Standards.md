@@ -48,7 +48,7 @@ is wel gemeten; dat zijn de tests in `Threat Analysis/tests.md`.
 | V8 Authorization | Ja | Eigenaarscontrole (MIT-15), standaard dicht (MIT-24) | |
 | V9 Self-contained Tokens | Deels | De sessiecookie van Flask is ondertekend en bevat de sessieversie, die de server bij elk verzoek controleert (MIT-09); geen JWT | |
 | V10 OAuth and OIDC | Nee | Geen OAuth of OIDC | |
-| V11 Cryptography | Ja | AES-256-GCM met de gebruiker als associated data (MIT-17, MIT-18), Argon2id (MIT-19), de sleutels in Key Vault (AZ-10) | Nog geen rotatie: `v2:` is voorbereid, niet gebouwd |
+| V11 Cryptography | Ja | AES-256-GCM met de gebruiker als associated data (MIT-17, MIT-18), Argon2id (MIT-19), de sleutels in Key Vault (AZ-10) | Rotatie met `rotate_key.py`, heen en terug getest; op Azure nog niet doorgegeven in Terraform |
 | V12 Secure Communication | Ja | TLS 1.2 en 1.3 op Azure, getoetst aan het NCSC (MIT-40, T-113); naar de database TLS 1.3 met `verify-full` (F-03) | Lokaal geen TLS; het certificaat van Azure is RSA-2048 |
 | V13 Configuration | Ja | Configuratie gecontroleerd bij het starten (MIT-23), geen debugmodus (MIT-25), geheimen uit Key Vault, vaste versies (MIT-03) | |
 | V14 Data Protection | Ja | Geen pagina in de cache (MIT-28), notities versleuteld (MIT-18), geen wachtwoord of code in de log (MIT-31) | Hoeveel notities iemand heeft en wanneer, blijft leesbaar (MC-23) |

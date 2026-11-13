@@ -32,6 +32,10 @@ services:
       FLASK_SECRET_KEY: ${FLASK_SECRET_KEY:?set FLASK_SECRET_KEY in .env}
       # Encrypts the TOTP secret and the notes (MIT-17, MIT-18); lost or replaced means the notes are lost.
       DATA_ENCRYPTION_KEY: ${DATA_ENCRYPTION_KEY:?set DATA_ENCRYPTION_KEY in .env}
+      # Only during a key rotation (python rotate_key.py in the container): the version of the new key, and the old key with its version.
+      DATA_ENCRYPTION_KEY_VERSION: ${DATA_ENCRYPTION_KEY_VERSION:-v1}
+      DATA_ENCRYPTION_KEY_PREVIOUS: ${DATA_ENCRYPTION_KEY_PREVIOUS:-}
+      DATA_ENCRYPTION_KEY_PREVIOUS_VERSION: ${DATA_ENCRYPTION_KEY_PREVIOUS_VERSION:-v1}
       # Locally the app runs on HTTP; without this line the safe default applies (HTTPS only).
       HTTPS_ONLY: "0"
       # Hackmode, only during the hacking week (MC-18); strict by default and without exceptions.
