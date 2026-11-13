@@ -130,10 +130,47 @@ Gemeten en opgezocht na de eerste uitrol, om te zien of een andere regio sneller
 3. Gedaan: deelvraag 1 van het onderzoek: welk formaat en welke tool, waar de SBoM gemaakt wordt, wie hem leest, en hoe een merge wordt tegengehouden. Het antwoord: CycloneDX 1.7 van het gebouwde image, gemaakt en gescand met Trivy, op de SBoM, met een ruleset.
 4. Gedaan (19-10-2026): daaruit een check bij elke pull request die de image bouwt, de SBoM maakt en scant, en niets publiceert, verplicht via een ruleset (MIT-39).
 5. Gedaan (19-10-2026): deelvraag 2 van het onderzoek: elk lek van HIGH of CRITICAL vraagt een beslissing, vastgelegd in de VEX (MIT-41), en geen setuid-bits meer in de image (MIT-42).
-6. De SBoM van de image op `main` elke dag opnieuw scannen, zodat een lek dat na de build bekend wordt niet op de volgende pull request wacht (MC-11).
+6. Gepland: de image die draait elke dag opnieuw scannen, zodat een lek dat na de build bekend wordt niet op de volgende pull request wacht (MC-11). Het plan staat onder "Plan: de draaiende image opnieuw scannen".
 7. Gedaan (20-10-2026): de securitytest in de check van stap 4, zodat een wijziging die een maatregel breekt niet op `main` komt (MIT-39, T-125).
 8. Gedaan (20-10-2026): SAST met CodeQL, voor Python, JavaScript en de workflows, met Dependabot alerts en private vulnerability reporting (MIT-45). Als default setup in de instellingen, niet als workflow-bestand: minder om bij te houden, maar een kopie van de repo krijgt het dus niet vanzelf.
 9. Gedaan (20-10-2026): uitrollen vanuit GitHub (CD), alleen de image, met OIDC en zonder sleutel, pas na goedkeuring, en alleen als er voor Azure is gekozen (MIT-44). `deployment.py azure` zet de environment `azure` en de drie ID's als environment secrets, niet als repository-variabelen: dan staan ze niet in de openbare log. In een fork of kopie zonder Azure doet de job niets. `deployment.py undo` haalt de environment weer weg.
+10. Gepland, klein: de containerinstellingen uit de CIS Docker Benchmark die nog open staan (5.13 root-bestandssysteem alleen-lezen, 5.4 capabilities beperken, 5.26 geen extra rechten) in `compose.yaml`. Alleen-lezen vraagt waarschijnlijk een schrijfbare map voor tijdelijke bestanden (`tmpfs`) voor Gunicorn; eerst proberen met de securitytest erbij. Op Azure bepaalt Container Apps de runtime zelf.
+11. Gepland, klein: een blocklist voor veelgebruikte wachtwoorden bij registreren, wijzigen en wachtwoord vergeten, naast de lengte-eis (MIT-13, MC-03; NIST SP 800-63B). Voorkeur: een lijst in de repo (bijvoorbeeld de 100.000 meest gelekte wachtwoorden, met een vaste versie en een checksum) boven de Pwned Passwords-API, zodat de app tijdens het draaien geen externe dienst nodig heeft. Eerst kiezen hoe groot (de lijst moet in de image zonder dat de app traag start), dan een test met een wachtwoord uit de lijst.
+12. Gepland, klein: de sleutelrotatie op Azure. Terraform geeft de vorige sleutel en de versies (`DATA_ENCRYPTION_KEY_VERSION`, `DATA_ENCRYPTION_KEY_PREVIOUS`, `DATA_ENCRYPTION_KEY_PREVIOUS_VERSION`) nog niet door aan de container app; daarna kan `rotate_key.py` daar draaien (zie Week 6 Encryption).
+13. Gepland, vóór de hacking week: een eigen domein koppelen aan de container app, in plaats van de naam van Azure (al genoteerd op 2026-10-18). Zie "Plan: een eigen domein".
+14. Gepland, vóór de hacking week: het demoaccount `hackingweek`, met een gedeeld TOTP-geheim en een verstopte flag. Het account is nog niet aangemaakt; de hackmode voor de teller bestaat al (`THROTTLE_PAIR_EXEMPT_USERS`).
+15. Eerder geparkeerd: systeemauthenticatie tussen de app en de database (een managed identity van Entra ID in plaats van een wachtwoord in de omgeving, AU-03), en hashes in `requirements.txt` (`pip --require-hashes`, na Dependabot).
+
+## Plan: de draaiende image opnieuw scannen
+
+Het probleem (MC-11): de scan draait bij een pull request en bij een push, dus een lek dat na de build bekend wordt, zie je pas bij de volgende wijziging. De beste aanpak is een geplande workflow, zonder nieuwe tools:
+
+1. **Een eigen workflow `CI-rescan.yml`**, met `schedule` (elke dag) en `workflow_dispatch`, met alleen `contents: read` en `packages: read`. Niet verplicht in de ruleset: het houdt geen merge tegen maar meldt.
+2. **Welke image.** De image op `main`: `ghcr.io/<repo>:app-<boomhash van app/>`, de tag waarmee `deployment.py azure` uitrolt (MIT-44). Dat is dezelfde image als op Azure zolang de laatste uitrol van `main` komt. Strenger: de digest van de draaiende revisie opvragen met een identiteit die alleen mag lezen (Reader op de container app) en die vergelijken met die van ghcr.io; alleen nodig als er ooit met de hand wordt uitgerold.
+3. **Dezelfde stappen als de check**: de SBoM maken, de VEX controleren en de scan met `--severity HIGH,CRITICAL --vex vex/openvex.json`, met de actuele Trivy-database (de vastgezette versie van Trivy blijft, de database wordt elke run vers opgehaald). Hergebruik de stappen via de bestaande YAML-anchors of een gedeelde workflow, zodat de beslissingen van de VEX overal gelden.
+4. **De melding.** Een rode run is de melding: GitHub mailt wie de workflow het laatst wijzigde. Eventueel een stap met `gh issue create` met de lijst van lekken, zodat het niet in een mailbox verdwijnt.
+5. **Daarna.** Dezelfde stroom als altijd (`vex/README.md`): een fix, verwijderen, of een verklaring in de VEX, en dan opnieuw bouwen en uitrollen.
+6. **Bewijs (T-nummer).** Een run met een bewust verouderde image of met een VEX waar een verklaring uit is, moet rood worden; en de dagelijkse run moet groen zijn op de huidige image.
+
+Afgewogen en niet gekozen: Microsoft Defender for Containers (kost geld per resource en is meer dan een app van deze grootte nodig heeft) en Trivy Operator (voor Kubernetes). Wat blijft: een lek tussen twee runs (hooguit een dag) en een lek in wat de SBoM niet ziet (T-118).
+
+## Plan: een eigen domein
+
+De app draait nu op de naam die Container Apps geeft (`https://<naam>.<regio>.azurecontainerapps.io`); er is geen eigen domein, en dus ook geen eigen certificaat of DNS. Wat het inhoudt:
+
+1. **De domeinnaam.** Het plan van 2026-10-18: een gratis `.tech`-domein via het GitHub Student Developer Pack (get.tech); ik heb niet gecontroleerd of dat aanbod nog geldt. Waarom: de naam van Container Apps verandert bij elke nieuwe omgeving, een eigen domein blijft gelijk. Bij de provider een `CNAME` naar de container app en een `TXT`-record (`asuid`) voor de controle van het eigendom.
+2. **Een certificaat.** Container Apps kan een beheerd certificaat uitgeven en verlengen voor een eigen domein; dat vraagt dat de DNS-records kloppen. Het certificaat is dan niet meer dat van Microsoft: de TLS-meting (T-113) moet opnieuw, tegen de NCSC-richtlijnen.
+3. **Terraform.** Het domein en het certificaat horen in `terraform/`, niet met de hand. De resourcenamen en wat de provider-versie ondersteunt, eerst in de documentatie van azurerm controleren.
+4. **In de app.** `TRUSTED_PROXIES` blijft 1 en de cookie blijft alleen over HTTPS (`HTTPS_ONLY`); HSTS komt over het nieuwe domein. De oude naam blijft werken, dus kiezen of die doorstuurt.
+5. **Wat het niet oplost:** de aanval op de app zelf. Het geeft een herkenbare naam en een certificaat dat je zelf beheert, en het maakt phishing met een naam die erop lijkt niet moeilijker.
+
+## Bewust niet gedaan (besluit 13-11-2026)
+
+- **Phishing van de code (MC-16).** Alleen WebAuthn of passkeys helpen daartegen. Voor deze app niet nodig; het staat als open in de risicomatrix.
+- **Een backup van de notities.** Weg is weg. Voor deze app niet nodig.
+- **Een melding buiten de app** (geen e-mail) bij een wachtwoordwijziging of het gebruik van een herstelcode. Geen probleem voor deze app.
+- **De eerste instelling kapen (MC-20).** Wie net geregistreerd is, moet meteen de tweede factor instellen (MIT-12); het venster is kort en vraagt het wachtwoord. Het risico staat laag in de matrix.
+- **Azure verdedigen is vooral een eigen taak:** de beheerder is Owner (MC-31). Dat blijft zo en staat als restrisico.
 
 ## Screenshots
 
