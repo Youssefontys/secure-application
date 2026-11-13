@@ -4,8 +4,8 @@
   "author": "Youssefontys",
   "role": "Maintainer of the secure-application image",
   "timestamp": "2026-10-19T19:00:00Z",
-  "last_updated": "2026-11-11T15:00:00Z",
-  "version": 2,
+  "last_updated": "2026-11-13T12:00:00Z",
+  "version": 3,
   "statements": [
     {
       "vulnerability": {
@@ -575,6 +575,500 @@
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "The flaw is in SQLite (session changesets). The library is in the image because liblastlog2-2 (util-linux, the last-login database) needs it, so removing it would break that package. The app talks to PostgreSQL, never imports sqlite3 and starts no program that loads either library: the security test checks that no process of the app has loaded libsqlite3 or liblastlog2 (MIT-41)."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-116304"
+      },
+      "products": [
+        {
+          "@id": "pkg:deb/debian/libpq5@17.11-0%2Bdeb13u1"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The flaw is in parallel worker coordination in the server, in the package postgresql-17 (the server). libpq5 contains only the client library libpq.so.5 (the file list of the package in Debian trixie); the image has no server and no client programs, so the vulnerable code is not there. Trivy lists libpq5 because it is built from the same source package postgresql-17, which the Debian security tracker lists as unfixed with no newer version in trixie on 13-11-2026. The decision rests on the title of the advisory and the file list, not on reading the patch."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-116306"
+      },
+      "products": [
+        {
+          "@id": "pkg:deb/debian/libpq5@17.11-0%2Bdeb13u1"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The flaw is in composite-value field assignment in the server, in the package postgresql-17 (the server). libpq5 contains only the client library libpq.so.5 (the file list of the package in Debian trixie); the image has no server and no client programs, so the vulnerable code is not there. Trivy lists libpq5 because it is built from the same source package postgresql-17, which the Debian security tracker lists as unfixed with no newer version in trixie on 13-11-2026. The decision rests on the title of the advisory and the file list, not on reading the patch."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-116307"
+      },
+      "products": [
+        {
+          "@id": "pkg:deb/debian/libpq5@17.11-0%2Bdeb13u1"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The flaw is in PL/Perl, in the package postgresql-plperl-17 (the PL/Perl language of the server). libpq5 contains only the client library libpq.so.5 (the file list of the package in Debian trixie); the image has no server and no client programs, so the vulnerable code is not there. Trivy lists libpq5 because it is built from the same source package postgresql-17, which the Debian security tracker lists as unfixed with no newer version in trixie on 13-11-2026. The decision rests on the title of the advisory and the file list, not on reading the patch."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-116309"
+      },
+      "products": [
+        {
+          "@id": "pkg:deb/debian/libpq5@17.11-0%2Bdeb13u1"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The flaw is in PL/Perl, in the package postgresql-plperl-17 (the PL/Perl language of the server). libpq5 contains only the client library libpq.so.5 (the file list of the package in Debian trixie); the image has no server and no client programs, so the vulnerable code is not there. Trivy lists libpq5 because it is built from the same source package postgresql-17, which the Debian security tracker lists as unfixed with no newer version in trixie on 13-11-2026. The decision rests on the title of the advisory and the file list, not on reading the patch."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-116313"
+      },
+      "products": [
+        {
+          "@id": "pkg:deb/debian/libpq5@17.11-0%2Bdeb13u1"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The flaw is in vacuumdb, in the package postgresql-client-17 (the command-line programs). libpq5 contains only the client library libpq.so.5 (the file list of the package in Debian trixie); the image has no server and no client programs, so the vulnerable code is not there. Trivy lists libpq5 because it is built from the same source package postgresql-17, which the Debian security tracker lists as unfixed with no newer version in trixie on 13-11-2026. The decision rests on the title of the advisory and the file list, not on reading the patch."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-116314"
+      },
+      "products": [
+        {
+          "@id": "pkg:deb/debian/libpq5@17.11-0%2Bdeb13u1"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The flaw is in pg_restore, in the package postgresql-client-17 (the command-line programs). libpq5 contains only the client library libpq.so.5 (the file list of the package in Debian trixie); the image has no server and no client programs, so the vulnerable code is not there. Trivy lists libpq5 because it is built from the same source package postgresql-17, which the Debian security tracker lists as unfixed with no newer version in trixie on 13-11-2026. The decision rests on the title of the advisory and the file list, not on reading the patch."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-116315"
+      },
+      "products": [
+        {
+          "@id": "pkg:deb/debian/libpq5@17.11-0%2Bdeb13u1"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The flaw is in tsvector_delete() in the server, in the package postgresql-17 (the server). libpq5 contains only the client library libpq.so.5 (the file list of the package in Debian trixie); the image has no server and no client programs, so the vulnerable code is not there. Trivy lists libpq5 because it is built from the same source package postgresql-17, which the Debian security tracker lists as unfixed with no newer version in trixie on 13-11-2026. The decision rests on the title of the advisory and the file list, not on reading the patch."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-116316"
+      },
+      "products": [
+        {
+          "@id": "pkg:deb/debian/libpq5@17.11-0%2Bdeb13u1"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The flaw is in type resolution in the temporary schema of the server, in the package postgresql-17 (the server). libpq5 contains only the client library libpq.so.5 (the file list of the package in Debian trixie); the image has no server and no client programs, so the vulnerable code is not there. Trivy lists libpq5 because it is built from the same source package postgresql-17, which the Debian security tracker lists as unfixed with no newer version in trixie on 13-11-2026. The decision rests on the title of the advisory and the file list, not on reading the patch."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-116317"
+      },
+      "products": [
+        {
+          "@id": "pkg:deb/debian/libpq5@17.11-0%2Bdeb13u1"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The flaw is in ts_rank_cd() in the server, in the package postgresql-17 (the server). libpq5 contains only the client library libpq.so.5 (the file list of the package in Debian trixie); the image has no server and no client programs, so the vulnerable code is not there. Trivy lists libpq5 because it is built from the same source package postgresql-17, which the Debian security tracker lists as unfixed with no newer version in trixie on 13-11-2026. The decision rests on the title of the advisory and the file list, not on reading the patch."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-116318"
+      },
+      "products": [
+        {
+          "@id": "pkg:deb/debian/libpq5@17.11-0%2Bdeb13u1"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The flaw is in pg_dump, in the package postgresql-client-17 (the command-line programs). libpq5 contains only the client library libpq.so.5 (the file list of the package in Debian trixie); the image has no server and no client programs, so the vulnerable code is not there. Trivy lists libpq5 because it is built from the same source package postgresql-17, which the Debian security tracker lists as unfixed with no newer version in trixie on 13-11-2026. The decision rests on the title of the advisory and the file list, not on reading the patch."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-116319"
+      },
+      "products": [
+        {
+          "@id": "pkg:deb/debian/libpq5@17.11-0%2Bdeb13u1"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The flaw is in PL/Perl, in the package postgresql-plperl-17 (the PL/Perl language of the server). libpq5 contains only the client library libpq.so.5 (the file list of the package in Debian trixie); the image has no server and no client programs, so the vulnerable code is not there. Trivy lists libpq5 because it is built from the same source package postgresql-17, which the Debian security tracker lists as unfixed with no newer version in trixie on 13-11-2026. The decision rests on the title of the advisory and the file list, not on reading the patch."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-116320"
+      },
+      "products": [
+        {
+          "@id": "pkg:deb/debian/libpq5@17.11-0%2Bdeb13u1"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The flaw is in PL/Perl, in the package postgresql-plperl-17 (the PL/Perl language of the server). libpq5 contains only the client library libpq.so.5 (the file list of the package in Debian trixie); the image has no server and no client programs, so the vulnerable code is not there. Trivy lists libpq5 because it is built from the same source package postgresql-17, which the Debian security tracker lists as unfixed with no newer version in trixie on 13-11-2026. The decision rests on the title of the advisory and the file list, not on reading the patch."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-116323"
+      },
+      "products": [
+        {
+          "@id": "pkg:deb/debian/libpq5@17.11-0%2Bdeb13u1"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The flaw is in PL/Tcl, in the package postgresql-pltcl-17 (the PL/Tcl language of the server). libpq5 contains only the client library libpq.so.5 (the file list of the package in Debian trixie); the image has no server and no client programs, so the vulnerable code is not there. Trivy lists libpq5 because it is built from the same source package postgresql-17, which the Debian security tracker lists as unfixed with no newer version in trixie on 13-11-2026. The decision rests on the title of the advisory and the file list, not on reading the patch."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-116325"
+      },
+      "products": [
+        {
+          "@id": "pkg:deb/debian/libpq5@17.11-0%2Bdeb13u1"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The flaw is in reindexdb, in the package postgresql-client-17 (the command-line programs). libpq5 contains only the client library libpq.so.5 (the file list of the package in Debian trixie); the image has no server and no client programs, so the vulnerable code is not there. Trivy lists libpq5 because it is built from the same source package postgresql-17, which the Debian security tracker lists as unfixed with no newer version in trixie on 13-11-2026. The decision rests on the title of the advisory and the file list, not on reading the patch."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-116326"
+      },
+      "products": [
+        {
+          "@id": "pkg:deb/debian/libpq5@17.11-0%2Bdeb13u1"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The flaw is in PL/Perl, in the package postgresql-plperl-17 (the PL/Perl language of the server). libpq5 contains only the client library libpq.so.5 (the file list of the package in Debian trixie); the image has no server and no client programs, so the vulnerable code is not there. Trivy lists libpq5 because it is built from the same source package postgresql-17, which the Debian security tracker lists as unfixed with no newer version in trixie on 13-11-2026. The decision rests on the title of the advisory and the file list, not on reading the patch."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-116328"
+      },
+      "products": [
+        {
+          "@id": "pkg:deb/debian/libpq5@17.11-0%2Bdeb13u1"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The flaw is in memory contexts in the server, in the package postgresql-17 (the server). libpq5 contains only the client library libpq.so.5 (the file list of the package in Debian trixie); the image has no server and no client programs, so the vulnerable code is not there. Trivy lists libpq5 because it is built from the same source package postgresql-17, which the Debian security tracker lists as unfixed with no newer version in trixie on 13-11-2026. The decision rests on the title of the advisory and the file list, not on reading the patch."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-116329"
+      },
+      "products": [
+        {
+          "@id": "pkg:deb/debian/libpq5@17.11-0%2Bdeb13u1"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The flaw is in the statistics code of the server, in the package postgresql-17 (the server). libpq5 contains only the client library libpq.so.5 (the file list of the package in Debian trixie); the image has no server and no client programs, so the vulnerable code is not there. Trivy lists libpq5 because it is built from the same source package postgresql-17, which the Debian security tracker lists as unfixed with no newer version in trixie on 13-11-2026. The decision rests on the title of the advisory and the file list, not on reading the patch."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-116330"
+      },
+      "products": [
+        {
+          "@id": "pkg:deb/debian/libpq5@17.11-0%2Bdeb13u1"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The flaw is in pg_dump restore, in the package postgresql-client-17 (the command-line programs). libpq5 contains only the client library libpq.so.5 (the file list of the package in Debian trixie); the image has no server and no client programs, so the vulnerable code is not there. Trivy lists libpq5 because it is built from the same source package postgresql-17, which the Debian security tracker lists as unfixed with no newer version in trixie on 13-11-2026. The decision rests on the title of the advisory and the file list, not on reading the patch."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-116331"
+      },
+      "products": [
+        {
+          "@id": "pkg:deb/debian/libpq5@17.11-0%2Bdeb13u1"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The flaw is in aggregate optimization in the server, in the package postgresql-17 (the server). libpq5 contains only the client library libpq.so.5 (the file list of the package in Debian trixie); the image has no server and no client programs, so the vulnerable code is not there. Trivy lists libpq5 because it is built from the same source package postgresql-17, which the Debian security tracker lists as unfixed with no newer version in trixie on 13-11-2026. The decision rests on the title of the advisory and the file list, not on reading the patch."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-116332"
+      },
+      "products": [
+        {
+          "@id": "pkg:deb/debian/libpq5@17.11-0%2Bdeb13u1"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The flaw is in portal setup in the server, in the package postgresql-17 (the server). libpq5 contains only the client library libpq.so.5 (the file list of the package in Debian trixie); the image has no server and no client programs, so the vulnerable code is not there. Trivy lists libpq5 because it is built from the same source package postgresql-17, which the Debian security tracker lists as unfixed with no newer version in trixie on 13-11-2026. The decision rests on the title of the advisory and the file list, not on reading the patch."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-116335"
+      },
+      "products": [
+        {
+          "@id": "pkg:deb/debian/libpq5@17.11-0%2Bdeb13u1"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The flaw is in operator links in the server, in the package postgresql-17 (the server). libpq5 contains only the client library libpq.so.5 (the file list of the package in Debian trixie); the image has no server and no client programs, so the vulnerable code is not there. Trivy lists libpq5 because it is built from the same source package postgresql-17, which the Debian security tracker lists as unfixed with no newer version in trixie on 13-11-2026. The decision rests on the title of the advisory and the file list, not on reading the patch."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-116336"
+      },
+      "products": [
+        {
+          "@id": "pkg:deb/debian/libpq5@17.11-0%2Bdeb13u1"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The flaw is in REINDEX CONCURRENTLY in the server, in the package postgresql-17 (the server). libpq5 contains only the client library libpq.so.5 (the file list of the package in Debian trixie); the image has no server and no client programs, so the vulnerable code is not there. Trivy lists libpq5 because it is built from the same source package postgresql-17, which the Debian security tracker lists as unfixed with no newer version in trixie on 13-11-2026. The decision rests on the title of the advisory and the file list, not on reading the patch."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-120139"
+      },
+      "products": [
+        {
+          "@id": "pkg:deb/debian/libpq5@17.11-0%2Bdeb13u1"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The flaw is in tuple-size calculations in the server, in the package postgresql-17 (the server). libpq5 contains only the client library libpq.so.5 (the file list of the package in Debian trixie); the image has no server and no client programs, so the vulnerable code is not there. Trivy lists libpq5 because it is built from the same source package postgresql-17, which the Debian security tracker lists as unfixed with no newer version in trixie on 13-11-2026. The decision rests on the title of the advisory and the file list, not on reading the patch."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-120141"
+      },
+      "products": [
+        {
+          "@id": "pkg:deb/debian/libpq5@17.11-0%2Bdeb13u1"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The flaw is in set-returning functions in the server, in the package postgresql-17 (the server). libpq5 contains only the client library libpq.so.5 (the file list of the package in Debian trixie); the image has no server and no client programs, so the vulnerable code is not there. Trivy lists libpq5 because it is built from the same source package postgresql-17, which the Debian security tracker lists as unfixed with no newer version in trixie on 13-11-2026. The decision rests on the title of the advisory and the file list, not on reading the patch."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-120142"
+      },
+      "products": [
+        {
+          "@id": "pkg:deb/debian/libpq5@17.11-0%2Bdeb13u1"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The flaw is in anonymous RECORD types in the server, in the package postgresql-17 (the server). libpq5 contains only the client library libpq.so.5 (the file list of the package in Debian trixie); the image has no server and no client programs, so the vulnerable code is not there. Trivy lists libpq5 because it is built from the same source package postgresql-17, which the Debian security tracker lists as unfixed with no newer version in trixie on 13-11-2026. The decision rests on the title of the advisory and the file list, not on reading the patch."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-120143"
+      },
+      "products": [
+        {
+          "@id": "pkg:deb/debian/libpq5@17.11-0%2Bdeb13u1"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The flaw is in trigger functions in the server, in the package postgresql-17 (the server). libpq5 contains only the client library libpq.so.5 (the file list of the package in Debian trixie); the image has no server and no client programs, so the vulnerable code is not there. Trivy lists libpq5 because it is built from the same source package postgresql-17, which the Debian security tracker lists as unfixed with no newer version in trixie on 13-11-2026. The decision rests on the title of the advisory and the file list, not on reading the patch."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-120144"
+      },
+      "products": [
+        {
+          "@id": "pkg:deb/debian/libpq5@17.11-0%2Bdeb13u1"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The flaw is in the type cache of the server, in the package postgresql-17 (the server). libpq5 contains only the client library libpq.so.5 (the file list of the package in Debian trixie); the image has no server and no client programs, so the vulnerable code is not there. Trivy lists libpq5 because it is built from the same source package postgresql-17, which the Debian security tracker lists as unfixed with no newer version in trixie on 13-11-2026. The decision rests on the title of the advisory and the file list, not on reading the patch."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-120145"
+      },
+      "products": [
+        {
+          "@id": "pkg:deb/debian/libpq5@17.11-0%2Bdeb13u1"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The flaw is in a system catalog replication target in the server, in the package postgresql-17 (the server). libpq5 contains only the client library libpq.so.5 (the file list of the package in Debian trixie); the image has no server and no client programs, so the vulnerable code is not there. Trivy lists libpq5 because it is built from the same source package postgresql-17, which the Debian security tracker lists as unfixed with no newer version in trixie on 13-11-2026. The decision rests on the title of the advisory and the file list, not on reading the patch."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-120147"
+      },
+      "products": [
+        {
+          "@id": "pkg:deb/debian/libpq5@17.11-0%2Bdeb13u1"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The flaw is in the dblink extension of the server, in the package postgresql-17 (the server). libpq5 contains only the client library libpq.so.5 (the file list of the package in Debian trixie); the image has no server and no client programs, so the vulnerable code is not there. Trivy lists libpq5 because it is built from the same source package postgresql-17, which the Debian security tracker lists as unfixed with no newer version in trixie on 13-11-2026. The decision rests on the title of the advisory and the file list, not on reading the patch."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-120148"
+      },
+      "products": [
+        {
+          "@id": "pkg:deb/debian/libpq5@17.11-0%2Bdeb13u1"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The flaw is in extended statistics in the server, in the package postgresql-17 (the server). libpq5 contains only the client library libpq.so.5 (the file list of the package in Debian trixie); the image has no server and no client programs, so the vulnerable code is not there. Trivy lists libpq5 because it is built from the same source package postgresql-17, which the Debian security tracker lists as unfixed with no newer version in trixie on 13-11-2026. The decision rests on the title of the advisory and the file list, not on reading the patch."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-120149"
+      },
+      "products": [
+        {
+          "@id": "pkg:deb/debian/libpq5@17.11-0%2Bdeb13u1"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The flaw is in foreign batch inserts in the server, in the package postgresql-17 (the server). libpq5 contains only the client library libpq.so.5 (the file list of the package in Debian trixie); the image has no server and no client programs, so the vulnerable code is not there. Trivy lists libpq5 because it is built from the same source package postgresql-17, which the Debian security tracker lists as unfixed with no newer version in trixie on 13-11-2026. The decision rests on the title of the advisory and the file list, not on reading the patch."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-120150"
+      },
+      "products": [
+        {
+          "@id": "pkg:deb/debian/libpq5@17.11-0%2Bdeb13u1"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The flaw is in expanded-record domain checks in the server, in the package postgresql-17 (the server). libpq5 contains only the client library libpq.so.5 (the file list of the package in Debian trixie); the image has no server and no client programs, so the vulnerable code is not there. Trivy lists libpq5 because it is built from the same source package postgresql-17, which the Debian security tracker lists as unfixed with no newer version in trixie on 13-11-2026. The decision rests on the title of the advisory and the file list, not on reading the patch."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-120151"
+      },
+      "products": [
+        {
+          "@id": "pkg:deb/debian/libpq5@17.11-0%2Bdeb13u1"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The flaw is in PL/pgSQL in the server, in the package postgresql-17 (the server). libpq5 contains only the client library libpq.so.5 (the file list of the package in Debian trixie); the image has no server and no client programs, so the vulnerable code is not there. Trivy lists libpq5 because it is built from the same source package postgresql-17, which the Debian security tracker lists as unfixed with no newer version in trixie on 13-11-2026. The decision rests on the title of the advisory and the file list, not on reading the patch."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-120153"
+      },
+      "products": [
+        {
+          "@id": "pkg:deb/debian/libpq5@17.11-0%2Bdeb13u1"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The flaw is in extension-script substitutions in the server, in the package postgresql-17 (the server). libpq5 contains only the client library libpq.so.5 (the file list of the package in Debian trixie); the image has no server and no client programs, so the vulnerable code is not there. Trivy lists libpq5 because it is built from the same source package postgresql-17, which the Debian security tracker lists as unfixed with no newer version in trixie on 13-11-2026. The decision rests on the title of the advisory and the file list, not on reading the patch."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-14661"
+      },
+      "products": [
+        {
+          "@id": "pkg:deb/debian/libpq5@17.11-0%2Bdeb13u1"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The flaw is in the sslkeylogfile parameter in dblink and CREATE/ALTER SUBSCRIPTION of the server, in the package postgresql-17 (the server). libpq5 contains only the client library libpq.so.5 (the file list of the package in Debian trixie); the image has no server and no client programs, so the vulnerable code is not there. Trivy lists libpq5 because it is built from the same source package postgresql-17, which the Debian security tracker lists as unfixed with no newer version in trixie on 13-11-2026. The decision rests on the title of the advisory and the file list, not on reading the patch."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-18447"
+      },
+      "products": [
+        {
+          "@id": "pkg:deb/debian/libpq5@17.11-0%2Bdeb13u1"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The flaw is in SQL-language functions in the server, in the package postgresql-17 (the server). libpq5 contains only the client library libpq.so.5 (the file list of the package in Debian trixie); the image has no server and no client programs, so the vulnerable code is not there. Trivy lists libpq5 because it is built from the same source package postgresql-17, which the Debian security tracker lists as unfixed with no newer version in trixie on 13-11-2026. The decision rests on the title of the advisory and the file list, not on reading the patch."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-6460"
+      },
+      "products": [
+        {
+          "@id": "pkg:deb/debian/libpq5@17.11-0%2Bdeb13u1"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The flaw is in data definition commands in the server, in the package postgresql-17 (the server). libpq5 contains only the client library libpq.so.5 (the file list of the package in Debian trixie); the image has no server and no client programs, so the vulnerable code is not there. Trivy lists libpq5 because it is built from the same source package postgresql-17, which the Debian security tracker lists as unfixed with no newer version in trixie on 13-11-2026. The decision rests on the title of the advisory and the file list, not on reading the patch."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-6467"
+      },
+      "products": [
+        {
+          "@id": "pkg:deb/debian/libpq5@17.11-0%2Bdeb13u1"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The flaw is in extension management in the server, in the package postgresql-17 (the server). libpq5 contains only the client library libpq.so.5 (the file list of the package in Debian trixie); the image has no server and no client programs, so the vulnerable code is not there. Trivy lists libpq5 because it is built from the same source package postgresql-17, which the Debian security tracker lists as unfixed with no newer version in trixie on 13-11-2026. The decision rests on the title of the advisory and the file list, not on reading the patch."
     }
   ]
 }
