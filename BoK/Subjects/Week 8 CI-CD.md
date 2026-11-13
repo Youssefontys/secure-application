@@ -125,6 +125,8 @@ Gemeten en opgezocht na de eerste uitrol, om te zien of een andere regio sneller
 
 ## Volgende stappen, één per keer
 
+De open punten staan gebundeld, met de status, in `Week 9 Extras.md` onder "Open punten, op één plek". Hieronder staan de plannen en de stappen die al gedaan zijn.
+
 1. Gedaan: een scan van de image op bekende lekken, met een rem vóór het publiceren (MIT-35).
 2. Gedaan: de SBoM van elke image, als bewijs bij de build, en de scan daarop (MIT-36).
 3. Gedaan: deelvraag 1 van het onderzoek: welk formaat en welke tool, waar de SBoM gemaakt wordt, wie hem leest, en hoe een merge wordt tegengehouden. Het antwoord: CycloneDX 1.7 van het gebouwde image, gemaakt en gescand met Trivy, op de SBoM, met een ruleset.

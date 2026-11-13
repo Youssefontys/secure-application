@@ -6,6 +6,39 @@ mapping van OWASP zelf. Status: **Gedaan**, **Deels**, **Open**, of **Bewust nie
 
 Aan het eind staan de voorstellen die eruit komen. Wat daarvan gebeurt, is nog niet besloten.
 
+## Open punten, op één plek
+
+Dit is de lijst van wat nog openstaat, uit de plannen van Week 8 en de voorstellen van deze notitie, zonder dubbelen. De plannen zelf
+(rescan, eigen domein, wat bewust niet) blijven in Week 8; de status houd ik hier bij. Een punt dat klaar is, krijgt "Gedaan (datum)".
+
+| # | Punt | Uit | Grootte | Status |
+|---|---|---|---|---|
+| 1 | De draaiende image elke dag opnieuw scannen (MC-11) | Week 8, stap 6 | Middel | Gepland, plan in Week 8 |
+| 2 | Containerinstellingen: alleen-lezen bestandssysteem, `cap_drop`, `no-new-privileges` (Docker #3, #4, #8) | Week 8, stap 10; voorstel 6 | Klein | Gepland |
+| 3 | Een blocklist voor veelgebruikte wachtwoorden (MC-03) | Week 8, stap 11 | Klein | Gepland |
+| 4 | Sleutelrotatie op Azure: Terraform geeft de vorige sleutel en de versies door | Week 8, stap 12 | Klein | Gepland |
+| 5 | Een eigen `.tech`-domein, met het `asuid`-record bewaard en een waarschuwing in `deployment.py undo` dat de `CNAME` eerst weg moet | Week 8, stap 13; voorstel 7 | Middel | Gepland, vóór de hacking week |
+| 6 | Het demoaccount `hackingweek` met een gedeeld TOTP-geheim en een verstopte flag | Week 8, stap 14 | Klein | Gepland, vóór de hacking week |
+| 7 | Een managed identity van Entra ID tussen de app en de database, in plaats van een wachtwoord (AU-03) | Week 8, stap 15 | Groot | Geparkeerd |
+| 8 | Hashes in `requirements.txt` (`pip --require-hashes`) | Week 8, stap 15 | Klein | Geparkeerd |
+| 9 | `authz_fail` en `input_validation_fail` loggen, met een test (MC-02) | Voorstel 1 | Klein | Voorstel |
+| 10 | Een time-out bij inactiviteit voor de sessie | Voorstel 2 | Klein | Voorstel |
+| 11 | `__Host-` voor de cookienaam en `Clear-Site-Data` bij uitloggen | Voorstel 3 | Klein | Voorstel |
+| 12 | De image en de SBoM ondertekenen, met provenance (attestations van GitHub) | Voorstel 4 | Middel | Voorstel |
+| 13 | Een linter voor het Dockerfile in de check | Voorstel 5 | Klein | Voorstel |
+| 14 | Een alert op wijzigingen aan rollen in de activiteitenlog van Azure | Voorstel 8 | Klein | Voorstel |
+
+Bewust niet gedaan staat in Week 8 ("Bewust niet gedaan (besluit 13-11-2026)"), met de reden.
+
+**Het verslag (`7.1 BoK.docx`), door jou:**
+
+- De drie screenshots: de geheimen in Container Apps (`az containerapp secret list`), de mail van Azure Monitor (T-108) en pull request #4.
+- In 5.2.5 de nummers en titels uit de CIS PostgreSQL Benchmark.
+- De placeholders: `XX` bij Secure Application, `<AFBEELDING DASHBOARD>`, `<NULMETING>`, "Welke volgorde? LINK" in de bijlage.
+- De inleiding met je leermotivatie, en de conclusie.
+- Na de hacking week: de bevindingen van de Red Teamers (placeholder in 5.2.8).
+- De planning controleren: de BoK-deadline stond op 8 november, de BoK-gesprekken op 18 en 25 november.
+
 ## 1. Infrastructure as Code Security
 
 | Aanbeveling | In de app | Status |
