@@ -27,7 +27,7 @@ De details staan in de entries (MC-28, MIT-31; A-11, C-05 en F-05 in de architec
 - **Het formaat:** één JSON-regel per gebeurtenis, bijvoorbeeld:
 
   ```
-  {"time": "2026-10-17T23:05:48+00:00", "event": "lockout_started", "ip": "172.18.0.1", "scope": "password_account_ip", "minutes": 15}
+  {"time": "2026-10-17T23:05:48+00:00", "level": "ERROR", "category": "authentication", "event": "lockout_started", "ip": "172.18.0.1", "scope": "password_account_ip", "minutes": 15}
   ```
 
 - **De plek:** stderr van de container. Lokaal is dat `docker compose logs app`; op Azure zet Container Apps hem in Log Analytics, in de tabel `ContainerAppConsoleLogs_CL` (de regel staat in `Log_s`). De code is op beide hetzelfde. De output `security_log_command` van Terraform geeft de blokkades van de laatste dag.
@@ -48,6 +48,26 @@ De details staan in de entries (MC-28, MIT-31; A-11, C-05 en F-05 in de architec
 | `logout`, `session_rejected` | Uitloggen, of een cookie met een oude sessieversie | account | MC-04 |
 | `csrf_refused` | Een POST zonder het juiste token | de route | MC-05 |
 | `note_limit`, `note_unreadable` | 25 notities bereikt; een notitie die niet ontsleutelt | account, notitie | MC-10, MC-08, MC-23 |
+
+## Niveaus en categorieën
+
+Elke regel heeft een niveau en een categorie, zodat je kunt filteren op wat aandacht vraagt (`KINDS` in `app/events.py`; één plek voor alle soorten, en de log-test eist dat elke soort erin staat).
+
+| Niveau | Wat het betekent | Soorten |
+|---|---|---|
+| INFO | Wat een gewone gebruiker doet | `login_ok`, `recovery_used`, `account_created`, `account_deleted`, `password_changed`, `password_reset`, `twofa_enabled`, `twofa_reset`, `recovery_code_new`, `logout` |
+| WARNING | Wat geweigerd wordt of mislukt: mogelijk een aanval | `login_failed`, `totp_failed`, `recovery_failed`, `forgot_failed`, `reauth_failed`, `register_taken`, `session_rejected`, `csrf_refused`, `note_limit` |
+| ERROR | Wat meteen aandacht vraagt | `lockout_started`, `note_unreadable` |
+
+| Categorie | Soorten |
+|---|---|
+| `authentication` | `login_ok`, `login_failed`, `totp_failed`, `recovery_used`, `recovery_failed`, `forgot_failed`, `reauth_failed`, `lockout_started` |
+| `account` | `account_created`, `register_taken`, `account_deleted`, `password_changed`, `password_reset`, `twofa_enabled`, `twofa_reset`, `recovery_code_new` |
+| `session` | `logout`, `session_rejected` |
+| `request` | `csrf_refused`, `note_limit` |
+| `integrity` | `note_unreadable` |
+
+Een nieuwe soort die niet in `KINDS` staat, krijgt WARNING en de categorie `other`; de test van de log laat dat zien.
 
 ## Waarom het veilig is
 

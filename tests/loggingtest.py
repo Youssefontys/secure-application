@@ -28,6 +28,7 @@ def run():
     records = [json.loads(l) for l in lines if l.startswith("{")]
     seen = {r["event"] for r in records}
     check("  every line has time, kind and address", all({"time", "event", "ip"} <= r.keys() for r in records), True)
+    check("  every line has a level and a category", all(r.get("level") in ("INFO", "WARNING", "ERROR") and r.get("category") not in (None, "other") for r in records), True)
     check("  a name with a line break does not get in, and makes no false line", ("fake" in seen, any(r.get("username", "").startswith("x") for r in records)),
           (False, False))
     check("tracebacks in the log", logs(STARTED, prefix=True).count("Traceback"), 0)
@@ -36,6 +37,9 @@ def run():
         app_code = "".join(open(os.path.join(REPO, "app", f), encoding="utf-8").read() for f in os.listdir(os.path.join(REPO, "app")) if f.endswith(".py"))
         want = set(re.findall(r'events\.event\("([a-z_]+)"', app_code))
         check(f"all {len(want)} kinds from the code are in the log", sorted(want - seen), [])
+        level = {r["event"]: r["level"] for r in records}
+        check("  a normal login is INFO, a failed one WARNING, a lockout and an unreadable value ERROR",
+              (level["login_ok"], level["login_failed"], level["lockout_started"], level["note_unreadable"]), ("INFO", "WARNING", "ERROR", "ERROR"))
         joined = "\n".join(lines)
         check("  no password, TOTP secret or recovery code in the log", (len(secrets_seen) > 3, [s for s in [PW, PW2, *secrets_seen] if s in joined]), (True, []))
 

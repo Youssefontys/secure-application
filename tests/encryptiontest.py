@@ -1,5 +1,5 @@
 """Encryption: the TOTP secret and the notes encrypted and bound to their place, the passwords with Argon2id
-(MIT-17 to MIT-19). Runs through securitytest.py."""
+(MIT-17 to MIT-19), and the rotation of the data key. Runs through securitytest.py."""
 from securitytest import *
 
 
@@ -57,3 +57,27 @@ def run():
     check("  note of testacc9 in the row of testacc10: unreadable", (page.count("(unreadable)"), "4821" in page), (2, False))
     sql("UPDATE notes SET title = body, body = title WHERE user_id = (SELECT id FROM users WHERE username = 'testacc9')")
     check("  title and body swapped: unreadable", req(c9, "/")[1].count("(unreadable)"), 2)
+
+    print("== key rotation (MIT-17, MIT-18)")
+    cr, _, _ = account("testrot1")
+    req(cr, "/", {"title": "Rotate me", "body": "Same text after."})
+    old_key = in_app("import os; print(os.environ['DATA_ENCRYPTION_KEY'])").stdout.strip()
+    new_key = in_app("import secrets; print(secrets.token_hex(32))").stdout.strip()
+    uid = sql("SELECT id FROM users WHERE username = 'testrot1'")
+    forward = (f"DATA_ENCRYPTION_KEY={new_key}", "DATA_ENCRYPTION_KEY_VERSION=v2", f"DATA_ENCRYPTION_KEY_PREVIOUS={old_key}")
+    # Only the values of this account count: rows that earlier tests broke on purpose stay unreadable, in both directions.
+    other = lambda like: sql(f"SELECT count(*) FROM (SELECT totp_secret AS v FROM users WHERE id = {uid} UNION ALL SELECT title FROM notes WHERE user_id = {uid}"
+                             f" UNION ALL SELECT body FROM notes WHERE user_id = {uid}) x WHERE v IS NOT NULL AND v NOT LIKE '{like}'")
+    out = in_app("rotate_key.py", *forward, run=("python",))
+    check("rotation to v2 ran, and prints only numbers", ("rotated to v2" in out.stdout, new_key in out.stdout + out.stderr, old_key in out.stdout + out.stderr), (True, False, False))
+    check("  every encrypted value of the test account is v2 now", other("v2:%"), "0")
+    title = sql(f"SELECT title FROM notes WHERE user_id = {uid}")
+    read = lambda *env: in_app(f"import encryption; print(encryption.decrypt({title!r}, 'note_title', {uid}))", *env).stdout.strip()
+    check("  with the new key the note still reads as before", read(*forward), "Rotate me")
+    check("  the old key alone cannot read it", read(), "None")
+    again = in_app("rotate_key.py", *forward, run=("python",)).stdout
+    check("  a second run changes nothing", "rotated to v2: 0" in again, True)
+    back = (f"DATA_ENCRYPTION_KEY={old_key}", f"DATA_ENCRYPTION_KEY_PREVIOUS={new_key}", "DATA_ENCRYPTION_KEY_PREVIOUS_VERSION=v2")
+    in_app("rotate_key.py", *back, run=("python",))
+    check("  and back to v1, so the rest of the tests read as before", other("v1:%"), "0")
+    check("  the app reads the note again", "Rotate me" in req(cr, "/")[1], True)

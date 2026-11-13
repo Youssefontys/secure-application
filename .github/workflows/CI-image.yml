@@ -86,6 +86,21 @@ jobs:
         name: Scan for known vulnerabilities
         run: docker run --rm -v "$PWD:/scan" "$TRIVY" sbom /scan/sbom.cdx.json --severity HIGH,CRITICAL --vex /scan/vex/openvex.json --show-suppressed --exit-code 1 --no-progress
 
+      # Secrets in the files of the repo (MIT-45): the secret scanner of Trivy, the same pinned version, on the checkout. .git is
+      # skipped: the history was searched by hand on 17-10-2026, and a pull request only adds files.
+      - name: Scan for secrets
+        run: docker run --rm -v "$PWD:/scan" "$TRIVY" fs --scanners secret --skip-dirs .git --exit-code 1 --no-progress /scan
+
+      # A scan that never finds anything proves nothing: a fake GitHub token in an empty folder must make it fail.
+      - name: Secret scan self-test
+        run: |
+          mkdir "$RUNNER_TEMP/plant"
+          printf 'token = ghp_%s\n' "$(printf 'a%.0s' $(seq 36))" > "$RUNNER_TEMP/plant/leak.txt"
+          if docker run --rm -v "$RUNNER_TEMP/plant:/scan" "$TRIVY" fs --scanners secret --exit-code 1 --no-progress /scan; then
+            echo "The planted token was not found: the secret scan does not work."
+            exit 1
+          fi
+
       # The security test (tests/securitytest.py) against the stack of compose.yaml, only in the check: if a check fails,
       # the job fails and the ruleset blocks the merge (MIT-39). Without a terminal deployment.py asks no questions and makes
       # throwaway secrets in .env, which only exist on this runner. The step takes about two minutes.

@@ -654,7 +654,7 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 - Houdt tegen: MC-02 stap 2
 - Wat: elke query op één notitie heeft naast de id ook `user_id` uit de sessie in de WHERE: `own_note()` bij openen en aanpassen, de UPDATE zelf, en de DELETE met `RETURNING`. Is de notitie niet van de ingelogde gebruiker, dan volgt 404, precies zoals bij een id dat niet bestaat; zo verraadt het antwoord niet dat de notitie bestaat, wat het OWASP IDOR Prevention Cheat Sheet aanraadt. De lijst op `/` liet al alleen eigen notities zien (AZ-01)
 - Waar: `own_note()`, `edit_note()` en `delete_note()` in `app/notes.py`
-- Status: bewezen (T-11; gemeten op 2026-10-16)
+- Status: bewezen (T-11, T-148; gemeten op 2026-10-16)
 - Sinds: 668166a
 
 ### MIT-16 Herauthenticatie bij wachtwoord wijzigen, account verwijderen en het vervangen van de tweede factor
@@ -668,14 +668,14 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 - Houdt tegen: MC-17 stap 1
 - Wat: de app versleutelt het TOTP-geheim voordat het de database in gaat, met AES-256-GCM uit de library `cryptography`, zoals het OWASP Cryptographic Storage Cheat Sheet aanraadt: AES met een sleutel van 256 bits in een geauthenticeerde modus. Elke waarde krijgt een nieuwe willekeurige nonce van 96 bits, de lengte die NIST aanraadt. De soort en de `user_id` gaan mee als associated data: een waarde die naar de rij van een ander account wordt gekopieerd, ontsleutelt daar niet (T-63). Vooraan staat de sleutelversie (`v1:`), zodat een nieuwe sleutel later naast de oude kan. De sleutel (A-09) staat in de omgeving van de app en nooit in de database. Wat niet ontsleutelt, telt als geen geheim: dan wordt elke code geweigerd. Een half ingesteld geheim dat niet ontsleutelt, wordt vervangen, want het werkte nog nergens (T-65). Bewust in de app en niet met pgcrypto in de database: dan zou de sleutel bij elke query als parameter mee naar de database gaan, en in de databaselog staan zodra het loggen van statements aanstaat (`log_statement = all`, zoals tijdelijk voor `17_sqli_databaselog`)
 - Waar: `app/encryption.py`; `setup_2fa()` en `qr_2fa()` in `app/account.py`; `check_code()` in `app/auth.py`
-- Status: bewezen (T-34, T-63; gemeten van 2026-10-16 tot 2026-10-17)
+- Status: bewezen (T-34, T-63; gemeten van 2026-10-16 tot 2026-10-17); sleutelrotatie T-144 (2026-11-13)
 - Sinds: 776931a
 
 ### MIT-18 Versleuteling van notities
 - Houdt tegen: MC-23 stap 2
 - Wat: titel en inhoud gaan met dezelfde helper en sleutel als het TOTP-geheim (MIT-17) de database in: AES-256-GCM, een nieuwe nonce per waarde, de sleutelversie vooraan. De soort (`note_title`, `note_body`) en de `user_id` van de eigenaar gaan mee als associated data, dus een titel als inhoud, of een notitie in de rij van een ander account, ontsleutelt niet (T-67). Wat niet ontsleutelt, staat op de pagina als "(unreadable)". De lengtegrens (MIT-04) geldt voor de tekst zelf, vóór het versleutelen
 - Waar: `sealed()` en `readable()` in `app/notes.py`; `app/encryption.py`
-- Status: bewezen (T-66, T-67; gemeten van 2026-10-16 tot 2026-10-17)
+- Status: bewezen (T-66, T-67; gemeten van 2026-10-16 tot 2026-10-17); sleutelrotatie T-144 (2026-11-13)
 - Sinds: b2b60e1
 
 ### MIT-19 Wachtwoorden als Argon2id-hash
@@ -710,7 +710,7 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 - Houdt tegen: MC-18 stap 4; MC-04 en MC-05 (de cookie)
 - Wat: configuratie is ook invoer. Bij het starten moeten `TRUSTED_PROXIES` 0 of 1 zijn en `HTTPS_ONLY` 0 of 1, `FLASK_SECRET_KEY` minstens 32 tekens, `DATA_ENCRYPTION_KEY` 256 bits en `THROTTLE_IP_MODE` een bekende stand; anders start de app niet. Standaard veilig: zonder `HTTPS_ONLY` gaat de cookie alleen over HTTPS, en alleen `compose.yaml` zet dat lokaal uit. De cookie heeft altijd `HttpOnly` en `SameSite=Lax`
 - Waar: `setting()` en de configuratie in `app/app.py`; `compose.yaml`
-- Status: bewezen (T-79; gemeten op 2026-10-16)
+- Status: bewezen (T-79, T-150; gemeten op 2026-10-16)
 - Sinds: 172f43d
 
 ### MIT-24 Standaard dicht
@@ -764,9 +764,9 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 
 ### MIT-31 Security-events loggen
 - Houdt tegen: MC-28 stap 1 tot 5
-- Wat: één functie, `events.event()`, schrijft per gebeurtenis een JSON-regel naar stderr: tijd (UTC), soort, IP-adres, en als dat bekend is het account. Dat is het "when, where, who and what" van de OWASP Logging Cheat Sheet. Lokaal in `docker compose logs`; op Azure zet Container Apps hem in een Log Analytics-workspace, 30 dagen en dan weg, zonder verschil in de code (sinds d547182, T-102 na de uitrol). 21 soorten, op de plekken waar de app al beslist: registreren, inloggen en de blokkades, codes en herstelcodes, wachtwoord vergeten, uitloggen, een verlopen sessie, tweestapsverificatie aan en opnieuw, een nieuw wachtwoord, herauthenticatie, account verwijderen, een geweigerd CSRF-token, de limiet op notities en een notitie die niet ontsleutelt. JSON escapet regeleindes en stuurtekens, dus invoer maakt geen valse regel (log injection). Een gebruikersnaam komt er alleen in als het account bestaat; anders staat er `"known": false` (sinds f977f6d, T-100). Eerst gold de naamregel van MIT-22, maar een wachtwoord als `Zomervakantie2026` voldoet daar ook aan. Een blokkade staat er één keer in, op het moment dat hij begint (`lockout_started`, met de soort teller), en niet bij elke geweigerde poging; anders kon een script de log vullen (sinds f977f6d, T-101). Wachtwoorden, codes, geheimen en de sessiecookie nooit (T-93, T-94). Overgenomen uit BOK-SECENGINEER
+- Wat: één functie, `events.event()`, schrijft per gebeurtenis een JSON-regel naar stderr: tijd (UTC), soort, IP-adres, en als dat bekend is het account. Dat is het "when, where, who and what" van de OWASP Logging Cheat Sheet. Lokaal in `docker compose logs`; op Azure zet Container Apps hem in een Log Analytics-workspace, 30 dagen en dan weg, zonder verschil in de code (sinds d547182, T-102 na de uitrol). 21 soorten, op de plekken waar de app al beslist: registreren, inloggen en de blokkades, codes en herstelcodes, wachtwoord vergeten, uitloggen, een verlopen sessie, tweestapsverificatie aan en opnieuw, een nieuw wachtwoord, herauthenticatie, account verwijderen, een geweigerd CSRF-token, de limiet op notities en een notitie die niet ontsleutelt. JSON escapet regeleindes en stuurtekens, dus invoer maakt geen valse regel (log injection). Een gebruikersnaam komt er alleen in als het account bestaat; anders staat er `"known": false` (sinds f977f6d, T-100). Eerst gold de naamregel van MIT-22, maar een wachtwoord als `Zomervakantie2026` voldoet daar ook aan. Een blokkade staat er één keer in, op het moment dat hij begint (`lockout_started`, met de soort teller), en niet bij elke geweigerde poging; anders kon een script de log vullen (sinds f977f6d, T-101). Wachtwoorden, codes, geheimen en de sessiecookie nooit (T-93, T-94). Overgenomen uit BOK-SECENGINEER Elke regel heeft ook een niveau (INFO, WARNING of ERROR) en een categorie (authentication, account, session, request, integrity).
 - Waar: `app/events.py`; aanroepen in `app/auth.py`, `app/account.py`, `app/csrf.py` en `app/notes.py`; op Azure `terraform/logs.tf`
-- Status: bewezen (T-93, T-94, T-100, T-101; gemeten van 2026-10-17 tot 2026-10-18); op Azure uitgerold op 2026-10-18 (T-102)
+- Status: bewezen (T-93, T-94, T-100, T-101, T-145; gemeten van 2026-10-17 tot 2026-11-13); op Azure uitgerold op 2026-10-18 (T-102)
 - Sinds: 6992001; naam en blokkade sinds f977f6d; bewaard op Azure sinds d547182
 
 ### MIT-32 .env alleen voor de eigenaar
@@ -861,10 +861,10 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 - Sinds: 4affd4c; subject met ID's en `deploy.yml` sinds ec0dee4
 
 ### MIT-45 Code scanning met CodeQL, Dependabot alerts, en een lek privé melden
-- Houdt tegen: een fout in de eigen code of de workflows met een bekend patroon, vóór de merge: een geheim in een log (MC-17, zoals T-131 vond), injectie (MC-06, MC-07) of een workflow die meer kan dan bedoeld (MC-30 stap 1 en 3); en MC-11 stap 1 en 3 sneller: een bekend lek in een afhankelijkheid geeft een melding en een pull request, ook tussen de wekelijkse runs van Dependabot
-- Wat: in de instellingen van de repo (Settings, Advanced Security) staan sinds 2026-10-20 aan: CodeQL in de default setup, voor Python, JavaScript en de workflows, met de standaardset regels, bij elke pull request en elke push naar `main`; Dependabot alerts en Dependabot security updates, naast de versie-updates van MIT-33; en private vulnerability reporting, met `SECURITY.md`: wie een lek vindt, meldt het privé in plaats van in een openbaar issue. Secret scanning en push protection stonden al aan. De eerste analyse vond één melding van high: de securitytest printte het TOTP-geheim van een testaccount in de openbare log van de check (T-131). Een wegwerpgeheim op een stack die na de run verdwijnt, maar het hoort niet in een openbare log. Sinds 6314360 vergelijkt die controle alleen of het geheim gelijk bleef, en vervangt `check()` elk geheim dat de test zag door `[secret]` (T-132)
+- Houdt tegen: een fout in de eigen code of de workflows met een bekend patroon, vóór de merge: een geheim in een log (MC-17, zoals T-131 vond), injectie (MC-06, MC-07) of een workflow die meer kan dan bedoeld (MC-30 stap 1 en 3); een geheim in de bestanden van de repo (MC-22), ook als de secret scanning van GitHub het mist, met de secret scanner van Trivy in de check; en MC-11 stap 1 en 3 sneller: een bekend lek in een afhankelijkheid geeft een melding en een pull request, ook tussen de wekelijkse runs van Dependabot
+- Wat: in de instellingen van de repo (Settings, Advanced Security) staan sinds 2026-10-20 aan: CodeQL in de default setup, voor Python, JavaScript en de workflows, met de standaardset regels, bij elke pull request en elke push naar `main`; Dependabot alerts en Dependabot security updates, naast de versie-updates van MIT-33; en private vulnerability reporting, met `SECURITY.md`: wie een lek vindt, meldt het privé in plaats van in een openbaar issue. Secret scanning en push protection stonden al aan. De eerste analyse vond één melding van high: de securitytest printte het TOTP-geheim van een testaccount in de openbare log van de check (T-131). Een wegwerpgeheim op een stack die na de run verdwijnt, maar het hoort niet in een openbare log. Sinds 6314360 vergelijkt die controle alleen of het geheim gelijk bleef, en vervangt `check()` elk geheim dat de test zag door `[secret]` (T-132) In de job `check` draait daarnaast sinds 2026-11-13 de secret scanner van Trivy over de bestanden van de checkout, met een zelftest die een nep-token plant.
 - Waar: de instellingen van de repo, die niet in de repo staan; `SECURITY.md`; `check()` in `tests/securitytest.py`
-- Status: bewezen (T-130, T-131, T-132, T-134; gemeten op 2026-10-20). Sinds 2026-10-20 eist de ruleset ook de uitkomst van CodeQL: een melding van high of hoger, of een fout, houdt de merge tegen, net als de check (T-134). Validity checks en patronen die niet van een provider zijn, bleven uit (T-130)
+- Status: bewezen (T-130, T-131, T-132, T-134, T-147; gemeten op 2026-10-20). Sinds 2026-10-20 eist de ruleset ook de uitkomst van CodeQL: een melding van high of hoger, of een fout, houdt de merge tegen, net als de check (T-134). Validity checks en patronen die niet van een provider zijn, bleven uit (T-130)
 - Sinds: 2026-10-20 (de instellingen); de fix voor T-131 sinds 6314360
 
 ### MIT-46 DAST: de ZAP baseline bij elke pull request, met een beslissing per melding

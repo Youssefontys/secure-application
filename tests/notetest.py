@@ -21,6 +21,8 @@ def run():
     check("  testacc8 deletes the note of testacc7", req(cb, f"/notes/{nid}/delete", {})[0], 404)
     check("  the note of testacc7 unchanged", all(s in req(a, f"/notes/{nid}/edit")[1] for s in ("T2", "Changed")), True)
     check("  unknown id", req(a, "/notes/999999/edit")[0], 404)
+    big = "9" * 40
+    check("  a note number far beyond 64 bits: 404, no error", (req(a, f"/notes/{big}/edit")[0], req(a, f"/notes/{big}/delete", {})[0]), (404, 404))
     check("delete", loc(req(a, f"/notes/{nid}/delete", {})), "302 /")
     check("profile", req(a, "/account")[0], 200)
 

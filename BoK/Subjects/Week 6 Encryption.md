@@ -155,8 +155,20 @@ Waar de geheimen nu staan, wie ze kan lezen en hoe ze gemaakt worden:
 
 Wat nog mist:
 - Lokaal staan de sleutels leesbaar in `.env` en in de omgeving van de container (T-64, MC-22).
-- Er is nog geen rotatie: `v2:` is voorbereid, niet gebouwd.
-- De pipeline scant nog niet op geheimen.
+- Rotatie is gebouwd (`app/rotate_key.py`, zie hieronder); op Azure geeft Terraform de vorige sleutel nog niet door.
+- De pipeline scant op geheimen in de bestanden (Trivy, stap `Scan for secrets` in `CI-image.yml`, MIT-45), naast de secret scanning en push protection van GitHub. De geschiedenis is alleen met de hand doorzocht (17-10-2026).
+
+## Rotatie van de gegevenssleutel (MIT-17, MIT-18)
+
+Een sleutel die nooit verandert, blijft werken na een lek. Elke versleutelde waarde begint met de versie van de sleutel (`v1:`), en de versie zit ook in de associated data van AES-GCM. Zo kan een nieuwe sleutel naast de oude staan:
+
+- **De instellingen.** `DATA_ENCRYPTION_KEY` is de nieuwe sleutel, met `DATA_ENCRYPTION_KEY_VERSION` (bijvoorbeeld `v2`). De oude sleutel staat in `DATA_ENCRYPTION_KEY_PREVIOUS`, met `DATA_ENCRYPTION_KEY_PREVIOUS_VERSION` (standaard `v1`). Zonder die instellingen werkt de app als voorheen, met één sleutel `v1`.
+- **Lezen en schrijven.** De app schrijft altijd met de nieuwe sleutel. Een waarde van de oude sleutel leest hij nog, tot hij opnieuw is versleuteld.
+- **Opnieuw versleutelen.** `python rotate_key.py` in de container van de app maakt elke waarde van het TOTP-geheim en de notities opnieuw met de nieuwe sleutel. Elke waarde verandert in één statement dat alleen werkt als de waarde nog dezelfde is als toen hij gelezen werd, dus het kan terwijl de app draait en het mag twee keer. Het script drukt alleen aantallen af, nooit een waarde. Exitcode 1 als een waarde niet te lezen was: dan moet de oude sleutel blijven.
+- **De oude sleutel weg.** Pas als het script meldt dat niets meer van de oude sleutel is (`not readable: 0`) en geen waarde meer `v1:` heet, kan de oude sleutel uit `.env` of Key Vault.
+- **Eén sleutel terug in de tijd.** De app houdt één vorige sleutel bij. Een volgende rotatie kan dus pas als de vorige klaar is.
+
+Wat nog mist: op Azure geeft Terraform de vorige sleutel en de versies nog niet door aan de container app. De code is er, en de securitytest draait de rotatie heen en terug (T-144, run 43406573786).
 
 ## Key management op Azure
 
@@ -165,7 +177,7 @@ Uitgerold op 18-10-2026, in France Central (zie Week 8 voor de uitrol). In Conta
 - **De geheimen komen nergens in Terraform terecht.** Terraform maakt ze als ephemeral waarde: de gegevenssleutel en de sessiesleutel elk 32 willekeurige bytes, de twee databasewachtwoorden elk 40 tekens. Die stuurt Terraform write-only naar Key Vault, dus ze staan niet in het plan en niet in de state. Het databasewachtwoord leest Terraform terug uit Key Vault, zodat vault en database altijd hetzelfde hebben, ook als een eerste uitrol halverwege stopt.
 - **Alleen de app leest ze**, met een eigen managed identity die de rol Key Vault Secrets User heeft. Het wachtwoord van de eigenaar staat sinds MIT-27 in een eigen vault, die alleen de schema-job leest. Container Apps zet de waarden als omgevingsvariabele, dus de code blijft gelijk. Wie Terraform draait, mag geheimen schrijven (Key Vault Secrets Officer), niet de vault beheren.
 - **Kwijtraken kan niet zomaar.** Purge protection en 90 dagen bewaartijd na verwijderen. Belangrijk, want sleutel kwijt is notities kwijt.
-- **Een nieuwe sleutel.** De databasewachtwoorden en de sessiesleutel veranderen als `secret_version` omhoog gaat; Terraform start dan zelf de schema-job, die het nieuwe wachtwoord van de app-rol zet. De gegevenssleutel staat vast op versie 1, tot `v2:` gebouwd is.
+- **Een nieuwe sleutel.** De databasewachtwoorden en de sessiesleutel veranderen als `secret_version` omhoog gaat; Terraform start dan zelf de schema-job, die het nieuwe wachtwoord van de app-rol zet. Voor de gegevenssleutel is er rotatie met `rotate_key.py` (zie Rotatie van de gegevenssleutel); op Azure moet Terraform de vorige sleutel en de versies dan nog doorgeven.
 - **Eventueel envelope-versleuteling:** een tweede sleutel (KEK) in Key Vault die `DATA_ENCRYPTION_KEY` (de DEK) versleutelt. Volgens OWASP werkt dat alleen als de KEK apart van de DEK staat; de versleutelde DEK mag dan bij de data.
 - **De opslag van de Terraform-state** wordt al versleuteld met een eigen sleutel (RSA 4096) in Key Vault, door `scripts/setup_azure.py`. Dat is key management voor de infrastructuur.
 
