@@ -156,7 +156,7 @@ Waar de geheimen nu staan, wie ze kan lezen en hoe ze gemaakt worden:
 Wat nog mist:
 - Lokaal staan de sleutels leesbaar in `.env` en in de omgeving van de container (T-64, MC-22).
 - Rotatie is gebouwd (`app/rotate_key.py`, zie hieronder); op Azure geeft Terraform de vorige sleutel nog niet door.
-- De pipeline scant nog niet op geheimen.
+- De pipeline scant op geheimen in de bestanden (Trivy, stap `Scan for secrets` in `CI-image.yml`, MIT-45), naast de secret scanning en push protection van GitHub. De geschiedenis is alleen met de hand doorzocht (17-10-2026).
 
 ## Rotatie van de gegevenssleutel (MIT-17, MIT-18)
 
