@@ -668,14 +668,14 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 - Houdt tegen: MC-17 stap 1
 - Wat: de app versleutelt het TOTP-geheim voordat het de database in gaat, met AES-256-GCM uit de library `cryptography`, zoals het OWASP Cryptographic Storage Cheat Sheet aanraadt: AES met een sleutel van 256 bits in een geauthenticeerde modus. Elke waarde krijgt een nieuwe willekeurige nonce van 96 bits, de lengte die NIST aanraadt. De soort en de `user_id` gaan mee als associated data: een waarde die naar de rij van een ander account wordt gekopieerd, ontsleutelt daar niet (T-63). Vooraan staat de sleutelversie (`v1:`), zodat een nieuwe sleutel later naast de oude kan. De sleutel (A-09) staat in de omgeving van de app en nooit in de database. Wat niet ontsleutelt, telt als geen geheim: dan wordt elke code geweigerd. Een half ingesteld geheim dat niet ontsleutelt, wordt vervangen, want het werkte nog nergens (T-65). Bewust in de app en niet met pgcrypto in de database: dan zou de sleutel bij elke query als parameter mee naar de database gaan, en in de databaselog staan zodra het loggen van statements aanstaat (`log_statement = all`, zoals tijdelijk voor `17_sqli_databaselog`)
 - Waar: `app/encryption.py`; `setup_2fa()` en `qr_2fa()` in `app/account.py`; `check_code()` in `app/auth.py`
-- Status: bewezen (T-34, T-63; gemeten van 2026-10-16 tot 2026-10-17)
+- Status: bewezen (T-34, T-63; gemeten van 2026-10-16 tot 2026-10-17); sleutelrotatie T-144 (2026-11-13)
 - Sinds: 776931a
 
 ### MIT-18 Versleuteling van notities
 - Houdt tegen: MC-23 stap 2
 - Wat: titel en inhoud gaan met dezelfde helper en sleutel als het TOTP-geheim (MIT-17) de database in: AES-256-GCM, een nieuwe nonce per waarde, de sleutelversie vooraan. De soort (`note_title`, `note_body`) en de `user_id` van de eigenaar gaan mee als associated data, dus een titel als inhoud, of een notitie in de rij van een ander account, ontsleutelt niet (T-67). Wat niet ontsleutelt, staat op de pagina als "(unreadable)". De lengtegrens (MIT-04) geldt voor de tekst zelf, vóór het versleutelen
 - Waar: `sealed()` en `readable()` in `app/notes.py`; `app/encryption.py`
-- Status: bewezen (T-66, T-67; gemeten van 2026-10-16 tot 2026-10-17)
+- Status: bewezen (T-66, T-67; gemeten van 2026-10-16 tot 2026-10-17); sleutelrotatie T-144 (2026-11-13)
 - Sinds: b2b60e1
 
 ### MIT-19 Wachtwoorden als Argon2id-hash
@@ -766,7 +766,7 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 - Houdt tegen: MC-28 stap 1 tot 5
 - Wat: één functie, `events.event()`, schrijft per gebeurtenis een JSON-regel naar stderr: tijd (UTC), soort, IP-adres, en als dat bekend is het account. Dat is het "when, where, who and what" van de OWASP Logging Cheat Sheet. Lokaal in `docker compose logs`; op Azure zet Container Apps hem in een Log Analytics-workspace, 30 dagen en dan weg, zonder verschil in de code (sinds d547182, T-102 na de uitrol). 21 soorten, op de plekken waar de app al beslist: registreren, inloggen en de blokkades, codes en herstelcodes, wachtwoord vergeten, uitloggen, een verlopen sessie, tweestapsverificatie aan en opnieuw, een nieuw wachtwoord, herauthenticatie, account verwijderen, een geweigerd CSRF-token, de limiet op notities en een notitie die niet ontsleutelt. JSON escapet regeleindes en stuurtekens, dus invoer maakt geen valse regel (log injection). Een gebruikersnaam komt er alleen in als het account bestaat; anders staat er `"known": false` (sinds f977f6d, T-100). Eerst gold de naamregel van MIT-22, maar een wachtwoord als `Zomervakantie2026` voldoet daar ook aan. Een blokkade staat er één keer in, op het moment dat hij begint (`lockout_started`, met de soort teller), en niet bij elke geweigerde poging; anders kon een script de log vullen (sinds f977f6d, T-101). Wachtwoorden, codes, geheimen en de sessiecookie nooit (T-93, T-94). Overgenomen uit BOK-SECENGINEER Elke regel heeft ook een niveau (INFO, WARNING of ERROR) en een categorie (authentication, account, session, request, integrity).
 - Waar: `app/events.py`; aanroepen in `app/auth.py`, `app/account.py`, `app/csrf.py` en `app/notes.py`; op Azure `terraform/logs.tf`
-- Status: bewezen (T-93, T-94, T-100, T-101; gemeten van 2026-10-17 tot 2026-10-18); op Azure uitgerold op 2026-10-18 (T-102)
+- Status: bewezen (T-93, T-94, T-100, T-101, T-145; gemeten van 2026-10-17 tot 2026-11-13); op Azure uitgerold op 2026-10-18 (T-102)
 - Sinds: 6992001; naam en blokkade sinds f977f6d; bewaard op Azure sinds d547182
 
 ### MIT-32 .env alleen voor de eigenaar

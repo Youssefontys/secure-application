@@ -168,7 +168,7 @@ Een sleutel die nooit verandert, blijft werken na een lek. Elke versleutelde waa
 - **De oude sleutel weg.** Pas als het script meldt dat niets meer van de oude sleutel is (`not readable: 0`) en geen waarde meer `v1:` heet, kan de oude sleutel uit `.env` of Key Vault.
 - **Eén sleutel terug in de tijd.** De app houdt één vorige sleutel bij. Een volgende rotatie kan dus pas als de vorige klaar is.
 
-Wat nog mist: op Azure geeft Terraform de vorige sleutel en de versies nog niet door aan de container app. De code is er, en de securitytest draait de rotatie heen en terug (T-nummers volgen na de eerste run in de pipeline).
+Wat nog mist: op Azure geeft Terraform de vorige sleutel en de versies nog niet door aan de container app. De code is er, en de securitytest draait de rotatie heen en terug (T-144, run 43406573786).
 
 ## Key management op Azure
 
