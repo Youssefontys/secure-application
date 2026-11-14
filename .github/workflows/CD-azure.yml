@@ -66,7 +66,11 @@ jobs:
       - name: Deploy to Azure
         run: |
           if [ -z "$AZURE_CLIENT_ID" ]; then echo "No deployment to Azure set up in the environment azure; nothing to do."; exit 0; fi
-          image="ghcr.io/${GITHUB_REPOSITORY,,}:app-$TREE"
+          # By digest, not by tag: the container app then runs exactly this image, also after a cold start and also if
+          # the tag would ever point to something else. The package is public, so pulling needs no sign-in.
+          docker pull --quiet "ghcr.io/${GITHUB_REPOSITORY,,}:app-$TREE"
+          image=$(docker inspect --format '{{index .RepoDigests 0}}' "ghcr.io/${GITHUB_REPOSITORY,,}:app-$TREE")
+          case "$image" in ghcr.io/*@sha256:*) echo "Deploying $image" ;; *) echo "No digest found for app-$TREE."; exit 1 ;; esac
           token=$(curl -sSf -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
             "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=api://AzureADTokenExchange" | jq -r .value)
           az login --service-principal --username "$AZURE_CLIENT_ID" --tenant "$AZURE_TENANT_ID" --federated-token "$token" \

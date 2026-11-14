@@ -3,7 +3,18 @@ recovery code (MIT-05 to MIT-09, MIT-12). Runs through securitytest.py."""
 from securitytest import *
 
 
+# RFC 6238 appendix B (SHA1, 8 digits, the secret "12345678901234567890") and RFC 4226 appendix D (counter 0 to 9, 6 digits): T-35.
+RFC_PROBE = """import base64, totp
+key = base64.b32encode(b"12345678901234567890").decode()
+t = [(59, "94287082"), (1111111109, "07081804"), (1111111111, "14050471"), (1234567890, "89005924"), (2000000000, "69279037"), (20000000000, "65353130")]
+h = ["755224", "287082", "359152", "969429", "338314", "254676", "287922", "162583", "399871", "520489"]
+print(sum(totp.code_at(key, s // 30, digits=8) == c for s, c in t) + sum(totp.code_at(key, i) == c for i, c in enumerate(h)))"""
+
+
 def run():
+    print("== TOTP against the RFC test vectors (T-35)")
+    check("all 16 vectors of RFC 6238 and RFC 4226", in_app(RFC_PROBE).stdout.strip(), "16")
+
     print("== mandatory two-step verification")
     c = client()
     req(c, "/register", {"username": "testacc1", "password": PW})

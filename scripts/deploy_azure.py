@@ -25,7 +25,8 @@ EMAILS = rf"-|{EMAIL}(,{EMAIL})*"  # none (-), or addresses separated by commas
 
 
 # Is the image there, and may everyone pull it? It must: Container Apps does not sign in to ghcr.io.
-def image_public(repo, tag):
+# Returns its digest (sha256:...), or None: the app is deployed by digest, so what runs cannot change under a tag.
+def image_digest(repo, tag):
     accept = ("application/vnd.oci.image.index.v1+json, application/vnd.oci.image.manifest.v1+json, "
               "application/vnd.docker.distribution.manifest.v2+json")
     try:
@@ -34,9 +35,10 @@ def image_public(repo, tag):
         request = urllib.request.Request(f"https://ghcr.io/v2/{repo}/manifests/{tag}", method="HEAD",
                                          headers={"Authorization": f"Bearer {token}", "Accept": accept})
         with urllib.request.urlopen(request, timeout=15) as response:
-            return response.status == 200
+            digest = response.headers.get("Docker-Content-Digest", "")
+            return digest if response.status == 200 and re.fullmatch(r"sha256:[0-9a-f]{64}", digest) else None
     except (urllib.error.URLError, KeyError, ValueError):
-        return False
+        return None
 
 
 # One output of Terraform as text; "" if it is not there (no state yet, or null).
@@ -98,15 +100,17 @@ def run():
     # ghcr.io wants lower case; the OIDC token of GitHub names the repo exactly as GitHub does (deploy.tf).
     repo, github = github.lower(), gh("repo", "view", github, "--json", "nameWithOwner", "--jq", ".nameWithOwner") or github
     tag = f"app-{tree}"
-    image = f"ghcr.io/{repo}:{tag}"
-    print(f"\n📦 The image of app/ as in your last commit: {image}")
-    if not image_public(repo, tag):
+    print(f"\n📦 The image of app/ as in your last commit: ghcr.io/{repo}:{tag}")
+    digest = image_digest(repo, tag)
+    # By digest, like CD-azure.yml: the container app runs exactly this image, also after a cold start.
+    image = f"ghcr.io/{repo}@{digest}"
+    if not digest:
         stop("That image is not on ghcr.io yet, or it is not public.\n"
              "   💡 Put your last commit on main with a pull request and wait until the GitHub Action Image\n"
              "      is green after that, a few minutes:\n"
              f"      https://github.com/{repo}/actions\n"
              "   Then again: python scripts/deployment.py azure", icon="⏳")
-    print("   ✅ Ready, and Container Apps may pull it")
+    print(f"   ✅ Ready, and Container Apps may pull it: {digest}")
 
     hack = hackmode() if deployment.INTERACTIVE else {"THROTTLE_IP_MODE": None, "THROTTLE_PAIR_EXEMPT_USERS": None}
     # The mail on a lockout (alerts.tf): by default the address you signed in to az with. Not in the repo, which is public.

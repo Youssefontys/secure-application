@@ -65,7 +65,8 @@ resource "azurerm_key_vault_secret" "data_key" {
   name         = "data-encryption-key"
   key_vault_id = azurerm_key_vault.main.id
   value_wo     = ephemeral.random_bytes.data_key.hex
-  # Do not raise: a new data key makes all notes and TOTP secrets unreadable, until v2: is built.
+  # Do not raise: a new data key makes all notes and TOTP secrets unreadable. Rotation goes with a second key next to
+  # this one (rotate_key.py); Terraform does not pass that one to the app yet (Week 8, step 12).
   value_wo_version = 1
   content_type     = "hex, 256 bits"
   depends_on       = [azurerm_role_assignment.kv_operator]
