@@ -8,7 +8,7 @@ gunicorn==26.2.0        # WSGI server for production, instead of the development
 
 blinker==1.9.0          # via flask: internal signals (events inside Flask)
 cffi==2.1.1             # via cryptography: the link between Python and C code
-click==8.5.0            # via flask: the command line of Flask; the Dockerfile no longer uses it
+click==8.5.1            # via flask: the command line of Flask; the Dockerfile no longer uses it
 itsdangerous==2.2.0     # via flask: signs the session cookie (A-03) with FLASK_SECRET_KEY (A-05)
 jinja2==3.1.6           # via flask: renders the HTML templates, escapes by default (MIT-01)
 markupsafe==3.0.4       # via jinja2: the actual escaping of text into safe HTML (MIT-01)
