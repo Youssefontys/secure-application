@@ -50,7 +50,7 @@ De details staan in de entries (MC-30, MC-11, MC-14, MIT-34 tot MIT-36, MIT-39 e
 | Het token mag niet meer dan nodig | `permissions: {}`, en per job alleen `contents: read` en `packages: write` | T-103: de log van de run toont `Contents: read`, `Metadata: read` en `Packages: write` |
 | Een action kan niet verschuiven | `actions/checkout` op een volledige commit-hash, niet op een tag; GitHub raadt dat zelf aan | T-103: opgehaald op `3d3c42e5` |
 | Een pull request publiceert niets | Bij een pull request draait alleen `check`, met `contents: read`; `image` draait daar niet | T-110: alleen `check` draaide, met `Contents: read` en `Metadata: read` |
-| De lijst klopt | De SBoM bevat het besturingssysteem, de Debian-pakketten en precies de 14 Python-pakketten uit `requirements.txt` | T-106: 103 onderdelen; een scan op de SBoM vindt hetzelfde als een scan op de image |
+| De lijst klopt | De SBoM bevat het besturingssysteem, de Debian-pakketten en precies de Python-pakketten uit `requirements.txt` (bij de meting 14; sinds MIT-43 13, en 98 Debian-pakketten, T-121) | T-106: 103 onderdelen op 18-10-2026; een scan op de SBoM vindt hetzelfde als een scan op de image |
 | Een bekend lek gaat niet live | Trivy vóór het pushen; met een lek stopt de job | T-105: met pip 4 keer HIGH (exit 1), zonder pip 0 (exit 0) |
 | Een bekend lek komt niet op `main` | Dezelfde scan bij elke pull request, en de ruleset maakt die verplicht | T-110: een image zonder lek gaat door (Trivy 0.76.0). T-111: een pull request met pip faalt met 4 keer HIGH, en GitHub houdt de merge tegen |
 | Niemand komt om de check heen | De ruleset, met een lege bypass-lijst | T-112: een push rechtstreeks naar `main` geweigerd (`GH013`) |

@@ -316,7 +316,7 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 - Stappen:
   - OR  1. De code meteen gebruiken, binnen de stap waarin hij geldt (30 seconden, plus één stap klokverschil)
   - OR  2. De code later nog eens gebruiken (replay)
-- Mitigaties: MIT-07 (stap 2), nog geen (stap 1)
+- Mitigaties: MIT-07 (stap 2). MIT-40 (meelezen op het netwerk, op Azure: de code gaat alleen over TLS; lokaal niet). Nog geen (stap 1: een nepsite die meteen doorgeeft)
 - Restrisico: TOTP is niet bestand tegen phishing: een nepsite die direct doorgeeft, komt binnen. Daartegen helpt alleen een factor die aan het domein gebonden is, zoals WebAuthn of passkeys
 - Status: open
 - Sinds: 96626e2
@@ -826,7 +826,7 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 - Sinds: bc6c669; op `main` sinds 7a83161; de securitytest sinds d517527
 
 ### MIT-40 TLS op Azure, getoetst aan de richtlijnen van het NCSC
-- Houdt tegen: MC-04 stap 1, op Azure; lokaal draait de app zonder TLS
+- Houdt tegen: MC-04 stap 1, op Azure, en daarmee ook het meelezen van een code onderweg (MC-16); lokaal draait de app zonder TLS
 - Wat: de ingress van Container Apps zet TLS voor de app (F-01); `allow_insecure_connections = false` stuurt HTTP met een 301 naar HTTPS, en de `Secure`-vlag (MIT-23) en HSTS (MIT-21) houden de browser daarna op HTTPS. Versies, ciphers en het certificaat kiest het platform; in `terraform/` staat daar niets over. Gemeten en getoetst aan de TLS-richtlijnen van het NCSC (versie 2025-05). Nergens Onvoldoende: alleen TLS 1.3 en 1.2, alleen AEAD-ciphers met ECDHE (forward secrecy), geen CBC en geen RSA-sleuteluitwisseling, geen compressie, geen renegotiation door de client en geen 0-RTT. Drie punten halen het hoogste niveau niet. Het certificaat heeft een RSA-sleutel van 2048 bits, wat de richtlijn sinds 2025 Uit te faseren noemt (3072 bits voor 128 bits sterkte). De sleuteluitwisseling is ECDHE (Voldoende), niet het hybride X25519MLKEM768 (Goed). En de server stuurt geen OCSP-antwoord mee, terwijl de richtlijn OCSP-stapling aanraadt als het kan (T-113)
 - Waar: de ingress in `terraform/app.tf`; `HTTPS_ONLY` in de configuratie van de app
 - Status: bewezen (T-113; gemeten op 2026-10-19)
