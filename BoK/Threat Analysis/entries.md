@@ -316,7 +316,7 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 - Stappen:
   - OR  1. De code meteen gebruiken, binnen de stap waarin hij geldt (30 seconden, plus één stap klokverschil)
   - OR  2. De code later nog eens gebruiken (replay)
-- Mitigaties: MIT-07 (stap 2), nog geen (stap 1)
+- Mitigaties: MIT-07 (stap 2). MIT-40 (meelezen op het netwerk, op Azure: de code gaat alleen over TLS; lokaal niet). Nog geen (stap 1: een nepsite die meteen doorgeeft)
 - Restrisico: TOTP is niet bestand tegen phishing: een nepsite die direct doorgeeft, komt binnen. Daartegen helpt alleen een factor die aan het domein gebonden is, zoals WebAuthn of passkeys
 - Status: open
 - Sinds: 96626e2
@@ -584,7 +584,7 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 - Houdt tegen: MC-03 stap 1 en 2, en een gelekt wachtwoord uit MC-01; sinds MIT-12 voor elk account. Maakt MC-12 kleiner
 - Wat: na het juiste wachtwoord krijgt de sessie alleen een `pending_user_id`. Daarmee opent geen enkele route, want `require_login` en `load_user` kijken naar `user_id`. Pas na een geldige code op `/login/2fa` wordt de sessie gewist en `user_id` gezet. De halve login vervalt na 5 minuten. TOTP volgens RFC 6238: een geheim van 160 bits (RFC 4226 R6), 6 cijfers, 30 seconden, één stap klokverschil (RFC 6238, 5.2), vergeleken in constante tijd. Alleen de cijfers 0-9 tellen; een code met andere cijfers, zoals Arabisch-Indische, is gewoon fout (T-59). De berekening is zonder dependency geschreven en met de hand tegen alle testvectoren van RFC 6238 en RFC 4226 gecontroleerd (T-35). Aanzetten gebeurt pas na een eerste geldige code. Opnieuw instellen vraagt ook een code (AU-06), zodat wie alleen de sessie heeft de tweede factor niet kan vervangen
 - Waar: `login()`, `login_code()` en `check_code()` in `app/auth.py`; `app/totp.py`
-- Status: bewezen (T-32, T-35; gemeten op 2026-10-15)
+- Status: bewezen (T-32, T-35; gemeten op 2026-10-15); de 16 testvectoren zitten sinds 0ee3be7 ook in de securitytest (T-151)
 - Sinds: 96626e2; alleen 0-9 sinds ce12d31
 
 ### MIT-06 Blokkade na 5 foute codes
@@ -794,7 +794,7 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 - Houdt tegen: MC-11 stap 1 en 3
 - Wat: de workflow scant de SBoM van de gebouwde image (MIT-36) met Trivy 0.76.0 (tot bc6c669 0.75.0), vast op versie en digest, vóór het pushen. Een lek van HIGH of CRITICAL stopt de job; dan staat er geen nieuwe image op ghcr.io, en kan `deployment.py azure` hem ook niet uitrollen. Tot e6a3888 alleen een lek waarvoor al een oplossing was (`--ignore-unfixed`); sinds e6a3888 ook een zonder oplossing, tenzij de VEX het voor die versie uitsluit (MIT-41). De eerste scan vond vier keer HIGH, allemaal in de eigen kopieën van urllib3, msgpack en setuptools die pip meeneemt; sinds b31d334 gaat pip na het installeren uit de image, want de app en de schema-job gebruiken hem niet (T-105). Sinds bc6c669 draait dezelfde scan ook bij elke pull request, en houdt hij dan de merge tegen (MIT-39)
 - Waar: de stap Scan for known vulnerabilities in `.github/workflows/CI-image.yml`; `RUN` in `app/Dockerfile`
-- Status: bewezen (T-105; gemeten op 2026-10-18; met Trivy 0.76.0 T-110, gemeten op 2026-10-19)
+- Status: bewezen (T-105; gemeten op 2026-10-18; met Trivy 0.76.0 T-110, gemeten op 2026-10-19). Sinds 0ee3be7 bouwt de job `image` een `app/` die al op ghcr.io staat niet opnieuw: hij haalt die image op, scant hem opnieuw met de lekken van die dag en geeft hem de tag van de commit, zodat de tag `app-<tree>` niet verschuift; hij draait alleen vanaf `main`, ook met de hand (T-152). Een nieuwe build van dezelfde code heeft een andere digest: tot 0ee3be7 overschreef elke push naar `main` die tag, ook een merge die alleen de BoK veranderde
 - Sinds: 29e42cc; pip uit de image sinds b31d334; op de SBoM sinds 1d6f21a; Trivy 0.76.0 sinds bc6c669; ook zonder oplossing sinds e6a3888
 
 ### MIT-36 Een SBoM van elke image
@@ -826,7 +826,7 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 - Sinds: bc6c669; op `main` sinds 7a83161; de securitytest sinds d517527
 
 ### MIT-40 TLS op Azure, getoetst aan de richtlijnen van het NCSC
-- Houdt tegen: MC-04 stap 1, op Azure; lokaal draait de app zonder TLS
+- Houdt tegen: MC-04 stap 1, op Azure, en daarmee ook het meelezen van een code onderweg (MC-16); lokaal draait de app zonder TLS
 - Wat: de ingress van Container Apps zet TLS voor de app (F-01); `allow_insecure_connections = false` stuurt HTTP met een 301 naar HTTPS, en de `Secure`-vlag (MIT-23) en HSTS (MIT-21) houden de browser daarna op HTTPS. Versies, ciphers en het certificaat kiest het platform; in `terraform/` staat daar niets over. Gemeten en getoetst aan de TLS-richtlijnen van het NCSC (versie 2025-05). Nergens Onvoldoende: alleen TLS 1.3 en 1.2, alleen AEAD-ciphers met ECDHE (forward secrecy), geen CBC en geen RSA-sleuteluitwisseling, geen compressie, geen renegotiation door de client en geen 0-RTT. Drie punten halen het hoogste niveau niet. Het certificaat heeft een RSA-sleutel van 2048 bits, wat de richtlijn sinds 2025 Uit te faseren noemt (3072 bits voor 128 bits sterkte). De sleuteluitwisseling is ECDHE (Voldoende), niet het hybride X25519MLKEM768 (Goed). En de server stuurt geen OCSP-antwoord mee, terwijl de richtlijn OCSP-stapling aanraadt als het kan (T-113)
 - Waar: de ingress in `terraform/app.tf`; `HTTPS_ONLY` in de configuratie van de app
 - Status: bewezen (T-113; gemeten op 2026-10-19)
@@ -857,7 +857,7 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 - Houdt tegen: MC-30 stap 7, en stap 4 blijft dicht: er staat geen sleutel voor Azure in GitHub die kan uitlekken
 - Wat: na een geslaagde Image op `main` zet `.github/workflows/CD-azure.yml` die image op Azure, alleen als `app/` veranderde: dezelfde tree is dezelfde image, dus na een merge die alleen de BoK verandert, wacht er niets op goedkeuring (sinds 2026-10-20; met de hand rolt hij altijd uit). De job draait in de environment `azure`, die alleen `main` toestaat en wacht tot de beheerder in de Actions-tab goedkeurt. Hij vraagt GitHub een OIDC-token en wisselt dat bij Entra ID om voor een token van de identiteit `id-notes-deploy`; de federated credential accepteert alleen het subject van de environment `azure` van deze repo, met de vaste ID's van eigenaar en repo, zodat een hernoemde of opnieuw aangemaakte repo met dezelfde naam niet past (T-127). Die identiteit heeft één eigen rol, alleen op de container app: lezen, schrijven en de revisies zien (T-129). De job leest de template van de app uit Azure en zet alleen de image, wacht tot de nieuwe revisie gezond is en controleert `/login` (T-128). Na een pull request draait hij niet, ook niet voor een fork met een branch die `main` heet, en hij checkt geen code uit. `deployment.py azure` zet de environment en de drie ID's met de GitHub CLI, na een vraag; `undo` haalt de environment weer weg. Zonder de ID's (geen Azure, of een fork) doet de job niets
 - Waar: `terraform/deploy.tf`; `.github/workflows/CD-azure.yml`; `setup_github` in `scripts/deploy_azure.py`; de environment `azure` in GitHub (Settings, Environments), die niet in de repo staat
-- Status: bewezen (T-127, T-128, T-129, T-133; gemeten op 2026-10-20)
+- Status: bewezen (T-127, T-128, T-129, T-133; gemeten op 2026-10-20). Sinds 0ee3be7 zetten `CD-azure.yml` en `deployment.py azure` de image op digest (`ghcr.io/...@sha256:...`) in plaats van op de tag, zodat wat draait niet verandert als de tag ooit verschuift, ook niet na een koude start; dat is nog niet gemeten op Azure (T-152)
 - Sinds: 4affd4c; subject met ID's en `deploy.yml` sinds ec0dee4
 
 ### MIT-45 Code scanning met CodeQL, Dependabot alerts, en een lek privé melden
@@ -878,7 +878,7 @@ daarna is toegevoegd, staat met de commit bij "Sinds".
 - Houdt tegen: een instelling in de infrastructuur die onbedoeld slechter wordt, zoals een Key Vault met een open netwerk, of een database die niets logt, vóór de merge (MC-22, MC-31)
 - Wat: de workflow `CI-iac.yml` draait bij elke pull request die `terraform/` of `.trivyignore.yaml` verandert `trivy config` op `terraform/`, met dezelfde Trivy-image als `CI-image.yml`, vast op versie en digest. Hij leest alleen de bestanden: er wordt niets gepland of toegepast. Elke melding heeft een beslissing in `.trivyignore.yaml`, met de reden, zoals de VEX bij de image en `zap-rules.tsv` bij ZAP; een melding zonder beslissing laat de job falen. Een eigen workflow, zoals `CI-dast.yml`. De eerste run vond negen meldingen: AZU-0013 (twee vaults zonder netwerkregels, CRITICAL), AZU-0017 (vier geheimen zonder vervaldatum, LOW) en AZU-0019, AZU-0021, AZU-0024 (de databaselog, MEDIUM). De eerste twee zijn bewust geaccepteerd, met de reden uit Week 6 (Encryption); de drie van de databaselog staan als nog niet beslist: ze wachten op de plek waar die log naartoe gaat (T-137, T-138). Checkov, Terrascan en Snyk zijn er niet bij gekomen: Trivy doet dit al voor de image en heeft dezelfde regels voor Azure (AZU-)
 - Waar: `.github/workflows/CI-iac.yml`; `.trivyignore.yaml`
-- Status: bewezen (T-137, T-138; gemeten op 2026-10-21). De job `iac` is niet verplicht in de ruleset en draait alleen als Terraform verandert: een rode `iac` houdt een merge niet tegen, alleen wie hem ziet. Trivy leest de code, niet wat er op Azure staat: een wijziging in de portal ziet hij niet
+- Status: bewezen (T-137, T-138; gemeten op 2026-10-21). Sinds 0ee3be7 vervallen de drie meldingen die niet beslist zijn op 2026-12-07 (`expired_at`): daarna laten ze de job weer falen (T-153). De job `iac` is niet verplicht in de ruleset en draait alleen als Terraform verandert: een rode `iac` houdt een merge niet tegen, alleen wie hem ziet. Trivy leest de code, niet wat er op Azure staat: een wijziging in de portal ziet hij niet
 - Sinds: c877ee2; de beslissingen sinds db6b814
 
 ### MIT-48 Privacyverklaring en toestemming bij registratie

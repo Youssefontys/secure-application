@@ -2,7 +2,9 @@
 
 Zeven stappen van de pipeline staan. Bij elke push naar `main` bouwt GitHub Actions de image en zet hem op ghcr.io (MIT-34): het token van de run mag alleen dat, `actions/checkout` staat vast op een commit, en een eigen token is niet meer nodig. Trivy maakt van elke image een SBoM (MIT-36), en scant die: een bekend lek van HIGH of CRITICAL houdt de image tegen (MIT-35), sinds deelvraag 2 van het onderzoek ook als er nog geen oplossing is, tot er een beslissing in de VEX staat (MIT-41). De eerste scan vond vier lekken, allemaal in pip, dat nu uit de image gaat. Sinds deelvraag 1 van het onderzoek draaien dezelfde stappen ook bij elke pull request, zonder te publiceren, en maakt een ruleset op `main` die check verplicht (MIT-39): een bekend lek komt dan niet eens meer op `main`. En sinds de securitytest in de repo staat, draait de check die ook: een wijziging die een maatregel breekt, komt niet op `main` (MIT-39, T-125). En sinds MIT-44 zet `CD-azure.yml` een nieuwe image op Azure zodra de beheerder het goedkeurt, met OIDC en zonder sleutel in GitHub. En sinds MIT-46 draait bij elke pull request ook de ZAP baseline, met een beslissing per melding.
 
-De details staan in de entries (MC-30, MC-11, MC-14, MIT-34 tot MIT-36, MIT-39 en MIT-41 tot MIT-47; C-06, C-11, A-12, A-14, A-18, A-19, F-06, F-07, F-12, F-13, B-04, B-06, AU-14, AZ-16 en AZ-17 in de architectuur) en de tests T-103, T-105, T-106, T-110 tot T-112 en T-114 tot T-138. De triageflow staat in `vex/README.md`.
+Sinds 14-11-2026 bouwt de job `image` een `app/` die al gepubliceerd is niet opnieuw, maar scant hij de bestaande image opnieuw; de tag `app-<tree>` verschuift dus niet meer, en uitrollen gaat op digest (T-152). De drie IaC-meldingen die niet beslist zijn, vervallen op 7 december 2026 (T-153).
+
+De details staan in de entries (MC-30, MC-11, MC-14, MIT-34 tot MIT-36, MIT-39 en MIT-41 tot MIT-47; C-06, C-11, A-12, A-14, A-18, A-19, F-06, F-07, F-12, F-13, B-04, B-06, AU-14, AZ-16 en AZ-17 in de architectuur) en de tests T-103, T-105, T-106, T-110 tot T-112, T-114 tot T-138, T-152 en T-153. De triageflow staat in `vex/README.md`.
 
 ## De dreiging
 
@@ -48,7 +50,7 @@ De details staan in de entries (MC-30, MC-11, MC-14, MIT-34 tot MIT-36, MIT-39 e
 | Het token mag niet meer dan nodig | `permissions: {}`, en per job alleen `contents: read` en `packages: write` | T-103: de log van de run toont `Contents: read`, `Metadata: read` en `Packages: write` |
 | Een action kan niet verschuiven | `actions/checkout` op een volledige commit-hash, niet op een tag; GitHub raadt dat zelf aan | T-103: opgehaald op `3d3c42e5` |
 | Een pull request publiceert niets | Bij een pull request draait alleen `check`, met `contents: read`; `image` draait daar niet | T-110: alleen `check` draaide, met `Contents: read` en `Metadata: read` |
-| De lijst klopt | De SBoM bevat het besturingssysteem, de Debian-pakketten en precies de 14 Python-pakketten uit `requirements.txt` | T-106: 103 onderdelen; een scan op de SBoM vindt hetzelfde als een scan op de image |
+| De lijst klopt | De SBoM bevat het besturingssysteem, de Debian-pakketten en precies de Python-pakketten uit `requirements.txt` (bij de meting 14; sinds MIT-43 13, en 98 Debian-pakketten, T-121) | T-106: 103 onderdelen op 18-10-2026; een scan op de SBoM vindt hetzelfde als een scan op de image |
 | Een bekend lek gaat niet live | Trivy vóór het pushen; met een lek stopt de job | T-105: met pip 4 keer HIGH (exit 1), zonder pip 0 (exit 0) |
 | Een bekend lek komt niet op `main` | Dezelfde scan bij elke pull request, en de ruleset maakt die verplicht | T-110: een image zonder lek gaat door (Trivy 0.76.0). T-111: een pull request met pip faalt met 4 keer HIGH, en GitHub houdt de merge tegen |
 | Niemand komt om de check heen | De ruleset, met een lege bypass-lijst | T-112: een push rechtstreeks naar `main` geweigerd (`GH013`) |
