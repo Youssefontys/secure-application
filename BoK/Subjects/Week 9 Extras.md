@@ -13,7 +13,7 @@ Dit is de lijst van wat nog openstaat, uit de plannen van Week 8 en de voorstell
 
 | # | Punt | Uit | Grootte | Status |
 |---|---|---|---|---|
-| 1 | De draaiende image elke dag opnieuw scannen (MC-11) | Week 8, stap 6 | Middel | Gepland, plan in Week 8 |
+| 1 | De draaiende image elke dag opnieuw scannen (MC-11) | Week 8, stap 6 | Middel | Deels (14-11-2026): de gepubliceerde image wordt bij elke push naar `main` opnieuw gescand (T-152); elke dag nog niet, plan in Week 8 |
 | 2 | Containerinstellingen: alleen-lezen bestandssysteem, `cap_drop`, `no-new-privileges` (Docker #3, #4, #8) | Week 8, stap 10; voorstel 6 | Klein | Gepland |
 | 3 | Een blocklist voor veelgebruikte wachtwoorden (MC-03) | Week 8, stap 11 | Klein | Gepland |
 | 4 | Sleutelrotatie op Azure: Terraform geeft de vorige sleutel en de versies door | Week 8, stap 12 | Klein | Gepland |
