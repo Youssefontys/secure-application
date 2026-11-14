@@ -6,7 +6,8 @@ variable "location" {
   default = "francecentral"
 }
 
-# The image of the app with a fixed tag or digest, never latest (MIT-03); the pipeline builds and pushes it.
+# The image of the app by digest (ghcr.io/owner/repo@sha256:...), never latest (MIT-03); the pipeline builds and pushes it,
+# and deploy_azure.py looks up the digest of the tag app-<tree>.
 variable "app_image" {
   type = string
 }

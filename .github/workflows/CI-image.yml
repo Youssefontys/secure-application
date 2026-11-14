@@ -23,7 +23,7 @@ env:
 
 jobs:
   # The brake on a pull request, only with read rights: on a pull request from a fork GitHub gives no more anyway.
-  # The steps with an & are in the job image once more, with a *: this way the check scans exactly what is published.
+  # The steps with an & are in the job image once more, with a *: this way the check scans the way the job image does.
   check:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-24.04
@@ -111,15 +111,36 @@ jobs:
           python3 -u tests/securitytest.py --wipe
 
   # On a push to main, or by hand: the same steps, and only after a clean scan to ghcr.io.
+  # Only from main, also by hand: otherwise workflow_dispatch on another branch publishes an image that no check has seen.
   image:
-    if: github.event_name != 'pull_request'
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     permissions:
       contents: read
       packages: write
     steps:
       - *checkout
-      - *build
+
+      # The tag app-<tree> never moves: if the image of this app/ is on ghcr.io already, that one is pulled, scanned again
+      # with the vulnerabilities of today and given the tag of this commit, instead of a new build under the same tag.
+      # A new build of the same code has another digest, so the image that was scanned and approved would no longer be
+      # the one behind the tag. Only an app/ that is not there yet is built.
+      - name: Build, or reuse the published image
+        run: |
+          image="ghcr.io/${GITHUB_REPOSITORY,,}"
+          tree="$(git rev-parse HEAD:app)"
+          if docker pull --quiet "$image:app-$tree" 2> "$RUNNER_TEMP/pull.log"; then
+            echo "app-$tree is published already: reusing $(docker inspect --format '{{index .RepoDigests 0}}' "$image:app-$tree")"
+            docker tag "$image:app-$tree" "$image:$GITHUB_SHA"
+          elif ! grep -qiE "manifest unknown|name unknown|not found|denied" "$RUNNER_TEMP/pull.log"; then
+            # Any other error (the network, ghcr.io down) is not "the tag is not there": building now would move the tag.
+            cat "$RUNNER_TEMP/pull.log"; exit 1
+          else
+            docker build --label "org.opencontainers.image.source=https://github.com/$GITHUB_REPOSITORY" \
+              -t "$image:$GITHUB_SHA" -t "$image:app-$tree" app
+          fi
+          echo "IMAGE=$image" >> "$GITHUB_ENV"
+
       - *sbom
       - *keep
       - *vex

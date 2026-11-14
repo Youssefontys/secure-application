@@ -2,7 +2,7 @@
 
 De tekst die een gebruiker bij het registreren leest, met het vinkje waarmee hij toestemming geeft. Hij hoort bij check 5 van de
 AVG-zelfassessment in `Laws.md` (Ondernemersplein: "vertel uw klanten in een privacyverklaring wat u met hun
-persoonsgegevens doet"). De app laat hem nog niet zien: dat is een open punt. Wat tussen `[ ]` staat, vul ik in voordat hij live gaat.
+persoonsgegevens doet"). De app laat hem zien op `/privacy`, met het vinkje bij het registreren (MIT-48). Open: het contactadres is nog een plaatshouder.
 
 Dit is de Nederlandse bron. De app zelf is Engels: de Engelse tekst staat in `app/web/templates/privacy.html` (pagina
 `/privacy`), het vinkje op de registratiepagina in `app/web/templates/auth.html`.

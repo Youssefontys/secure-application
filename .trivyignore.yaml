@@ -1,6 +1,7 @@
 # The decision per finding of Trivy on terraform/ (MIT-47, CI-iac.yml): a finding without a decision here fails the job.
 # Per finding the rule, the file and the reason, like the VEX for the image and zap-rules.tsv for ZAP. A fixed finding is
 # removed from this file, so that it fails again if it comes back. The same nine findings as in the BoK (Week 6).
+# A finding that is not decided yet has an expired_at: after that date it fails the job again, so "not decided" cannot stay forever.
 misconfigurations:
   - id: AZU-0013
     paths:
@@ -15,17 +16,20 @@ misconfigurations:
       Accepted, four secrets: without automatic rotation an expiry date stops the app on one day, and the data key must
       never expire (a new one makes all notes unreadable).
   - id: AZU-0019
+    expired_at: 2026-12-07
     paths:
       - database.tf
     statement: >-
       Open, not decided: the database log goes nowhere yet (Week 6, Logging). It becomes a fix when the log has a place
       to go, and this decision is then removed.
   - id: AZU-0021
+    expired_at: 2026-12-07
     paths:
       - database.tf
     statement: >-
       Open, not decided: the app limits attempts itself (MIT-10); the database parameter waits for the same step as AZU-0019.
   - id: AZU-0024
+    expired_at: 2026-12-07
     paths:
       - database.tf
     statement: >-
